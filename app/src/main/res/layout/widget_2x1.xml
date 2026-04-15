@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/green_500">
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="QR Zen"
-        android:textColor="@color/white" />
-</FrameLayout>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/green_500" android:gravity="center" android:orientation="horizontal" android:padding="8dp">
+    <TextView android:id="@+id/tvCount" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="0" android:textColor="@color/white" android:textSize="28sp" android:textStyle="bold" android:layout_marginEnd="8dp" />
+    <TextView android:id="@+id/tvStatus" android:layout_width="0dp" android:layout_height="wrap_content"
+        android:layout_weight="1" android:text="No blocks active" android:textColor="@color/white" android:textSize="13sp" />
+</LinearLayout>

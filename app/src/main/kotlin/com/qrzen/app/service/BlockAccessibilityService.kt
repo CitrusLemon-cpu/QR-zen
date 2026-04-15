@@ -4,7 +4,9 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.BlockEventDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.ui.lock.LockScreenActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
@@ -17,6 +19,7 @@ import javax.inject.Inject
 class BlockAccessibilityService : AccessibilityService() {
 
     @Inject lateinit var dao: AppBlockDao
+    @Inject lateinit var blockEventDao: BlockEventDao
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val fmt = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -28,14 +31,11 @@ class BlockAccessibilityService : AccessibilityService() {
         scope.launch {
             val now = System.currentTimeMillis()
             val activeBlocks = dao.getAll().filter { block ->
-                block.isEnabled &&
-                now > block.pausedUntil &&
+                block.isEnabled && now > block.pausedUntil &&
                 isBlockActive(block) &&
                 block.appPackages.split(",").map { it.trim() }.contains(pkg)
             }
-            if (activeBlocks.isNotEmpty()) {
-                launchLockScreen(pkg, activeBlocks.first())
-            }
+            if (activeBlocks.isNotEmpty()) launchLockScreen(pkg, activeBlocks.first())
         }
     }
 
@@ -43,35 +43,26 @@ class BlockAccessibilityService : AccessibilityService() {
         val now = LocalTime.now()
         val start = LocalTime.parse(block.startTime, fmt)
         val end = LocalTime.parse(block.endTime, fmt)
-        val timeOk = if (end.isAfter(start)) {
-            now.isAfter(start) && now.isBefore(end)
-        } else {
-            now.isAfter(start) || now.isBefore(end)
-        }
+        val timeOk = if (end.isAfter(start)) now.isAfter(start) && now.isBefore(end)
+                     else now.isAfter(start) || now.isBefore(end)
         if (!timeOk) return false
-
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
         return block.activeDays.getOrNull(dayIndex) == '1'
     }
 
     private fun launchLockScreen(blockedPkg: String, block: AppBlock) {
-        val intent = Intent(this, LockScreenActivity::class.java).apply {
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                Intent.FLAG_ACTIVITY_SINGLE_TOP
-            )
+        startActivity(Intent(this, LockScreenActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             putExtra(LockScreenActivity.EXTRA_BLOCK_ID, block.id)
             putExtra(LockScreenActivity.EXTRA_BLOCKED_PKG, blockedPkg)
+        })
+        scope.launch {
+            blockEventDao.insert(BlockEvent(blockId = block.id, blockTitle = block.title,
+                packageName = blockedPkg, eventType = "BLOCKED"))
         }
-        startActivity(intent)
     }
 
     override fun onInterrupt() {}
-
-    override fun onDestroy() {
-        super.onDestroy()
-        scope.cancel()
-    }
+    override fun onDestroy() { super.onDestroy(); scope.cancel() }
 }
