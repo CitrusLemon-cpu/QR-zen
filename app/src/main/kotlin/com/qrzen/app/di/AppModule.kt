@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.AppDatabase
+import com.qrzen.app.data.db.BlockEventDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,4 +26,8 @@ object AppModule {
     @Provides
     @Singleton
     fun provideAppBlockDao(db: AppDatabase): AppBlockDao = db.appBlockDao()
+
+    @Provides
+    @Singleton
+    fun provideBlockEventDao(db: AppDatabase): BlockEventDao = db.blockEventDao()
 }

@@ -40,4 +40,7 @@
     <string name="app_picker_title">Select Apps to Block</string>
     <string name="qr_display_instructions">Print or save this QR code. You’ll need to scan it to unlock this block.</string>
     <string name="home_empty">No blocks yet. Tap + to add one.</string>
+    <string name="stats_no_events">No events yet. Blocks will appear here when they fire.</string>
+    <string name="settings_master_pwd_label">Master password</string>
+    <string name="settings_save_pwd">Save Password</string>
 </resources>
