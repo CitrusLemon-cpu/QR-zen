@@ -4,7 +4,9 @@ import android.accessibilityservice.AccessibilityService
 import android.content.Intent
 import android.view.accessibility.AccessibilityEvent
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.BlockEventDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.ui.lock.LockScreenActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.*
@@ -17,6 +19,7 @@ import javax.inject.Inject
 class BlockAccessibilityService : AccessibilityService() {
 
     @Inject lateinit var dao: AppBlockDao
+    @Inject lateinit var blockEventDao: BlockEventDao
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val fmt = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -66,6 +69,16 @@ class BlockAccessibilityService : AccessibilityService() {
             putExtra(LockScreenActivity.EXTRA_BLOCKED_PKG, blockedPkg)
         }
         startActivity(intent)
+        scope.launch {
+            blockEventDao.insert(
+                BlockEvent(
+                    blockId = block.id,
+                    blockTitle = block.title,
+                    packageName = blockedPkg,
+                    eventType = "BLOCKED"
+                )
+            )
+        }
     }
 
     override fun onInterrupt() {}

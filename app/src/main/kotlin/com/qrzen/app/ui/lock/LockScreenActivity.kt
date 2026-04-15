@@ -13,7 +13,9 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.BlockEventDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityLockScreenBinding
 import com.qrzen.app.databinding.BottomSheetPauseDurationBinding
@@ -32,6 +34,7 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     @Inject lateinit var dao: AppBlockDao
+    @Inject lateinit var blockEventDao: BlockEventDao
     private lateinit var binding: ActivityLockScreenBinding
     private var currentBlock: AppBlock? = null
 
@@ -123,8 +126,17 @@ class LockScreenActivity : AppCompatActivity() {
     private fun applyPause(block: AppBlock, durationMs: Long) {
         val until = if (durationMs == Long.MAX_VALUE) Long.MAX_VALUE
                     else System.currentTimeMillis() + durationMs
+        val blockedPkg = intent.getStringExtra(EXTRA_BLOCKED_PKG) ?: ""
         lifecycleScope.launch {
             dao.setPausedUntil(block.id, until)
+            blockEventDao.insert(
+                BlockEvent(
+                    blockId = block.id,
+                    blockTitle = block.title,
+                    packageName = blockedPkg,
+                    eventType = "PAUSED"
+                )
+            )
             finish()
         }
     }
