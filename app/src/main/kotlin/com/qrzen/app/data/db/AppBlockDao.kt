@@ -1,0 +1,35 @@
+package com.qrzen.app.data.db
+
+import androidx.room.*
+import com.qrzen.app.data.model.AppBlock
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface AppBlockDao {
+    @Query("SELECT * FROM app_blocks ORDER BY id ASC")
+    fun observeAll(): Flow<List<AppBlock>>
+
+    @Query("SELECT * FROM app_blocks WHERE isEnabled = 1")
+    fun observeActive(): Flow<List<AppBlock>>
+
+    @Query("SELECT * FROM app_blocks WHERE id = :id")
+    suspend fun getById(id: Int): AppBlock?
+
+    @Query("SELECT * FROM app_blocks WHERE qrSecret = :secret LIMIT 1")
+    suspend fun getByQrSecret(secret: String): AppBlock?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(block: AppBlock): Long
+
+    @Update
+    suspend fun update(block: AppBlock)
+
+    @Delete
+    suspend fun delete(block: AppBlock)
+
+    @Query("UPDATE app_blocks SET pausedUntil = :until WHERE id = :id")
+    suspend fun setPausedUntil(id: Int, until: Long)
+
+    @Query("SELECT * FROM app_blocks")
+    suspend fun getAll(): List<AppBlock>
+}
