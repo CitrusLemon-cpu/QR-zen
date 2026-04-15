@@ -16,6 +16,7 @@ import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.FragmentHomeBinding
 import com.qrzen.app.ui.block.EditBlockActivity
 import com.qrzen.app.ui.block.QrDisplayFragment
+import com.qrzen.app.ui.pomodoro.PomodoroActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
@@ -61,15 +62,16 @@ class HomeFragment : Fragment() {
     }
 
     private fun showBlockOptions(block: AppBlock) {
-        val options = arrayOf("Edit", "Delete", "Show QR Code")
+        val baseOptions = mutableListOf("Edit", "Delete", "Show QR Code")
+        if (block.isPomodoroBlock) baseOptions.add("Start Pomodoro")
+        val options = baseOptions.toTypedArray()
         AlertDialog.Builder(requireContext())
             .setItems(options) { _, which ->
                 when (which) {
                     0 -> {
-                        val intent = Intent(requireContext(), EditBlockActivity::class.java).apply {
+                        startActivity(Intent(requireContext(), EditBlockActivity::class.java).apply {
                             putExtra(EditBlockActivity.EXTRA_BLOCK_ID, block.id)
-                        }
-                        startActivity(intent)
+                        })
                     }
                     1 -> {
                         AlertDialog.Builder(requireContext())
@@ -79,13 +81,16 @@ class HomeFragment : Fragment() {
                             .setNegativeButton("Cancel", null)
                             .show()
                     }
-                    2 -> {
-                        QrDisplayFragment.newInstance(block.qrSecret)
-                            .show(childFragmentManager, "qr_display")
+                    2 -> QrDisplayFragment.newInstance(block.qrSecret).show(childFragmentManager, "qr")
+                    3 -> {
+                        startActivity(
+                            Intent(requireContext(), PomodoroActivity::class.java).apply {
+                                putExtra(PomodoroActivity.EXTRA_BLOCK_ID, block.id)
+                            }
+                        )
                     }
                 }
-            }
-            .show()
+            }.show()
     }
 
     override fun onDestroyView() {

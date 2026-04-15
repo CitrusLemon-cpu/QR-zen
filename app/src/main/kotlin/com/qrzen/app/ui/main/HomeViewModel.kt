@@ -1,10 +1,13 @@
 package com.qrzen.app.ui.main
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -13,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val dao: AppBlockDao
+    private val dao: AppBlockDao,
+    @ApplicationContext private val ctx: Context
 ) : ViewModel() {
 
     val blocks: StateFlow<List<AppBlock>> = dao.observeAll()
@@ -21,9 +25,11 @@ class HomeViewModel @Inject constructor(
 
     fun delete(block: AppBlock) = viewModelScope.launch {
         dao.delete(block)
+        WidgetRefresh.refresh(ctx)
     }
 
     fun setEnabled(block: AppBlock, enabled: Boolean) = viewModelScope.launch {
         dao.update(block.copy(isEnabled = enabled))
+        WidgetRefresh.refresh(ctx)
     }
 }

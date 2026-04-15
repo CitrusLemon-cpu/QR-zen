@@ -1,17 +1,26 @@
 package com.qrzen.app.ui.main
 
-import android.os.Bundle; import android.view.*; import androidx.fragment.app.Fragment
+import android.app.NotificationManager
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.fragment.app.Fragment
 import com.google.android.material.snackbar.Snackbar
-import com.qrzen.app.data.prefs.Prefs; import com.qrzen.app.databinding.FragmentSettingsBinding
+import com.qrzen.app.data.prefs.Prefs
+import com.qrzen.app.databinding.FragmentSettingsBinding
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
+
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        _binding = FragmentSettingsBinding.inflate(inflater, container, false); return binding.root
+        _binding = FragmentSettingsBinding.inflate(inflater, container, false)
+        return binding.root
     }
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.swMasterPwd.isChecked = Prefs.masterPasswordEnabled
@@ -27,12 +36,34 @@ class SettingsFragment : Fragment() {
         }
         binding.btnSavePwd.setOnClickListener {
             val pwd = binding.etMasterPwd.text?.toString()?.trim() ?: ""
-            if (pwd.isEmpty()) { binding.tilMasterPwd.error = "Password cannot be empty"; return@setOnClickListener }
-            binding.tilMasterPwd.error = null; Prefs.masterPassword = pwd
+            if (pwd.isEmpty()) {
+                binding.tilMasterPwd.error = "Password cannot be empty"
+                return@setOnClickListener
+            }
+            binding.tilMasterPwd.error = null
+            Prefs.masterPassword = pwd
             Snackbar.make(binding.root, "Master password saved", Snackbar.LENGTH_SHORT).show()
         }
         binding.swRemoveNotif.setOnCheckedChangeListener { _, checked -> Prefs.removeNotifications = checked }
-        binding.swSilentMode.setOnCheckedChangeListener { _, checked -> Prefs.silentMode = checked }
+        binding.swSilentMode.setOnCheckedChangeListener { _, isChecked ->
+            Prefs.silentMode = isChecked
+            if (isChecked) {
+                val nm = requireContext().getSystemService(NotificationManager::class.java)
+                if (!nm.isNotificationPolicyAccessGranted) {
+                    Snackbar.make(
+                        binding.root,
+                        "Grant Do Not Disturb access for silent mode",
+                        Snackbar.LENGTH_LONG
+                    ).setAction("Grant") {
+                        startActivity(android.content.Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))
+                    }.show()
+                }
+            }
+        }
     }
-    override fun onDestroyView() { super.onDestroyView(); _binding = null }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
+    }
 }
