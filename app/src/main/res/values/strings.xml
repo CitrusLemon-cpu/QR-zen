@@ -24,4 +24,20 @@
     <string name="block_scan_qr">Scan QR Code to Unlock</string>
     <string name="block_wrong_qr">Wrong QR code. Please scan the correct code for this block.</string>
     <string name="block_master_password">Enter Master Password</string>
+    <string name="lock_screen_message">This app is blocked. Scan your QR code to take a break.</string>
+    <string name="edit_block_title_hint">Block name (e.g. Social Media)</string>
+    <string name="edit_block_select_apps">Select Apps to Block</string>
+    <string name="edit_block_schedule">Schedule</string>
+    <string name="edit_block_edit_window">Edit Window</string>
+    <string name="edit_block_qr_section">QR Unlock Code</string>
+    <string name="edit_block_generate_qr">Show QR Code</string>
+    <string name="edit_block_share_qr">Share QR Code</string>
+    <string name="edit_block_save_qr">Save to Downloads</string>
+    <string name="edit_block_master_pwd_toggle">Enable master password fallback</string>
+    <string name="edit_block_pomodoro_toggle">Pomodoro mode</string>
+    <string name="edit_block_save">Save Block</string>
+    <string name="edit_window_locked">You can only edit this block between %1$s and %2$s</string>
+    <string name="app_picker_title">Select Apps to Block</string>
+    <string name="qr_display_instructions">Print or save this QR code. You’ll need to scan it to unlock this block.</string>
+    <string name="home_empty">No blocks yet. Tap + to add one.</string>
 </resources>
