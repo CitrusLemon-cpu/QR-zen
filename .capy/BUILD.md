@@ -1,0 +1,6 @@
+- Android app project in Kotlin; build scripts use `libs.plugins.android.application`, `kotlin.android`, `kotlin.kapt`, and `hilt`.
+- Treat UI work as Android/Jetpack Compose-oriented where relevant, but match the existing conventions used in the `app/` module.
+- Dependency injection is handled with Hilt.
+- Follow the existing code style and patterns under `app/`.
+- Kotlin code style is `official` (`gradle.properties`).
+- Do not run Gradle builds unless explicitly asked; the Android SDK/toolchain may not be configured in this environment.

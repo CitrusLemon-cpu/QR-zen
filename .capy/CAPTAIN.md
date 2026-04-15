@@ -1,0 +1,4 @@
+- Android app project with a single module: `:app`.
+- Stack: Kotlin, Jetpack Compose, Hilt DI.
+- Application source lives under `app/src/main/`.
+- Prefer planning and file targeting around the `app/` module structure.
