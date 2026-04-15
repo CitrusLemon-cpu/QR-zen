@@ -19,6 +19,8 @@ import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityLockScreenBinding
 import com.qrzen.app.databinding.BottomSheetPauseDurationBinding
+import com.qrzen.app.util.SilentModeHelper
+import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -47,7 +49,8 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     override fun onNewIntent(intent: Intent) {
-        super.onNewIntent(intent); setIntent(intent)
+        super.onNewIntent(intent)
+        setIntent(intent)
         loadBlock(intent.getIntExtra(EXTRA_BLOCK_ID, -1))
     }
 
@@ -67,6 +70,7 @@ class LockScreenActivity : AppCompatActivity() {
         binding.btnMasterPassword.visibility = if (showMasterPwd) View.VISIBLE else View.GONE
         binding.btnMasterPassword.setOnClickListener { showMasterPasswordDialog(block) }
         binding.btnGoHome.setOnClickListener { goToLauncher() }
+        SilentModeHelper.applySilentMode(this)
     }
 
     private fun startQrScanner() {
@@ -77,15 +81,20 @@ class LockScreenActivity : AppCompatActivity() {
 
     @Deprecated("Deprecated in Java")
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        @Suppress("DEPRECATION") super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_QR_SCAN && resultCode == RESULT_OK)
+        @Suppress("DEPRECATION")
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_QR_SCAN && resultCode == RESULT_OK) {
             handleQrResult(com.king.zxing.util.CodeUtils.parseResult(data))
+        }
     }
 
     private fun handleQrResult(scanned: String?) {
         val block = currentBlock ?: return
         if (scanned == block.qrSecret) showPauseDurationSheet(block)
-        else { binding.tvError.visibility = View.VISIBLE; binding.tvError.text = getString(R.string.block_wrong_qr) }
+        else {
+            binding.tvError.visibility = View.VISIBLE
+            binding.tvError.text = getString(R.string.block_wrong_qr)
+        }
     }
 
     private fun showPauseDurationSheet(block: AppBlock) {
@@ -94,8 +103,8 @@ class LockScreenActivity : AppCompatActivity() {
         sheet.setContentView(sb.root)
         sb.btn15min.setOnClickListener { applyPause(block, 15 * 60_000L); sheet.dismiss() }
         sb.btn30min.setOnClickListener { applyPause(block, 30 * 60_000L); sheet.dismiss() }
-        sb.btn1hr.setOnClickListener  { applyPause(block, 60 * 60_000L); sheet.dismiss() }
-        sb.btn2hr.setOnClickListener  { applyPause(block, 2 * 60 * 60_000L); sheet.dismiss() }
+        sb.btn1hr.setOnClickListener { applyPause(block, 60 * 60_000L); sheet.dismiss() }
+        sb.btn2hr.setOnClickListener { applyPause(block, 2 * 60 * 60_000L); sheet.dismiss() }
         sb.btnRestOfDay.setOnClickListener { applyPause(block, millisUntilMidnight()); sheet.dismiss() }
         sb.btnIndefinitely.setOnClickListener { applyPause(block, Long.MAX_VALUE); sheet.dismiss() }
         sheet.show()
@@ -106,33 +115,59 @@ class LockScreenActivity : AppCompatActivity() {
         val blockedPkg = intent.getStringExtra(EXTRA_BLOCKED_PKG) ?: ""
         lifecycleScope.launch {
             dao.setPausedUntil(block.id, until)
-            blockEventDao.insert(BlockEvent(blockId = block.id, blockTitle = block.title,
-                packageName = blockedPkg, eventType = "PAUSED"))
+            WidgetRefresh.refresh(applicationContext)
+            blockEventDao.insert(
+                BlockEvent(
+                    blockId = block.id,
+                    blockTitle = block.title,
+                    packageName = blockedPkg,
+                    eventType = "PAUSED"
+                )
+            )
+            SilentModeHelper.restoreRinger(this@LockScreenActivity)
             finish()
         }
     }
 
     private fun millisUntilMidnight(): Long {
         val cal = Calendar.getInstance().apply {
-            set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59)
-            set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
         }
         return cal.timeInMillis - System.currentTimeMillis()
     }
 
     private fun showMasterPasswordDialog(block: AppBlock) {
-        val et = EditText(this).apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD; hint = getString(R.string.block_master_password) }
-        AlertDialog.Builder(this).setTitle(R.string.block_master_password).setView(et)
+        val et = EditText(this).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            hint = getString(R.string.block_master_password)
+        }
+        AlertDialog.Builder(this)
+            .setTitle(R.string.block_master_password)
+            .setView(et)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 if (et.text.toString() == Prefs.masterPassword) showPauseDurationSheet(block)
-                else { binding.tvError.visibility = View.VISIBLE; binding.tvError.text = "Incorrect password" }
-            }.setNegativeButton(android.R.string.cancel, null).show()
+                else {
+                    binding.tvError.visibility = View.VISIBLE
+                    binding.tvError.text = "Incorrect password"
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     private fun goToLauncher() {
-        startActivity(Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME); flags = Intent.FLAG_ACTIVITY_NEW_TASK })
+        SilentModeHelper.restoreRinger(this)
+        startActivity(Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        })
     }
 
     @Deprecated("Deprecated in Java")
-    override fun onBackPressed() { goToLauncher() }
+    override fun onBackPressed() {
+        goToLauncher()
+    }
 }

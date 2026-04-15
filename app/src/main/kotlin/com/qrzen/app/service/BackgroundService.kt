@@ -1,6 +1,9 @@
 package com.qrzen.app.service
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -10,17 +13,15 @@ import android.os.Looper
 import androidx.core.app.NotificationCompat
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-/**
- * Persistent foreground service — the heartbeat of QR Zen.
- *
- * Uses START_STICKY so the system restarts it if killed.
- * Combined with RebootReceiver + StartupContentProvider, this forms
- * the three-layer ultra-battery-saver survival stack.
- */
 @AndroidEntryPoint
 class BackgroundService : Service() {
 
@@ -63,11 +64,12 @@ class BackgroundService : Service() {
         dao.getAll()
             .filter { block ->
                 block.pausedUntil != 0L &&
-                block.pausedUntil != Long.MAX_VALUE &&
-                now > block.pausedUntil
+                    block.pausedUntil != Long.MAX_VALUE &&
+                    now > block.pausedUntil
             }
             .forEach { block ->
                 dao.setPausedUntil(block.id, 0L)
+                WidgetRefresh.refresh(applicationContext)
             }
     }
 
