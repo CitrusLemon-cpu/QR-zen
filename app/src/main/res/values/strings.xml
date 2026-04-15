@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">QR Zen</string>
+    <string name="accessibility_description">QR Zen uses Accessibility Service to detect when a blocked app is in the foreground and show the block overlay.</string>
+
+    <!-- Bottom nav -->
+    <string name="nav_home">Home</string>
+    <string name="nav_stats">Stats</string>
+    <string name="nav_settings">Settings</string>
+
+    <!-- Permission onboarding -->
+    <string name="perm_grant">Grant Permission</string>
+    <string name="perm_next">Next</string>
+    <string name="perm_skip">Skip</string>
+    <string name="perm_done">Done</string>
+
+    <!-- Block UI -->
+    <string name="block_paused_15min">Pause for 15 minutes</string>
+    <string name="block_paused_30min">Pause for 30 minutes</string>
+    <string name="block_paused_1hr">Pause for 1 hour</string>
+    <string name="block_paused_2hr">Pause for 2 hours</string>
+    <string name="block_paused_today">Pause for rest of day</string>
+    <string name="block_paused_indefinitely">Pause indefinitely</string>
+    <string name="block_scan_qr">Scan QR Code to Unlock</string>
+    <string name="block_wrong_qr">Wrong QR code. Please scan the correct code for this block.</string>
+    <string name="block_master_password">Enter Master Password</string>
+</resources>
