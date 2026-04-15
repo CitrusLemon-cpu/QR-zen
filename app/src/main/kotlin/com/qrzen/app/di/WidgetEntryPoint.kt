@@ -1,0 +1,12 @@
+package com.qrzen.app.di
+
+import com.qrzen.app.data.db.AppBlockDao
+import dagger.hilt.EntryPoint
+import dagger.hilt.InstallIn
+import dagger.hilt.components.SingletonComponent
+
+@EntryPoint
+@InstallIn(SingletonComponent::class)
+interface WidgetEntryPoint {
+    fun appBlockDao(): AppBlockDao
+}
