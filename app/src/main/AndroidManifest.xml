@@ -13,6 +13,9 @@
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
 
     <application
         android:name=".QrZenApp"
@@ -44,6 +47,24 @@
             android:name=".ui.main.MainActivity"
             android:exported="false"
             android:launchMode="singleTask" />
+
+        <activity
+            android:name=".ui.lock.LockScreenActivity"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:showOnLockScreen="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.QrZen.Lock" />
+
+        <activity
+            android:name=".ui.block.EditBlockActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
+            android:name=".ui.block.AppPickerActivity"
+            android:exported="false" />
 
         <!-- 1px survival activity: brings process to foreground silently -->
         <activity
@@ -202,6 +223,17 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/appwidget_4x2" />
         </receiver>
+
+        <!-- FileProvider for sharing QR code images -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- ─── Content Provider ────────────────────────────────────────── -->
         <!--

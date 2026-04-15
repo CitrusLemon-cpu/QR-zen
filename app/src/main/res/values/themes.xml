@@ -15,4 +15,12 @@
         <item name="android:windowIsFloating">true</item>
         <item name="android:backgroundDimEnabled">false</item>
     </style>
+
+    <!-- Full-screen dark overlay for LockScreenActivity -->
+    <style name="Theme.QrZen.Lock" parent="Theme.QrZen">
+        <item name="android:windowBackground">@color/overlay_bg</item>
+        <item name="android:windowIsTranslucent">false</item>
+        <item name="android:statusBarColor">@color/overlay_bg</item>
+        <item name="android:navigationBarColor">@color/overlay_bg</item>
+    </style>
 </resources>
