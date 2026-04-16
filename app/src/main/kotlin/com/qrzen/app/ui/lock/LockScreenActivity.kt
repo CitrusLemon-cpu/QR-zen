@@ -76,7 +76,7 @@ class LockScreenActivity : AppCompatActivity() {
     private fun startQrScanner() {
         if (currentBlock == null) return
         @Suppress("DEPRECATION")
-        startActivityForResult(com.king.zxing.CaptureActivity.getLaunchIntent(this), REQ_QR_SCAN)
+        startActivityForResult(Intent(this, QrScanActivity::class.java), REQ_QR_SCAN)
     }
 
     @Deprecated("Deprecated in Java")
@@ -84,7 +84,7 @@ class LockScreenActivity : AppCompatActivity() {
         @Suppress("DEPRECATION")
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQ_QR_SCAN && resultCode == RESULT_OK) {
-            handleQrResult(com.king.zxing.util.CodeUtils.parseResult(data))
+            handleQrResult(data?.getStringExtra(com.king.zxing.CameraScan.SCAN_RESULT))
         }
     }
 
