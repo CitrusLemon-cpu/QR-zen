@@ -59,6 +59,10 @@
             android:theme="@style/Theme.QrZen.Lock" />
 
         <activity
+            android:name=".ui.lock.QrScanActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.block.EditBlockActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
