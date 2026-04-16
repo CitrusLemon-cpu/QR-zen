@@ -8,10 +8,11 @@ import com.king.zxing.CaptureActivity
 
 class QrScanActivity : CaptureActivity() {
 
-    override fun onScanResultCallback(result: Result) {
+    override fun onScanResultCallback(result: Result): Boolean {
         val intent = Intent()
         intent.putExtra(CameraScan.SCAN_RESULT, result.text)
         setResult(Activity.RESULT_OK, intent)
         finish()
+        return true
     }
 }
