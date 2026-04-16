@@ -13,6 +13,8 @@
     <string name="perm_next">Next</string>
     <string name="perm_skip">Skip</string>
     <string name="perm_done">Done</string>
+    <string name="perm_notif_title">Notifications</string>
+    <string name="perm_notif_desc">Allow QR Zen to show notifications for Pomodoro timers and block status updates.</string>
 
     <!-- Block UI -->
     <string name="block_paused_15min">Pause for 15 minutes</string>

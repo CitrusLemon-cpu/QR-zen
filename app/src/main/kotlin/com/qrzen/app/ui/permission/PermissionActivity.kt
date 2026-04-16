@@ -2,24 +2,31 @@ package com.qrzen.app.ui.permission
 
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
+import com.qrzen.app.R
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityPermissionBinding
 import com.qrzen.app.ui.main.MainActivity
 
 /**
- * 7-step permission onboarding. Steps:
+ * Permission onboarding. Steps:
  * 0 - Welcome
  * 1 - Accessibility Service
  * 2 - Notification Listener
- * 3 - Device Admin
- * 4 - Battery Optimization exemption
- * 5 - Draw Over Other Apps (SYSTEM_ALERT_WINDOW)
- * 6 - Usage Access (PACKAGE_USAGE_STATS)
+ * 3 - Notifications (Android 13+ only)
+ * 4 - Device Admin
+ * 5 - Battery Optimization exemption
+ * 6 - Draw Over Other Apps (SYSTEM_ALERT_WINDOW)
+ * 7 - Usage Access (PACKAGE_USAGE_STATS)
  */
 class PermissionActivity : AppCompatActivity() {
+    companion object {
+        private const val REQ_POST_NOTIF = 3001
+    }
 
     private lateinit var binding: ActivityPermissionBinding
     private var currentStep = 0
@@ -32,27 +39,46 @@ class PermissionActivity : AppCompatActivity() {
     )
 
     private val steps by lazy {
-        listOf(
-            Step(
+        buildList {
+            add(
+                Step(
                 "Welcome to QR Zen",
                 "QR Zen helps you stay focused by blocking distracting apps. A few permissions are needed to make everything work. Tap Next to continue.",
                 grantLabel = "Next"
-            ),
-            Step(
+            ))
+            add(
+                Step(
                 "Accessibility Access",
                 "QR Zen uses Accessibility Service to detect when a blocked app is in the foreground and show the block overlay.",
                 onGrant = {
                     startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
                 }
-            ),
-            Step(
+            ))
+            add(
+                Step(
                 "Notification Access",
                 "Allows QR Zen to suppress notifications from blocked apps while a session is active.",
                 onGrant = {
                     startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                 }
-            ),
-            Step(
+            ))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                add(
+                    Step(
+                        getString(R.string.perm_notif_title),
+                        getString(R.string.perm_notif_desc),
+                        onGrant = {
+                            ActivityCompat.requestPermissions(
+                                this,
+                                arrayOf(android.Manifest.permission.POST_NOTIFICATIONS),
+                                REQ_POST_NOTIF
+                            )
+                        }
+                    )
+                )
+            }
+            add(
+                Step(
                 "Device Admin",
                 "Device Admin prevents QR Zen from being uninstalled while a block is active, making it harder to circumvent.",
                 onGrant = {
@@ -64,8 +90,9 @@ class PermissionActivity : AppCompatActivity() {
                     }
                     startActivity(intent)
                 }
-            ),
-            Step(
+            ))
+            add(
+                Step(
                 "Battery Optimization",
                 "Exclude QR Zen from battery optimization so it keeps running in the background and survives aggressive power-saving modes.",
                 onGrant = {
@@ -74,8 +101,9 @@ class PermissionActivity : AppCompatActivity() {
                     }
                     startActivity(intent)
                 }
-            ),
-            Step(
+            ))
+            add(
+                Step(
                 "Display Over Apps",
                 "Allows QR Zen to show the block overlay on top of other apps when a blocked app is detected.",
                 onGrant = {
@@ -85,16 +113,17 @@ class PermissionActivity : AppCompatActivity() {
                     )
                     startActivity(intent)
                 }
-            ),
-            Step(
+            ))
+            add(
+                Step(
                 "Usage Access",
                 "Allows QR Zen to see which apps you use so it can track screen time and enforce usage limits.",
                 grantLabel = "Grant & Finish",
                 onGrant = {
                     startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
                 }
-            )
-        )
+            ))
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
