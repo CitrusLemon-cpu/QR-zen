@@ -37,6 +37,8 @@ class PomodoroActivity : AppCompatActivity() {
     private var sessionCount = 0
     private var timer: CountDownTimer? = null
     private var isPaused = false
+    private var remainingMs: Long = 0L
+    private var totalPhaseMs: Long = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,6 +59,8 @@ class PomodoroActivity : AppCompatActivity() {
         timer?.cancel()
         val durationMs = if (focusPhase) block.pomodoroDurationMin * 60_000L
         else block.pomodoroBreakMin * 60_000L
+        totalPhaseMs = durationMs
+        remainingMs = durationMs
 
         binding.tvPhaseLabel.text = if (focusPhase) "FOCUS" else "BREAK"
         binding.tvPhaseLabel.setTextColor(getColor(
@@ -72,22 +76,7 @@ class PomodoroActivity : AppCompatActivity() {
             else dao.setPausedUntil(block.id, System.currentTimeMillis() + durationMs)
         }
 
-        timer = object : CountDownTimer(durationMs, 1000L) {
-            override fun onTick(ms: Long) {
-                val min = ms / 60_000
-                val sec = (ms % 60_000) / 1000
-                val text = "%02d:%02d".format(min, sec)
-                binding.tvCountdown.text = text
-                binding.progressBar.progress = ((1 - ms.toFloat() / durationMs) * 100).toInt()
-                showNotification("${if (focusPhase) "Focus" else "Break"}: $text remaining")
-            }
-
-            override fun onFinish() {
-                vibrate()
-                if (focusPhase) sessionCount++
-                startPhase(block, !focusPhase)
-            }
-        }.start()
+        startTimer(block, durationMs)
 
         binding.btnPauseResume.setOnClickListener {
             if (!isPaused) {
@@ -97,7 +86,10 @@ class PomodoroActivity : AppCompatActivity() {
             } else {
                 isPaused = false
                 binding.btnPauseResume.text = "Pause"
-                startPhase(block, isFocusPhase)
+                lifecycleScope.launch {
+                    if (!isFocusPhase) dao.setPausedUntil(block.id, System.currentTimeMillis() + remainingMs)
+                }
+                startTimer(block, remainingMs)
             }
         }
         binding.btnStop.setOnClickListener {
@@ -106,6 +98,29 @@ class PomodoroActivity : AppCompatActivity() {
             lifecycleScope.launch { dao.setPausedUntil(block.id, 0L) }
             finish()
         }
+    }
+
+    private fun startTimer(block: AppBlock, durationMs: Long) {
+        timer?.cancel()
+        remainingMs = durationMs
+        timer = object : CountDownTimer(durationMs, 1000L) {
+            override fun onTick(ms: Long) {
+                remainingMs = ms
+                val min = ms / 60_000
+                val sec = (ms % 60_000) / 1000
+                val text = "%02d:%02d".format(min, sec)
+                binding.tvCountdown.text = text
+                binding.progressBar.progress = ((1 - ms.toFloat() / totalPhaseMs) * 100).toInt()
+                showNotification("${if (isFocusPhase) "Focus" else "Break"}: $text remaining")
+            }
+
+            override fun onFinish() {
+                remainingMs = 0L
+                vibrate()
+                if (isFocusPhase) sessionCount++
+                startPhase(block, !isFocusPhase)
+            }
+        }.start()
     }
 
     private fun vibrate() {
