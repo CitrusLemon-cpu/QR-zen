@@ -29,6 +29,7 @@
     <string name="lock_screen_message">This app is blocked. Scan your QR code to take a break.</string>
     <string name="edit_block_title_hint">Block name (e.g. Social Media)</string>
     <string name="edit_block_select_apps">Select Apps to Block</string>
+    <string name="edit_block_select_allowed_apps">Select Allowed Apps</string>
     <string name="edit_block_schedule">Schedule</string>
     <string name="edit_block_edit_window">Edit Window</string>
     <string name="edit_block_qr_section">QR Unlock Code</string>
@@ -40,6 +41,13 @@
     <string name="edit_block_save">Save Block</string>
     <string name="edit_window_locked">You can only edit this block between %1$s and %2$s</string>
     <string name="app_picker_title">Select Apps to Block</string>
+    <string name="block_type_title">Block Type</string>
+    <string name="block_type_blocklist">Block specific apps</string>
+    <string name="block_type_allowlist">Allow only these apps (allowlist)</string>
     <string name="qr_display_instructions">Print or save this QR code. You’ll need to scan it to unlock this block.</string>
     <string name="home_empty">No blocks yet. Tap + to add one.</string>
+    <string name="allowlist_remaining">remaining</string>
+    <string name="allowlist_allowed_apps">Allowed Apps</string>
+    <string name="allowlist_scan_qr_end_early">Scan QR Code to End Early</string>
+    <string name="allowlist_wrong_qr">Wrong QR code. Please scan the correct code for this block.</string>
 </resources>

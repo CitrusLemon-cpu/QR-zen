@@ -24,7 +24,8 @@ class BlockAdapter(
         fun bind(block: AppBlock) {
             binding.tvTitle.text = block.title
             binding.tvTimeRange.text = "${block.startTime} \u2013 ${block.endTime}"
-            binding.tvDays.text = formatDays(block.activeDays)
+            val modePrefix = if (block.isAllowlistMode) "Allowlist" else "Blocklist"
+            binding.tvDays.text = "$modePrefix \u00b7 ${formatDays(block.activeDays)}"
             binding.switchEnabled.setOnCheckedChangeListener(null)
             binding.switchEnabled.isChecked = block.isEnabled
             binding.switchEnabled.setOnCheckedChangeListener { _, checked ->

@@ -14,8 +14,10 @@ data class AppBlock(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     /** User-facing name for this block (e.g. "Social Media") */
     val title: String = "",
-    /** Comma-separated package names of blocked apps */
+    /** Comma-separated package names of blocked or allowed apps */
     val appPackages: String = "",
+    /** When true, appPackages lists allowed apps; everything else is blocked */
+    val isAllowlistMode: Boolean = false,
     /** Active time window start in "HH:mm" format */
     val startTime: String = "00:00",
     /** Active time window end in "HH:mm" format */

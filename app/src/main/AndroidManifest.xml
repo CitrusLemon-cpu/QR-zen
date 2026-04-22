@@ -81,6 +81,15 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.allowlist.AllowlistOverlayActivity"
+            android:exported="false"
+            android:launchMode="singleInstance"
+            android:excludeFromRecents="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
+            android:theme="@style/Theme.QrZen.Lock" />
+
+        <activity
             android:name=".ui.pomodoro.PomodoroActivity"
             android:exported="false"
             android:launchMode="singleTop" />
