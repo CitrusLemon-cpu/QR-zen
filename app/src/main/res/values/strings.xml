@@ -32,6 +32,7 @@
     <string name="edit_block_select_allowed_apps">Select Allowed Apps</string>
     <string name="edit_block_schedule">Schedule</string>
     <string name="edit_block_qr_section">QR Unlock Code</string>
+    <string name="edit_block_scan_custom_qr">Scan Your Own QR Code</string>
     <string name="edit_block_generate_qr">Show QR Code</string>
     <string name="edit_block_share_qr">Share QR Code</string>
     <string name="edit_block_save_qr">Save to Downloads</string>
@@ -60,7 +61,7 @@
     <string name="unlock_delay_desc">You must wait this long before you can edit or pause the block.</string>
     <string name="unlock_password_desc">Enter this password to edit or pause the block.</string>
     <string name="unlock_type_over_desc">You must type this text exactly to edit or pause the block.</string>
-    <string name="unlock_qr_desc">Scan your QR code to edit or pause the block.</string>
+    <string name="unlock_qr_desc">Scan your own QR code or use the auto-generated one to edit or pause the block.</string>
     <string name="unlock_edit_window_desc">You can only edit or pause this block during the specified window.</string>
     <string name="unlock_timer_desc">You cannot edit or pause this block until this time.</string>
     <string name="unlock_delay_label">Delay duration (minutes)</string>
