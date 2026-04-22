@@ -2,12 +2,17 @@ package com.qrzen.app.ui.block
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import android.widget.ToggleButton
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
@@ -15,8 +20,12 @@ import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.ActivityEditBlockBinding
+import com.qrzen.app.databinding.ItemSelectedAppIconBinding
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -60,6 +69,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var editWindowEnd: String = "10:00"
     private var editWindowDays: String = "1111111"
     private var lockUntil: Long = 0L
+    private var selectedAppsLoadJob: Job? = null
     private val qrScanForSetLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val scanned = result.data?.getStringExtra(com.king.zxing.CameraScan.SCAN_RESULT)
@@ -116,6 +126,7 @@ class EditBlockActivity : AppCompatActivity() {
 
     private fun setupUi() {
         setupUnlockMethodDropdown()
+        binding.rvSelectedApps.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
 
         binding.npDelayMinutes.minValue = 1
         binding.npDelayMinutes.maxValue = 60
@@ -263,14 +274,71 @@ class EditBlockActivity : AppCompatActivity() {
     }
 
     private fun updateSelectedAppsDisplay() {
-        val packages = selectedPackages.split(",")
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
+        val packages = getSelectedPackageList()
         binding.tvSelectedApps.text = if (isAllowlistMode) {
             if (packages.isEmpty()) "No allowed apps selected" else "${packages.size} app(s) allowed"
         } else {
             if (packages.isEmpty()) "No apps selected" else "${packages.size} app(s) selected"
         }
+
+        selectedAppsLoadJob?.cancel()
+        if (packages.isEmpty()) {
+            binding.cardSelectedApps.visibility = View.GONE
+            binding.rvSelectedApps.adapter = null
+            return
+        }
+
+        binding.cardSelectedApps.visibility = View.VISIBLE
+        binding.rvSelectedApps.adapter = null
+        selectedAppsLoadJob = lifecycleScope.launch {
+            val icons = withContext(Dispatchers.IO) {
+                packages.mapNotNull { pkg ->
+                    try {
+                        val appInfo = packageManager.getApplicationInfo(pkg, 0)
+                        SelectedAppIcon(pkg, packageManager.getApplicationIcon(appInfo))
+                    } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+                        null
+                    }
+                }
+            }
+            if (packages != getSelectedPackageList()) return@launch
+            if (icons.isEmpty()) {
+                binding.cardSelectedApps.visibility = View.GONE
+                binding.rvSelectedApps.adapter = null
+            } else {
+                binding.cardSelectedApps.visibility = View.VISIBLE
+                binding.rvSelectedApps.adapter = SelectedAppsAdapter(icons)
+            }
+        }
+    }
+
+    private fun getSelectedPackageList(): List<String> = selectedPackages.split(",")
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+
+    data class SelectedAppIcon(
+        val packageName: String,
+        val icon: android.graphics.drawable.Drawable
+    )
+
+    private inner class SelectedAppsAdapter(
+        private val apps: List<SelectedAppIcon>
+    ) : RecyclerView.Adapter<SelectedAppsAdapter.ViewHolder>() {
+
+        inner class ViewHolder(
+            val binding: ItemSelectedAppIconBinding
+        ) : RecyclerView.ViewHolder(binding.root) {
+            fun bind(item: SelectedAppIcon) {
+                binding.ivSelectedAppIcon.setImageDrawable(item.icon)
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            ViewHolder(ItemSelectedAppIconBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(apps[position])
+
+        override fun getItemCount(): Int = apps.size
     }
 
     private fun updateScheduleButtons() {

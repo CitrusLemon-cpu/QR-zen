@@ -5,13 +5,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
+import androidx.lifecycle.findViewTreeLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.ItemBlockBinding
+import com.qrzen.app.databinding.ItemSelectedAppIconBinding
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class BlockAdapter(
     private val onToggle: (AppBlock, Boolean) -> Boolean,
@@ -30,15 +38,41 @@ class BlockAdapter(
         }
     }
 
+    data class BlockAppIcon(
+        val packageName: String,
+        val icon: android.graphics.drawable.Drawable
+    )
+
+    private class BlockAppsIconAdapter(
+        private val apps: List<BlockAppIcon>
+    ) : RecyclerView.Adapter<BlockAppsIconAdapter.ViewHolder>() {
+        class ViewHolder(val binding: ItemSelectedAppIconBinding) : RecyclerView.ViewHolder(binding.root) {
+            fun bind(item: BlockAppIcon) {
+                binding.ivSelectedAppIcon.setImageDrawable(item.icon)
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            ViewHolder(ItemSelectedAppIconBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(apps[position])
+
+        override fun getItemCount(): Int = apps.size
+    }
+
     inner class ViewHolder(val binding: ItemBlockBinding) : RecyclerView.ViewHolder(binding.root) {
         private var countDownTimer: CountDownTimer? = null
         private var blockNowTimer: CountDownTimer? = null
+        private var iconLoadJob: Job? = null
+        private var boundPackages: List<String> = emptyList()
 
         fun bind(block: AppBlock) {
             countDownTimer?.cancel()
             countDownTimer = null
             blockNowTimer?.cancel()
             blockNowTimer = null
+            iconLoadJob?.cancel()
+            iconLoadJob = null
 
             binding.tvTitle.text = block.title
             binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
@@ -59,6 +93,49 @@ class BlockAdapter(
 
             setupPauseTimer(block)
             setupBlockNowTimer(block)
+
+            val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            boundPackages = packages
+            if (packages.isEmpty()) {
+                binding.rvBlockApps.visibility = View.GONE
+                binding.rvBlockApps.adapter = null
+                return
+            }
+
+            binding.rvBlockApps.visibility = View.VISIBLE
+            binding.rvBlockApps.adapter = null
+            if (binding.rvBlockApps.layoutManager == null) {
+                binding.rvBlockApps.layoutManager = LinearLayoutManager(binding.root.context, LinearLayoutManager.HORIZONTAL, false)
+            }
+
+            val lifecycleOwner = binding.root.findViewTreeLifecycleOwner()
+            if (lifecycleOwner == null) {
+                binding.rvBlockApps.visibility = View.GONE
+                binding.rvBlockApps.adapter = null
+                return
+            }
+
+            val pm = binding.root.context.packageManager
+            iconLoadJob = lifecycleOwner.lifecycleScope.launch {
+                val icons = withContext(Dispatchers.IO) {
+                    packages.mapNotNull { pkg ->
+                        try {
+                            val appInfo = pm.getApplicationInfo(pkg, 0)
+                            BlockAppIcon(pkg, pm.getApplicationIcon(appInfo))
+                        } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+                            null
+                        }
+                    }
+                }
+                if (packages != boundPackages) return@launch
+                if (icons.isEmpty()) {
+                    binding.rvBlockApps.visibility = View.GONE
+                    binding.rvBlockApps.adapter = null
+                } else {
+                    binding.rvBlockApps.visibility = View.VISIBLE
+                    binding.rvBlockApps.adapter = BlockAppsIconAdapter(icons)
+                }
+            }
         }
 
         private fun bindToggleListener(block: AppBlock) {
@@ -164,6 +241,8 @@ class BlockAdapter(
             countDownTimer = null
             blockNowTimer?.cancel()
             blockNowTimer = null
+            iconLoadJob?.cancel()
+            iconLoadJob = null
         }
     }
 
