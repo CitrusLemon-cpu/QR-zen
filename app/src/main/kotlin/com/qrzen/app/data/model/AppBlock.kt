@@ -33,6 +33,24 @@ data class AppBlock(
      * Scanning the correct QR presents the pause-duration picker.
      */
     val qrSecret: String = "",
+    /** Which unlock method is configured. Default NONE = freely editable. */
+    val unlockMethod: String = "NONE",
+    /** Delay method: how many minutes the user must wait */
+    val delayMinutes: Int = 5,
+    /** Password method: per-block password */
+    val blockPassword: String = "",
+    /** Type-over text method: the challenge text (custom or template for random) */
+    val typeOverText: String = "",
+    /** Type-over text method: if true, generate random text each time instead of using typeOverText */
+    val typeOverIsRandom: Boolean = false,
+    /** Edit window method: start time in "HH:mm" format */
+    val editWindowStart: String = "09:00",
+    /** Edit window method: end time in "HH:mm" format */
+    val editWindowEnd: String = "10:00",
+    /** Edit window method: active days as 7-char binary string (same format as activeDays) */
+    val editWindowDays: String = "1111111",
+    /** Timer method: epoch millis until which editing is locked */
+    val lockUntil: Long = 0L,
     /** Whether the master-password fallback is enabled for this specific block */
     val masterPasswordEnabled: Boolean = false,
     /**
