@@ -46,6 +46,13 @@
         <TextView android:id="@+id/tvPauseAllStatus"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:textSize="13sp" android:textColor="#FFA726"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResumeAll"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_resume_all"
             android:layout_marginBottom="16dp"
             android:visibility="gone" />
         <View android:layout_width="match_parent" android:layout_height="1dp"

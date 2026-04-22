@@ -100,6 +100,8 @@ class SettingsFragment : Fragment() {
             }
         }
 
+        binding.btnResumeAll.setOnClickListener { resumeAllBlocks() }
+
         binding.swRemoveNotif.setOnCheckedChangeListener { _, checked ->
             Prefs.removeNotifications = checked
         }
@@ -148,7 +150,8 @@ class SettingsFragment : Fragment() {
         binding.btnPauseAll.visibility = if (masterPasswordEnabled) View.VISIBLE else View.GONE
         binding.btnPauseAll.isEnabled = masterPasswordEnabled
         val pauseAllUntil = Prefs.pauseAllUntil
-        if (pauseAllUntil > System.currentTimeMillis()) {
+        val isPauseActive = pauseAllUntil > System.currentTimeMillis()
+        if (isPauseActive) {
             binding.tvPauseAllStatus.visibility = View.VISIBLE
             binding.tvPauseAllStatus.text = getString(
                 R.string.settings_pause_all_status,
@@ -158,6 +161,7 @@ class SettingsFragment : Fragment() {
             binding.tvPauseAllStatus.visibility = View.GONE
             binding.tvPauseAllStatus.text = ""
         }
+        binding.btnResumeAll.visibility = if (isPauseActive) View.VISIBLE else View.GONE
     }
 
     private fun promptDisableMasterPassword() {
@@ -238,6 +242,20 @@ class SettingsFragment : Fragment() {
                 getString(R.string.settings_pause_all_confirm, option.label),
                 Snackbar.LENGTH_LONG
             ).show()
+        }
+    }
+
+    private fun resumeAllBlocks() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            Prefs.pauseAllUntil = 0L
+            dao.getAll().forEach { block ->
+                if (block.pausedUntil > System.currentTimeMillis()) {
+                    dao.setPausedUntil(block.id, 0L)
+                }
+            }
+            WidgetRefresh.refresh(requireContext().applicationContext)
+            updatePauseAllViews()
+            Snackbar.make(binding.root, getString(R.string.settings_resume_all_confirm), Snackbar.LENGTH_SHORT).show()
         }
     }
 

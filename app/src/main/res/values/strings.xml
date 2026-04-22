@@ -100,6 +100,8 @@
     <string name="settings_pause_all_confirm">All blocks paused for %1$s</string>
     <string name="settings_old_password_hint">Current password</string>
     <string name="settings_old_password_wrong">Incorrect current password</string>
+    <string name="settings_resume_all">Resume All Blocks</string>
+    <string name="settings_resume_all_confirm">All blocks resumed</string>
     <string name="settings_pause_all_duration">Pause duration</string>
     <string name="settings_master_pwd_required">Enter master password to continue</string>
 </resources>
