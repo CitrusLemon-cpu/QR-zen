@@ -7,9 +7,14 @@ import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.BlockEventDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
+import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
 import com.qrzen.app.ui.lock.LockScreenActivity
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
@@ -30,12 +35,25 @@ class BlockAccessibilityService : AccessibilityService() {
 
         scope.launch {
             val now = System.currentTimeMillis()
-            val activeBlocks = dao.getAll().filter { block ->
-                block.isEnabled && now > block.pausedUntil &&
-                isBlockActive(block) &&
-                block.appPackages.split(",").map { it.trim() }.contains(pkg)
+            val activeBlocks = dao.getAll().filter { it.isEnabled && now > it.pausedUntil && isBlockActive(it) }
+            val blocklistMatch = activeBlocks
+                .filter { !it.isAllowlistMode }
+                .firstOrNull { block ->
+                    block.appPackages.split(",").map { it.trim() }.contains(pkg)
+                }
+            if (blocklistMatch != null) {
+                launchLockScreen(pkg, blocklistMatch)
+                return@launch
             }
-            if (activeBlocks.isNotEmpty()) launchLockScreen(pkg, activeBlocks.first())
+            val allowlistMatch = activeBlocks
+                .filter { it.isAllowlistMode }
+                .firstOrNull { block ->
+                    val allowed = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                    !allowed.contains(pkg)
+                }
+            if (allowlistMatch != null) {
+                launchAllowlistOverlay(pkg, allowlistMatch)
+            }
         }
     }
 
@@ -44,7 +62,7 @@ class BlockAccessibilityService : AccessibilityService() {
         val start = LocalTime.parse(block.startTime, fmt)
         val end = LocalTime.parse(block.endTime, fmt)
         val timeOk = if (end.isAfter(start)) now.isAfter(start) && now.isBefore(end)
-                     else now.isAfter(start) || now.isBefore(end)
+        else now.isAfter(start) || now.isBefore(end)
         if (!timeOk) return false
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
@@ -58,11 +76,39 @@ class BlockAccessibilityService : AccessibilityService() {
             putExtra(LockScreenActivity.EXTRA_BLOCKED_PKG, blockedPkg)
         })
         scope.launch {
-            blockEventDao.insert(BlockEvent(blockId = block.id, blockTitle = block.title,
-                packageName = blockedPkg, eventType = "BLOCKED"))
+            blockEventDao.insert(
+                BlockEvent(
+                    blockId = block.id,
+                    blockTitle = block.title,
+                    packageName = blockedPkg,
+                    eventType = "BLOCKED"
+                )
+            )
+        }
+    }
+
+    private fun launchAllowlistOverlay(blockedPkg: String, block: AppBlock) {
+        startActivity(Intent(this, AllowlistOverlayActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_ID, block.id)
+            putExtra(AllowlistOverlayActivity.EXTRA_BLOCKED_PKG, blockedPkg)
+        })
+        scope.launch {
+            blockEventDao.insert(
+                BlockEvent(
+                    blockId = block.id,
+                    blockTitle = block.title,
+                    packageName = blockedPkg,
+                    eventType = "BLOCKED"
+                )
+            )
         }
     }
 
     override fun onInterrupt() {}
-    override fun onDestroy() { super.onDestroy(); scope.cancel() }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
 }
