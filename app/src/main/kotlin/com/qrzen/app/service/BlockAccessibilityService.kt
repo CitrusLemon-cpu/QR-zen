@@ -1,7 +1,10 @@
 package com.qrzen.app.service
 
 import android.accessibilityservice.AccessibilityService
+import android.app.KeyguardManager
 import android.content.Intent
+import android.net.Uri
+import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.qrzen.app.data.model.AppBlock
@@ -24,6 +27,23 @@ class BlockAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "QrZenAccessibility"
+
+        /** System packages that must never be blocked by allowlist mode. */
+        private val SYSTEM_EXEMPT_PACKAGES = setOf(
+            "com.android.systemui",
+            "com.android.settings",
+            "com.android.permissioncontroller",
+            "com.google.android.permissioncontroller",
+            "com.android.packageinstaller",
+            "com.google.android.packageinstaller",
+            "com.android.server.telecom",
+            "com.android.phone",
+            "com.android.incallui",
+            "com.google.android.dialer",
+            "com.samsung.android.dialer",
+            "com.samsung.android.incallui",
+            "com.android.emergency"
+        )
     }
 
     private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
@@ -37,6 +57,34 @@ class BlockAccessibilityService : AccessibilityService() {
             applicationContext,
             WidgetEntryPoint::class.java
         )
+    }
+
+    /** All packages that declare themselves as launchers (ACTION_MAIN + CATEGORY_HOME). */
+    private val launcherPackages: Set<String> by lazy {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        packageManager.queryIntentActivities(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { it.activityInfo?.packageName }
+            .toSet()
+    }
+
+    private val dialerPackages: Set<String> by lazy {
+        val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+            data = Uri.parse("tel:")
+        }
+        packageManager.queryIntentActivities(dialIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { it.activityInfo?.packageName }
+            .toSet()
+    }
+
+    private fun isExemptFromAllowlist(pkg: String): Boolean {
+        return pkg in SYSTEM_EXEMPT_PACKAGES || pkg in launcherPackages || pkg in dialerPackages
+    }
+
+    private fun isDeviceLocked(): Boolean {
+        val km = getSystemService(KeyguardManager::class.java) ?: return false
+        return km.isKeyguardLocked
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -58,6 +106,9 @@ class BlockAccessibilityService : AccessibilityService() {
                 launchLockScreen(pkg, blocklistMatch)
                 return@launch
             }
+
+            // Skip allowlist blocking for exempt packages and locked device
+            if (isExemptFromAllowlist(pkg) || isDeviceLocked()) return@launch
 
             val allowlistMatch = activeBlocks
                 .filter { it.isAllowlistMode }
