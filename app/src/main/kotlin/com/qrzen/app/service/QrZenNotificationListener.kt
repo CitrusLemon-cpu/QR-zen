@@ -68,8 +68,8 @@ class QrZenNotificationListener : NotificationListenerService() {
         val now = LocalTime.now()
         val start = LocalTime.parse(block.startTime, fmt)
         val end = LocalTime.parse(block.endTime, fmt)
-        val timeOk = if (end.isAfter(start)) now.isAfter(start) && now.isBefore(end)
-        else now.isAfter(start) || now.isBefore(end)
+        val timeOk = if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
+        else !now.isBefore(start) || !now.isAfter(end)
         if (!timeOk) return false
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7

@@ -1,10 +1,14 @@
 package com.qrzen.app.ui.main
 
+import android.accessibilityservice.AccessibilityServiceInfo
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.provider.Settings
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.accessibility.AccessibilityManager
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -71,6 +75,29 @@ class HomeFragment : Fragment() {
                 }
             }
         }
+
+        binding.cardServiceWarning.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+        updateServiceWarning()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        updateServiceWarning()
+    }
+
+    private fun isAccessibilityServiceEnabled(): Boolean {
+        val am = requireContext().getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
+        val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
+        return enabledServices.any {
+            it.resolveInfo.serviceInfo.packageName == requireContext().packageName
+        }
+    }
+
+    private fun updateServiceWarning() {
+        val enabled = isAccessibilityServiceEnabled()
+        binding.cardServiceWarning.visibility = if (enabled) View.GONE else View.VISIBLE
     }
 
     private fun showBlockOptions(block: AppBlock) {
