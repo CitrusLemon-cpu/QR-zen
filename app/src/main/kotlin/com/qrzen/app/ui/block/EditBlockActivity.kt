@@ -9,18 +9,19 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import android.widget.ToggleButton
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.datepicker.MaterialDatePicker
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.ActivityEditBlockBinding
-import com.qrzen.app.databinding.ItemSelectedAppIconBinding
+import com.qrzen.app.databinding.ItemEditAppGridBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -126,7 +127,7 @@ class EditBlockActivity : AppCompatActivity() {
 
     private fun setupUi() {
         setupUnlockMethodDropdown()
-        binding.rvSelectedApps.layoutManager = LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        binding.rvSelectedApps.layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, 5)
 
         binding.npDelayMinutes.minValue = 1
         binding.npDelayMinutes.maxValue = 60
@@ -282,20 +283,24 @@ class EditBlockActivity : AppCompatActivity() {
         }
 
         selectedAppsLoadJob?.cancel()
+        binding.rvSelectedApps.adapter = null
         if (packages.isEmpty()) {
-            binding.cardSelectedApps.visibility = View.GONE
-            binding.rvSelectedApps.adapter = null
+            binding.rvSelectedApps.visibility = View.GONE
             return
         }
 
-        binding.cardSelectedApps.visibility = View.VISIBLE
-        binding.rvSelectedApps.adapter = null
+        binding.rvSelectedApps.visibility = View.VISIBLE
         selectedAppsLoadJob = lifecycleScope.launch {
             val icons = withContext(Dispatchers.IO) {
                 packages.mapNotNull { pkg ->
                     try {
                         val appInfo = packageManager.getApplicationInfo(pkg, 0)
-                        SelectedAppIcon(pkg, packageManager.getApplicationIcon(appInfo))
+                        SelectedAppIcon(
+                            packageName = pkg,
+                            label = packageManager.getApplicationLabel(appInfo).toString(),
+                            icon = packageManager.getApplicationIcon(appInfo),
+                            timerExpiry = if (isAllowlistMode) Prefs.getAppTimerExpiry(pkg) else 0L
+                        )
                     } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
                         null
                     }
@@ -303,10 +308,10 @@ class EditBlockActivity : AppCompatActivity() {
             }
             if (packages != getSelectedPackageList()) return@launch
             if (icons.isEmpty()) {
-                binding.cardSelectedApps.visibility = View.GONE
+                binding.rvSelectedApps.visibility = View.GONE
                 binding.rvSelectedApps.adapter = null
             } else {
-                binding.cardSelectedApps.visibility = View.VISIBLE
+                binding.rvSelectedApps.visibility = View.VISIBLE
                 binding.rvSelectedApps.adapter = SelectedAppsAdapter(icons)
             }
         }
@@ -318,7 +323,9 @@ class EditBlockActivity : AppCompatActivity() {
 
     data class SelectedAppIcon(
         val packageName: String,
-        val icon: android.graphics.drawable.Drawable
+        val label: String,
+        val icon: android.graphics.drawable.Drawable,
+        val timerExpiry: Long = 0L
     )
 
     private inner class SelectedAppsAdapter(
@@ -326,19 +333,88 @@ class EditBlockActivity : AppCompatActivity() {
     ) : RecyclerView.Adapter<SelectedAppsAdapter.ViewHolder>() {
 
         inner class ViewHolder(
-            val binding: ItemSelectedAppIconBinding
+            val binding: ItemEditAppGridBinding
         ) : RecyclerView.ViewHolder(binding.root) {
             fun bind(item: SelectedAppIcon) {
-                binding.ivSelectedAppIcon.setImageDrawable(item.icon)
+                binding.ivAppIcon.setImageDrawable(item.icon)
+                binding.tvAppLabel.text = item.label
+
+                val now = System.currentTimeMillis()
+                if (item.timerExpiry > now) {
+                    binding.tvTimerBadge.visibility = View.VISIBLE
+                    val remaining = item.timerExpiry - now
+                    binding.tvTimerBadge.text = formatTimerBadge(remaining)
+                } else if (item.timerExpiry > 0L && item.timerExpiry <= now) {
+                    binding.tvTimerBadge.visibility = View.VISIBLE
+                    binding.tvTimerBadge.text = "00:00"
+                } else {
+                    binding.tvTimerBadge.visibility = View.GONE
+                }
+
+                if (isAllowlistMode) {
+                    binding.root.setOnClickListener {
+                        showAppTimerDialog(item)
+                    }
+                } else {
+                    binding.root.setOnClickListener(null)
+                }
             }
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            ViewHolder(ItemSelectedAppIconBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            ViewHolder(ItemEditAppGridBinding.inflate(
+                LayoutInflater.from(parent.context), parent, false
+            ))
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) = holder.bind(apps[position])
-
         override fun getItemCount(): Int = apps.size
+    }
+
+    private fun showAppTimerDialog(appItem: SelectedAppIcon) {
+        val dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_app_timer, null)
+        val npHours = dialogView.findViewById<android.widget.NumberPicker>(R.id.npHours)
+        val npMinutes = dialogView.findViewById<android.widget.NumberPicker>(R.id.npMinutes)
+
+        npHours.minValue = 0
+        npHours.maxValue = 23
+        npMinutes.minValue = 0
+        npMinutes.maxValue = 59
+
+        val now = System.currentTimeMillis()
+        if (appItem.timerExpiry > now) {
+            val remainingMinutes = ((appItem.timerExpiry - now) / 60_000L).toInt()
+            npHours.value = remainingMinutes / 60
+            npMinutes.value = remainingMinutes % 60
+        } else {
+            npHours.value = 1
+            npMinutes.value = 0
+        }
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.timer_dialog_title, appItem.label))
+            .setView(dialogView)
+            .setPositiveButton(R.string.timer_set) { _, _ ->
+                val totalMinutes = npHours.value * 60L + npMinutes.value
+                if (totalMinutes > 0) {
+                    val expiry = System.currentTimeMillis() + totalMinutes * 60_000L
+                    Prefs.setAppTimerExpiry(appItem.packageName, expiry)
+                }
+                updateSelectedAppsDisplay()
+            }
+            .setNeutralButton(R.string.timer_clear) { _, _ ->
+                Prefs.setAppTimerExpiry(appItem.packageName, 0L)
+                updateSelectedAppsDisplay()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun formatTimerBadge(millis: Long): String {
+        val totalMinutes = (millis / 60_000L).coerceAtLeast(0L)
+        val hours = totalMinutes / 60
+        val minutes = totalMinutes % 60
+        return if (hours > 0) String.format("%d:%02d", hours, minutes)
+        else String.format("%02d:00", minutes)
     }
 
     private fun updateScheduleButtons() {
