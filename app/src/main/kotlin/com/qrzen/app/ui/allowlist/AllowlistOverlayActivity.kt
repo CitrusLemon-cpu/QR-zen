@@ -11,6 +11,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.EditText
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
@@ -28,6 +29,7 @@ import com.qrzen.app.databinding.ActivityAllowlistOverlayBinding
 import com.qrzen.app.databinding.BottomSheetPauseDurationBinding
 import com.qrzen.app.databinding.ItemAllowedAppBinding
 import com.qrzen.app.ui.lock.QrScanActivity
+import com.qrzen.app.ui.unlock.UnlockChallengeRenderer
 import com.qrzen.app.util.SilentModeHelper
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
@@ -48,22 +50,27 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_BLOCK_ID = "extra_block_id"
         const val EXTRA_BLOCKED_PKG = "extra_blocked_pkg"
-        private const val REQ_QR_SCAN = 1002
     }
 
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var blockEventDao: BlockEventDao
 
     private lateinit var binding: ActivityAllowlistOverlayBinding
+    private lateinit var unlockRenderer: UnlockChallengeRenderer
     private var currentBlock: AppBlock? = null
     private var countDownTimer: CountDownTimer? = null
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
+
+    private val qrScanLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        unlockRenderer.handleQrScanResult(result.data?.getStringExtra(CameraScan.SCAN_RESULT))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
         binding = ActivityAllowlistOverlayBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        unlockRenderer = UnlockChallengeRenderer(this, binding.challengeContainer, binding.tvError)
         binding.rvAllowedApps.layoutManager = GridLayoutManager(this, 3)
         loadBlock(intent.getIntExtra(EXTRA_BLOCK_ID, -1))
     }
@@ -92,7 +99,16 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         binding.tvError.visibility = View.GONE
         binding.tvError.text = ""
         binding.rvAllowedApps.adapter = AllowedAppAdapter(allowedApps) { launchAllowedApp(it) }
-        binding.btnScanQr.setOnClickListener { startQrScanner() }
+        unlockRenderer.render(
+            block = block,
+            showGoBackButton = false,
+            onRequestQrScan = {
+                qrScanLauncher.launch(Intent(this, QrScanActivity::class.java))
+            },
+            onUnlocked = {
+                showPauseDurationSheet(block)
+            }
+        )
         val showMasterPwd = block.masterPasswordEnabled && Prefs.masterPasswordEnabled
         binding.btnMasterPassword.visibility = if (showMasterPwd) View.VISIBLE else View.GONE
         binding.btnMasterPassword.setOnClickListener { showMasterPasswordDialog(block) }
@@ -166,31 +182,6 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun startQrScanner() {
-        if (currentBlock == null) return
-        @Suppress("DEPRECATION")
-        startActivityForResult(Intent(this, QrScanActivity::class.java), REQ_QR_SCAN)
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        @Suppress("DEPRECATION")
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_QR_SCAN && resultCode == RESULT_OK) {
-            handleQrResult(data?.getStringExtra(CameraScan.SCAN_RESULT))
-        }
-    }
-
-    private fun handleQrResult(scanned: String?) {
-        val block = currentBlock ?: return
-        if (scanned == block.qrSecret) {
-            showPauseDurationSheet(block)
-        } else {
-            binding.tvError.visibility = View.VISIBLE
-            binding.tvError.text = getString(R.string.allowlist_wrong_qr)
-        }
-    }
-
     private fun showPauseDurationSheet(block: AppBlock) {
         val sheet = BottomSheetDialog(this)
         val sb = BottomSheetPauseDurationBinding.inflate(LayoutInflater.from(this))
@@ -243,10 +234,11 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             .setView(et)
             .setPositiveButton(android.R.string.ok) { _, _ ->
                 if (et.text.toString() == Prefs.masterPassword) {
+                    binding.tvError.visibility = View.GONE
                     showPauseDurationSheet(block)
                 } else {
                     binding.tvError.visibility = View.VISIBLE
-                    binding.tvError.text = "Incorrect password"
+                    binding.tvError.text = getString(R.string.challenge_password_wrong)
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -268,6 +260,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         countDownTimer?.cancel()
+        unlockRenderer.clear()
         super.onDestroy()
     }
 
