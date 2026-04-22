@@ -72,6 +72,11 @@
             android:exported="false" />
 
         <activity
+            android:name=".ui.unlock.UnlockChallengeActivity"
+            android:exported="false"
+            android:theme="@style/Theme.QrZen.Lock" />
+
+        <activity
             android:name=".ui.block.EditBlockActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />

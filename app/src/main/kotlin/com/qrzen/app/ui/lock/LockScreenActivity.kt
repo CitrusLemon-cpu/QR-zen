@@ -7,10 +7,12 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.WindowManager
 import android.widget.EditText
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.king.zxing.CameraScan
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.BlockEventDao
@@ -19,6 +21,7 @@ import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityLockScreenBinding
 import com.qrzen.app.databinding.BottomSheetPauseDurationBinding
+import com.qrzen.app.ui.unlock.UnlockChallengeRenderer
 import com.qrzen.app.util.SilentModeHelper
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
@@ -32,19 +35,25 @@ class LockScreenActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_BLOCK_ID = "extra_block_id"
         const val EXTRA_BLOCKED_PKG = "extra_blocked_pkg"
-        private const val REQ_QR_SCAN = 1001
     }
 
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var blockEventDao: BlockEventDao
+
     private lateinit var binding: ActivityLockScreenBinding
+    private lateinit var unlockRenderer: UnlockChallengeRenderer
     private var currentBlock: AppBlock? = null
+
+    private val qrScanLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        unlockRenderer.handleQrScanResult(result.data?.getStringExtra(CameraScan.SCAN_RESULT))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON or WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD)
         binding = ActivityLockScreenBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        unlockRenderer = UnlockChallengeRenderer(this, binding.challengeContainer, binding.tvError)
         loadBlock(intent.getIntExtra(EXTRA_BLOCK_ID, -1))
     }
 
@@ -56,45 +65,33 @@ class LockScreenActivity : AppCompatActivity() {
 
     private fun loadBlock(blockId: Int) {
         lifecycleScope.launch {
-            val block = dao.getById(blockId) ?: run { finish(); return@launch }
+            val block = dao.getById(blockId) ?: run {
+                finish()
+                return@launch
+            }
             currentBlock = block
-            runOnUiThread { setupUI(block) }
+            setupUi(block)
         }
     }
 
-    private fun setupUI(block: AppBlock) {
+    private fun setupUi(block: AppBlock) {
         binding.tvBlockTitle.text = block.title
         binding.tvBlockMessage.text = getString(R.string.lock_screen_message)
-        binding.btnScanQr.setOnClickListener { startQrScanner() }
+        unlockRenderer.render(
+            block = block,
+            showGoBackButton = false,
+            onRequestQrScan = {
+                qrScanLauncher.launch(Intent(this, QrScanActivity::class.java))
+            },
+            onUnlocked = {
+                showPauseDurationSheet(block)
+            }
+        )
         val showMasterPwd = block.masterPasswordEnabled && Prefs.masterPasswordEnabled
         binding.btnMasterPassword.visibility = if (showMasterPwd) View.VISIBLE else View.GONE
         binding.btnMasterPassword.setOnClickListener { showMasterPasswordDialog(block) }
         binding.btnGoHome.setOnClickListener { goToLauncher() }
         SilentModeHelper.applySilentMode(this)
-    }
-
-    private fun startQrScanner() {
-        if (currentBlock == null) return
-        @Suppress("DEPRECATION")
-        startActivityForResult(Intent(this, QrScanActivity::class.java), REQ_QR_SCAN)
-    }
-
-    @Deprecated("Deprecated in Java")
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        @Suppress("DEPRECATION")
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQ_QR_SCAN && resultCode == RESULT_OK) {
-            handleQrResult(data?.getStringExtra(com.king.zxing.CameraScan.SCAN_RESULT))
-        }
-    }
-
-    private fun handleQrResult(scanned: String?) {
-        val block = currentBlock ?: return
-        if (scanned == block.qrSecret) showPauseDurationSheet(block)
-        else {
-            binding.tvError.visibility = View.VISIBLE
-            binding.tvError.text = getString(R.string.block_wrong_qr)
-        }
     }
 
     private fun showPauseDurationSheet(block: AppBlock) {
@@ -148,10 +145,12 @@ class LockScreenActivity : AppCompatActivity() {
             .setTitle(R.string.block_master_password)
             .setView(et)
             .setPositiveButton(android.R.string.ok) { _, _ ->
-                if (et.text.toString() == Prefs.masterPassword) showPauseDurationSheet(block)
-                else {
+                if (et.text.toString() == Prefs.masterPassword) {
+                    binding.tvError.visibility = View.GONE
+                    showPauseDurationSheet(block)
+                } else {
                     binding.tvError.visibility = View.VISIBLE
-                    binding.tvError.text = "Incorrect password"
+                    binding.tvError.text = getString(R.string.challenge_password_wrong)
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -169,5 +168,10 @@ class LockScreenActivity : AppCompatActivity() {
     @Deprecated("Deprecated in Java")
     override fun onBackPressed() {
         goToLauncher()
+    }
+
+    override fun onDestroy() {
+        unlockRenderer.clear()
+        super.onDestroy()
     }
 }

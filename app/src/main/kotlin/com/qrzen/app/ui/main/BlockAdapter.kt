@@ -11,9 +11,10 @@ import androidx.recyclerview.widget.RecyclerView
 import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.ItemBlockBinding
+import com.qrzen.app.ui.unlock.UnlockMethodUtils
 
 class BlockAdapter(
-    private val onToggle: (AppBlock, Boolean) -> Unit,
+    private val onToggle: (AppBlock, Boolean) -> Boolean,
     private val onPause: (AppBlock) -> Unit,
     private val onBlockNow: (AppBlock) -> Unit,
     private val onEdit: (AppBlock) -> Unit,
@@ -37,21 +38,34 @@ class BlockAdapter(
             countDownTimer = null
 
             binding.tvTitle.text = block.title
-            binding.tvTimeRange.text = "${block.startTime} \u2013 ${block.endTime}"
+            binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
             val modePrefix = if (block.isAllowlistMode) "Allowlist" else "Blocklist"
-            binding.tvDays.text = "$modePrefix \u00b7 ${formatDays(block.activeDays)}"
+            binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
+
+            val unlockSummary = UnlockMethodUtils.getUnlockMethodSummary(binding.root.context, block)
+            binding.tvUnlockMethod.visibility = if (unlockSummary.isNullOrBlank()) View.GONE else View.VISIBLE
+            binding.tvUnlockMethod.text = unlockSummary.orEmpty()
 
             binding.switchEnabled.setOnCheckedChangeListener(null)
             binding.switchEnabled.isChecked = block.isEnabled
-            binding.switchEnabled.setOnCheckedChangeListener { _, checked ->
-                onToggle(block, checked)
-            }
+            bindToggleListener(block)
 
             binding.btnOverflow.setOnClickListener { view ->
                 showPopupMenu(view, block)
             }
 
             setupPauseTimer(block)
+        }
+
+        private fun bindToggleListener(block: AppBlock) {
+            binding.switchEnabled.setOnCheckedChangeListener { _, checked ->
+                val accepted = onToggle(block, checked)
+                if (!accepted) {
+                    binding.switchEnabled.setOnCheckedChangeListener(null)
+                    binding.switchEnabled.isChecked = block.isEnabled
+                    bindToggleListener(block)
+                }
+            }
         }
 
         private fun setupPauseTimer(block: AppBlock) {
@@ -66,13 +80,13 @@ class BlockAdapter(
                 }
 
                 if (isIndefinite) {
-                    binding.tvPauseTimer.text = "\u23F8 Paused indefinitely \u2022 Tap to restart"
+                    binding.tvPauseTimer.text = "⏸ Paused indefinitely • Tap to restart"
                 } else {
                     val remaining = block.pausedUntil - now
-                    binding.tvPauseTimer.text = "\u23F8 Paused \u2013 ${formatDuration(remaining)} remaining"
+                    binding.tvPauseTimer.text = "⏸ Paused – ${formatDuration(remaining)} remaining"
                     countDownTimer = object : CountDownTimer(remaining, 1000L) {
                         override fun onTick(millisUntilFinished: Long) {
-                            binding.tvPauseTimer.text = "\u23F8 Paused \u2013 ${formatDuration(millisUntilFinished)} remaining"
+                            binding.tvPauseTimer.text = "⏸ Paused – ${formatDuration(millisUntilFinished)} remaining"
                         }
 
                         override fun onFinish() {
@@ -125,14 +139,6 @@ class BlockAdapter(
             countDownTimer?.cancel()
             countDownTimer = null
         }
-    }
-
-    private fun formatDays(activeDays: String): String {
-        val names = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-        val active = activeDays.mapIndexedNotNull { i, c ->
-            if (c == '1') names.getOrNull(i) else null
-        }
-        return if (active.isEmpty()) "No days" else active.joinToString(", ")
     }
 
     private fun formatDuration(millis: Long): String {
