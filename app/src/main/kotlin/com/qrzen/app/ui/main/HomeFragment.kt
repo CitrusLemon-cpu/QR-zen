@@ -12,6 +12,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.FragmentHomeBinding
 import com.qrzen.app.ui.block.EditBlockActivity
@@ -47,7 +48,18 @@ class HomeFragment : Fragment() {
         binding.rvBlocks.adapter = adapter
 
         binding.fabAdd.setOnClickListener {
-            startActivity(Intent(requireContext(), EditBlockActivity::class.java))
+            val options = arrayOf(getString(R.string.block_type_blocklist), getString(R.string.block_type_allowlist))
+            var selectedIndex = 0
+            AlertDialog.Builder(requireContext())
+                .setTitle(getString(R.string.block_type_title))
+                .setSingleChoiceItems(options, 0) { _, which -> selectedIndex = which }
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    startActivity(Intent(requireContext(), EditBlockActivity::class.java).apply {
+                        putExtra(EditBlockActivity.EXTRA_IS_ALLOWLIST, selectedIndex == 1)
+                    })
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
