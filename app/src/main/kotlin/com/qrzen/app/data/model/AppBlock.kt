@@ -27,9 +27,6 @@ data class AppBlock(
      * "1111111" = every day, "1111100" = Mon–Fri only.
      */
     val activeDays: String = "1111111",
-    /** Edit window: time when user is allowed to modify this block's settings */
-    val editStartTime: String = "06:00",
-    val editEndTime: String = "07:00",
     /**
      * UUID secret encoded in the physical/digital QR code for this block.
      * Generated once when the block is created, never changes.
