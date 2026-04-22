@@ -7,7 +7,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
 
-@Database(entities = [AppBlock::class, BlockEvent::class], version = 6, exportSchema = false)
+@Database(entities = [AppBlock::class, BlockEvent::class], version = 7, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appBlockDao(): AppBlockDao
     abstract fun blockEventDao(): BlockEventDao
@@ -30,6 +30,12 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE app_blocks ADD COLUMN editWindowEnd TEXT NOT NULL DEFAULT '10:00'")
                 db.execSQL("ALTER TABLE app_blocks ADD COLUMN editWindowDays TEXT NOT NULL DEFAULT '1111111'")
                 db.execSQL("ALTER TABLE app_blocks ADD COLUMN lockUntil INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE app_blocks ADD COLUMN blockNowUntil INTEGER NOT NULL DEFAULT 0")
             }
         }
     }

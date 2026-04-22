@@ -77,10 +77,7 @@ class HomeFragment : Fragment() {
             onPause = { block ->
                 requestUnlock(block, UnlockChallengeActivity.ACTION_PAUSE)
             },
-            onBlockNow = { block ->
-                viewModel.blockNow(block)
-                goToHomeIfBlockActive(block)
-            },
+            onBlockNow = { block -> showBlockNowDurationPicker(block) },
             onEdit = { block ->
                 requestUnlock(block, UnlockChallengeActivity.ACTION_EDIT)
             },
@@ -204,6 +201,32 @@ class HomeFragment : Fragment() {
                     else -> 0L
                 }
                 if (durationMs > 0L) viewModel.pause(block, durationMs)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showBlockNowDurationPicker(block: AppBlock) {
+        val options = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Rest of day")
+        AlertDialog.Builder(requireContext())
+            .setTitle("Block '${block.title}' now for...")
+            .setItems(options) { _, which ->
+                val durationMs = when (which) {
+                    0 -> 15 * 60_000L
+                    1 -> 30 * 60_000L
+                    2 -> 60 * 60_000L
+                    3 -> 2 * 60 * 60_000L
+                    4 -> 4 * 60 * 60_000L
+                    5 -> millisUntilMidnight()
+                    else -> 0L
+                }
+                if (durationMs > 0L) {
+                    viewModel.blockNow(block, durationMs)
+                    startActivity(Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_HOME)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                }
             }
             .setNegativeButton("Cancel", null)
             .show()

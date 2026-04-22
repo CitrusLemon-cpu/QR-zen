@@ -18,7 +18,7 @@ object AppModule {
     @Provides @Singleton
     fun provideDatabase(@ApplicationContext ctx: Context): AppDatabase =
         Room.databaseBuilder(ctx, AppDatabase::class.java, "qrzen.db")
-            .addMigrations(AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6)
+            .addMigrations(AppDatabase.MIGRATION_4_5, AppDatabase.MIGRATION_5_6, AppDatabase.MIGRATION_6_7)
             .fallbackToDestructiveMigration().build()
 
     @Provides @Singleton

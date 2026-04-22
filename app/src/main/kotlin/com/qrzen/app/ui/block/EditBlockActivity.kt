@@ -372,6 +372,7 @@ class EditBlockActivity : AppCompatActivity() {
             lockUntil = lockUntil,
             masterPasswordEnabled = existingBlock?.masterPasswordEnabled ?: false,
             pausedUntil = existingBlock?.pausedUntil ?: 0L,
+            blockNowUntil = existingBlock?.blockNowUntil ?: 0L,
             isEnabled = existingBlock?.isEnabled ?: true,
             isPomodoroBlock = isPomodoroBlock,
             pomodoroDurationMin = if (isPomodoroBlock) binding.npPomodoroDuration.value else 25,
@@ -396,6 +397,7 @@ class EditBlockActivity : AppCompatActivity() {
     }
 
     private fun isBlockCurrentlyActive(block: AppBlock): Boolean {
+        if (block.blockNowUntil > System.currentTimeMillis()) return true
         val now = LocalTime.now()
         val start = LocalTime.parse(block.startTime, DateTimeFormatter.ofPattern("HH:mm"))
         val end = LocalTime.parse(block.endTime, DateTimeFormatter.ofPattern("HH:mm"))

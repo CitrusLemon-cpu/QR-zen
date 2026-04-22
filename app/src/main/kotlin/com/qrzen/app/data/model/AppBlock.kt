@@ -58,6 +58,8 @@ data class AppBlock(
      * 0 = not paused. Long.MAX_VALUE = paused indefinitely (until reboot/restart).
      */
     val pausedUntil: Long = 0L,
+    /** Epoch millis until which this block is forced active regardless of schedule. 0 = not forced. */
+    val blockNowUntil: Long = 0L,
     /** Whether this block rule is active */
     val isEnabled: Boolean = true,
     /** Pomodoro: treat this block as a Pomodoro focus timer */

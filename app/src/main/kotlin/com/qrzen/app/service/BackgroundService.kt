@@ -83,6 +83,16 @@ class BackgroundService : Service() {
                 dao.setPausedUntil(block.id, 0L)
                 shouldRefresh = true
             }
+        allBlocks
+            .filter { block ->
+                block.blockNowUntil != 0L &&
+                    block.blockNowUntil != Long.MAX_VALUE &&
+                    now > block.blockNowUntil
+            }
+            .forEach { block ->
+                dao.update(block.copy(blockNowUntil = 0L))
+                shouldRefresh = true
+            }
         val currentlyActiveIds = allBlocks
             .filter { it.isEnabled && !it.isArchived && it.pausedUntil <= now && isBlockActive(it) }
             .map { it.id }
@@ -102,6 +112,7 @@ class BackgroundService : Service() {
     }
 
     private fun isBlockActive(block: AppBlock): Boolean {
+        if (block.blockNowUntil > System.currentTimeMillis()) return true
         val now = LocalTime.now()
         val fmt = DateTimeFormatter.ofPattern("HH:mm")
         val start = LocalTime.parse(block.startTime, fmt)

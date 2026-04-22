@@ -7,6 +7,7 @@ import android.net.Uri
 import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
+import android.view.inputmethod.InputMethodManager
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.data.prefs.Prefs
@@ -79,8 +80,13 @@ class BlockAccessibilityService : AccessibilityService() {
             .toSet()
     }
 
+    private val imePackages: Set<String> by lazy {
+        val imm = getSystemService(InputMethodManager::class.java)
+        imm?.enabledInputMethodList?.map { it.packageName }?.toSet() ?: emptySet()
+    }
+
     private fun isExemptFromAllowlist(pkg: String): Boolean {
-        return pkg in SYSTEM_EXEMPT_PACKAGES || pkg in launcherPackages || pkg in dialerPackages
+        return pkg in SYSTEM_EXEMPT_PACKAGES || pkg in launcherPackages || pkg in dialerPackages || pkg in imePackages
     }
 
     private fun isDeviceLocked(): Boolean {
@@ -125,6 +131,7 @@ class BlockAccessibilityService : AccessibilityService() {
     }
 
     private fun isBlockActive(block: AppBlock): Boolean {
+        if (block.blockNowUntil > System.currentTimeMillis()) return true
         val now = LocalTime.now()
         val start = LocalTime.parse(block.startTime, fmt)
         val end = LocalTime.parse(block.endTime, fmt)
