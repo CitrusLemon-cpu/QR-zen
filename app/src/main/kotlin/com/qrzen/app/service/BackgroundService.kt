@@ -2,19 +2,27 @@ package com.qrzen.app.service
 
 import android.app.Notification
 import android.app.NotificationChannel
+import android.app.KeyguardManager
 import android.app.NotificationManager
 import android.app.Service
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
+import android.os.PowerManager
+import android.net.Uri
+import android.content.pm.PackageManager
+import android.view.inputmethod.InputMethodManager
 import androidx.core.app.NotificationCompat
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.prefs.Prefs
+import com.qrzen.app.receiver.AlarmKeepaliveReceiver
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -34,7 +42,49 @@ class BackgroundService : Service() {
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val handler = Handler(Looper.getMainLooper())
+    private val usageHandler = Handler(Looper.getMainLooper())
     private val previouslyActiveBlockIds = mutableSetOf<Int>()
+    private var usagePollingActive = false
+    private var lastBlockedPkg: String? = null
+    private var lastBlockedTime = 0L
+    private var wakeLock: PowerManager.WakeLock? = null
+
+    private val systemExemptPackages = setOf(
+        "com.android.systemui",
+        "com.android.settings",
+        "com.miui.securitycenter",
+        "com.miui.guardprovider",
+        "com.android.permissioncontroller",
+        "com.google.android.permissioncontroller",
+        "com.android.packageinstaller",
+        "com.google.android.packageinstaller",
+        "com.android.server.telecom",
+        "com.android.phone",
+        "com.android.incallui",
+        "com.google.android.dialer",
+        "com.samsung.android.dialer",
+        "com.samsung.android.incallui",
+        "com.android.emergency"
+    )
+
+    private val launcherPackages: Set<String> by lazy {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply { addCategory(Intent.CATEGORY_HOME) }
+        packageManager.queryIntentActivities(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { it.activityInfo?.packageName }
+            .toSet()
+    }
+
+    private val imePackages: Set<String> by lazy {
+        val imm = getSystemService(InputMethodManager::class.java)
+        imm?.enabledInputMethodList?.map { it.packageName }?.toSet() ?: emptySet()
+    }
+
+    private val dialerPackages: Set<String> by lazy {
+        val dialIntent = Intent(Intent.ACTION_DIAL).apply { data = Uri.parse("tel:") }
+        packageManager.queryIntentActivities(dialIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { it.activityInfo?.packageName }
+            .toSet()
+    }
 
     private val checkRunnable = object : Runnable {
         override fun run() {
@@ -43,10 +93,21 @@ class BackgroundService : Service() {
         }
     }
 
+    private val usageCheckRunnable = object : Runnable {
+        override fun run() {
+            scope.launch { checkForegroundApp() }
+            if (usagePollingActive) {
+                usageHandler.postDelayed(this, USAGE_POLL_INTERVAL_MS)
+            }
+        }
+    }
+
     companion object {
         private const val NOTIF_CHANNEL_ID = "qrzen_bg"
         private const val NOTIF_ID = 1001
         private const val CHECK_INTERVAL_MS = 60_000L
+        private const val USAGE_POLL_INTERVAL_MS = 2_000L
+        private const val BLOCK_COOLDOWN_MS = 3_000L
 
         fun start(context: Context) {
             val intent = Intent(context, BackgroundService::class.java)
@@ -60,6 +121,8 @@ class BackgroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIF_ID, buildNotification())
+        acquireWakeLock()
+        AlarmKeepaliveReceiver.schedule(applicationContext)
         handler.removeCallbacks(checkRunnable)
         handler.post(checkRunnable)
         return START_STICKY
@@ -101,14 +164,22 @@ class BackgroundService : Service() {
         previouslyActiveBlockIds.clear()
         previouslyActiveBlockIds.addAll(currentlyActiveIds)
         if (newlyActive.isNotEmpty()) {
-            val homeIntent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_HOME)
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK
-            }
-            applicationContext.startActivity(homeIntent)
+            sendToHome()
             shouldRefresh = true
         }
         if (shouldRefresh) WidgetRefresh.refresh(applicationContext)
+
+        val accessibilityRunning = BlockAccessibilityService.isRunning
+        val hasActiveBlocks = currentlyActiveIds.isNotEmpty()
+        val hasActiveAllowlistBlocks = allBlocks.any {
+            it.isEnabled && !it.isArchived && it.pausedUntil <= now && isBlockActive(it) && it.isAllowlistMode
+        }
+        val needsPolling = (hasActiveBlocks && !accessibilityRunning) || hasActiveAllowlistBlocks
+        if (needsPolling) {
+            startUsagePolling()
+        } else {
+            stopUsagePolling()
+        }
     }
 
     private fun isBlockActive(block: AppBlock): Boolean {
@@ -141,9 +212,128 @@ class BackgroundService : Service() {
             .build()
     }
 
+    private fun isExemptPackage(pkg: String): Boolean {
+        return pkg == packageName ||
+            pkg in systemExemptPackages ||
+            pkg in launcherPackages ||
+            pkg in imePackages ||
+            pkg in dialerPackages
+    }
+
+    private fun isDeviceLocked(): Boolean {
+        val keyguardManager = getSystemService(KeyguardManager::class.java) ?: return false
+        return keyguardManager.isKeyguardLocked
+    }
+
+    private fun getForegroundPackage(): String? {
+        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return null
+        val endTime = System.currentTimeMillis()
+        val startTime = endTime - 5_000
+        val events = usageStatsManager.queryEvents(startTime, endTime)
+        var lastPkg: String? = null
+        val event = UsageEvents.Event()
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
+                lastPkg = event.packageName
+            }
+        }
+        if (lastPkg == null) {
+            lastPkg = usageStatsManager.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                endTime - 10_000,
+                endTime
+            )
+                ?.filter { it.totalTimeInForeground > 0 }
+                ?.maxByOrNull { it.lastTimeUsed }
+                ?.packageName
+        }
+        return lastPkg
+    }
+
+    private suspend fun checkForegroundApp() {
+        if (isDeviceLocked()) return
+        val now = System.currentTimeMillis()
+        if (Prefs.pauseAllUntil > now) return
+
+        val pkg = getForegroundPackage() ?: return
+        if (isExemptPackage(pkg)) return
+        if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) return
+
+        val activeBlocks = dao.getAll().filter {
+            it.isEnabled && !it.isArchived && now > it.pausedUntil && isBlockActive(it)
+        }
+
+        if (!BlockAccessibilityService.isRunning) {
+            val blocklistMatch = activeBlocks
+                .filter { !it.isAllowlistMode }
+                .any { block ->
+                    block.appPackages.split(",").map { it.trim() }.contains(pkg)
+                }
+            if (blocklistMatch) {
+                lastBlockedPkg = pkg
+                lastBlockedTime = now
+                sendToHome()
+                return
+            }
+        }
+
+        val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
+        if (allowlistBlocks.isNotEmpty()) {
+            val isAllowed = allowlistBlocks.all { block ->
+                val allowed = block.appPackages.split(",")
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .toSet()
+                allowed.contains(pkg) && !Prefs.isAppTimerExpired(pkg)
+            }
+            if (!isAllowed) {
+                lastBlockedPkg = pkg
+                lastBlockedTime = now
+                sendToHome()
+            }
+        }
+    }
+
+    private fun sendToHome() {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        applicationContext.startActivity(homeIntent)
+    }
+
+    private fun startUsagePolling() {
+        if (usagePollingActive) return
+        usagePollingActive = true
+        usageHandler.post(usageCheckRunnable)
+    }
+
+    private fun stopUsagePolling() {
+        usagePollingActive = false
+        usageHandler.removeCallbacks(usageCheckRunnable)
+        lastBlockedPkg = null
+    }
+
+    private fun acquireWakeLock() {
+        if (wakeLock == null) {
+            val powerManager = getSystemService(PowerManager::class.java)
+            wakeLock = powerManager?.newWakeLock(
+                PowerManager.PARTIAL_WAKE_LOCK,
+                "QrZen::BackgroundService"
+            )
+            wakeLock?.acquire()
+        }
+    }
+
     override fun onDestroy() {
-        super.onDestroy()
+        stopUsagePolling()
+        wakeLock?.let {
+            if (it.isHeld) it.release()
+            wakeLock = null
+        }
         handler.removeCallbacks(checkRunnable)
+        super.onDestroy()
         scope.cancel()
     }
 
