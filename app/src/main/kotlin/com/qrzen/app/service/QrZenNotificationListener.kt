@@ -59,7 +59,7 @@ class QrZenNotificationListener : NotificationListenerService() {
             cancelNotification(notification.key)
             return
         }
-        if (cachedHasAllowlist && pkg !in cachedAllowedPackages) {
+        if (cachedHasAllowlist && pkg !in cachedAllowedPackages && pkg !in SYSTEM_EXEMPT_PACKAGES) {
             cancelNotification(notification.key)
         }
     }
@@ -78,5 +78,18 @@ class QrZenNotificationListener : NotificationListenerService() {
 
     companion object {
         private const val CACHE_TTL_MS = 5_000L
+
+        private val SYSTEM_EXEMPT_PACKAGES = setOf(
+            "com.android.systemui",
+            "com.android.settings",
+            "com.android.permissioncontroller",
+            "com.google.android.permissioncontroller",
+            "com.android.packageinstaller",
+            "com.google.android.packageinstaller",
+            "com.android.server.telecom",
+            "com.android.phone",
+            "com.android.incallui",
+            "com.android.emergency"
+        )
     }
 }
