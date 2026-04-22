@@ -9,6 +9,7 @@ import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
+import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.di.WidgetEntryPoint
 import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
 import com.qrzen.app.ui.lock.LockScreenActivity
@@ -95,6 +96,7 @@ class BlockAccessibilityService : AccessibilityService() {
         scope.launch {
             val dao = entryPoint.appBlockDao()
             val now = System.currentTimeMillis()
+            if (Prefs.pauseAllUntil > now) return@launch
             val activeBlocks = dao.getAll().filter { it.isEnabled && now > it.pausedUntil && isBlockActive(it) }
 
             val blocklistMatch = activeBlocks
