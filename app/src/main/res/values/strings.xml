@@ -40,6 +40,10 @@
     <string name="edit_block_pomodoro_toggle">Pomodoro mode</string>
     <string name="edit_block_save">Save Block</string>
     <string name="app_picker_title">Select Apps to Block</string>
+    <string name="app_picker_search_hint">Search apps</string>
+    <string name="app_picker_import_from_block">Import from existing block</string>
+    <string name="app_picker_import_title">Select blocks to import apps from</string>
+    <string name="app_picker_no_blocks">No existing blocks with apps found</string>
     <string name="block_type_title">Block Type</string>
     <string name="block_type_blocklist">Block specific apps</string>
     <string name="block_type_allowlist">Allow only these apps (allowlist)</string>
