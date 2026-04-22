@@ -87,8 +87,14 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                 finish()
                 return@launch
             }
-            val allowedApps = withContext(Dispatchers.IO) { buildAllowedApps(block) }
             currentBlock = block
+            if (Prefs.pauseAllUntil > System.currentTimeMillis()) {
+                binding.tvBlockTitle.text = block.title
+                binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
+                showPauseDurationSheet(block)
+                return@launch
+            }
+            val allowedApps = withContext(Dispatchers.IO) { buildAllowedApps(block) }
             setupUi(block, allowedApps)
         }
     }

@@ -70,6 +70,12 @@ class LockScreenActivity : AppCompatActivity() {
                 return@launch
             }
             currentBlock = block
+            if (Prefs.pauseAllUntil > System.currentTimeMillis()) {
+                binding.tvBlockTitle.text = block.title
+                binding.tvBlockMessage.text = getString(R.string.lock_screen_message)
+                showPauseDurationSheet(block)
+                return@launch
+            }
             setupUi(block)
         }
     }
