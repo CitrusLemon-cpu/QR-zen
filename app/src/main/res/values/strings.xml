@@ -31,7 +31,6 @@
     <string name="edit_block_select_apps">Select Apps to Block</string>
     <string name="edit_block_select_allowed_apps">Select Allowed Apps</string>
     <string name="edit_block_schedule">Schedule</string>
-    <string name="edit_block_edit_window">Edit Window</string>
     <string name="edit_block_qr_section">QR Unlock Code</string>
     <string name="edit_block_generate_qr">Show QR Code</string>
     <string name="edit_block_share_qr">Share QR Code</string>
@@ -39,7 +38,6 @@
     <string name="edit_block_master_pwd_toggle">Enable master password fallback</string>
     <string name="edit_block_pomodoro_toggle">Pomodoro mode</string>
     <string name="edit_block_save">Save Block</string>
-    <string name="edit_window_locked">You can only edit this block between %1$s and %2$s</string>
     <string name="app_picker_title">Select Apps to Block</string>
     <string name="block_type_title">Block Type</string>
     <string name="block_type_blocklist">Block specific apps</string>
