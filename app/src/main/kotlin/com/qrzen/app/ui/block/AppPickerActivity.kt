@@ -1,21 +1,25 @@
 package com.qrzen.app.ui.block
 
 import android.content.Intent
-import android.content.pm.ApplicationInfo
-import android.content.pm.PackageManager
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.LayoutInflater
-import android.view.View
 import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
+import com.qrzen.app.R
+import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.databinding.ActivityAppPickerBinding
 import com.qrzen.app.databinding.ItemAppPickerBinding
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -32,6 +36,10 @@ class AppPickerActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityAppPickerBinding
     private lateinit var adapter: AppPickerAdapter
+    private var allApps: List<AppItem> = emptyList()
+
+    @Inject
+    lateinit var dao: AppBlockDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,9 +49,9 @@ class AppPickerActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.title = if (intent.getBooleanExtra(EXTRA_IS_ALLOWLIST, false)) {
-            "Select Allowed Apps"
+            getString(R.string.edit_block_select_allowed_apps)
         } else {
-            getString(com.qrzen.app.R.string.app_picker_title)
+            getString(R.string.app_picker_title)
         }
         binding.toolbar.setNavigationOnClickListener { finish() }
 
@@ -54,6 +62,14 @@ class AppPickerActivity : AppCompatActivity() {
         adapter = AppPickerAdapter(preselected.toMutableSet())
         binding.rvApps.layoutManager = LinearLayoutManager(this)
         binding.rvApps.adapter = adapter
+        binding.etSearch.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) = Unit
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) = Unit
+            override fun afterTextChanged(s: Editable?) {
+                filterApps(s?.toString().orEmpty())
+            }
+        })
+        binding.btnImportFromBlock.setOnClickListener { showImportFromBlockDialog() }
 
         binding.btnDone.setOnClickListener {
             val result = adapter.getSelectedPackages().joinToString(",")
@@ -85,7 +101,61 @@ class AppPickerActivity : AppCompatActivity() {
                     .distinctBy { it.packageName }
                     .sortedBy { it.label.lowercase() }
             }
-            adapter.submitList(apps)
+            allApps = apps
+            filterApps(binding.etSearch.text?.toString().orEmpty())
+        }
+    }
+
+    private fun filterApps(query: String) {
+        if (query.isBlank()) {
+            adapter.submitList(allApps)
+            return
+        }
+        val lower = query.lowercase()
+        adapter.submitList(
+            allApps.filter {
+                it.label.lowercase().contains(lower) || it.packageName.lowercase().contains(lower)
+            }
+        )
+    }
+
+    private fun showImportFromBlockDialog() {
+        lifecycleScope.launch {
+            val blocks = withContext(Dispatchers.IO) {
+                dao.getAll().filter { it.appPackages.isNotBlank() }
+            }
+            if (blocks.isEmpty()) {
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.app_picker_no_blocks),
+                    Snackbar.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+            val blockNames = blocks.map { it.title.ifBlank { "Untitled" } }.toTypedArray()
+            val checkedItems = BooleanArray(blocks.size) { false }
+            AlertDialog.Builder(this@AppPickerActivity)
+                .setTitle(getString(R.string.app_picker_import_title))
+                .setMultiChoiceItems(blockNames, checkedItems) { _, which, isChecked ->
+                    checkedItems[which] = isChecked
+                }
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    val packagesToImport = mutableSetOf<String>()
+                    checkedItems.forEachIndexed { index, checked ->
+                        if (checked) {
+                            blocks[index].appPackages.split(",")
+                                .map { it.trim() }
+                                .filter { it.isNotEmpty() }
+                                .forEach { packagesToImport.add(it) }
+                        }
+                    }
+                    if (packagesToImport.isNotEmpty()) {
+                        adapter.addPackages(packagesToImport)
+                        adapter.notifyDataSetChanged()
+                    }
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
         }
     }
 
@@ -131,5 +201,9 @@ class AppPickerActivity : AppCompatActivity() {
             holder.bind(getItem(position))
 
         fun getSelectedPackages(): Set<String> = selected
+
+        fun addPackages(packages: Set<String>) {
+            selected.addAll(packages)
+        }
     }
 }
