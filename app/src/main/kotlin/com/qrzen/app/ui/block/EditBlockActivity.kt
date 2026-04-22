@@ -25,6 +25,7 @@ class EditBlockActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_BLOCK_ID = "extra_block_id"
+        const val EXTRA_IS_ALLOWLIST = "extra_is_allowlist"
     }
 
     @Inject lateinit var dao: AppBlockDao
@@ -33,6 +34,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var existingBlock: AppBlock? = null
     private var currentQrSecret: String = ""
     private var selectedPackages: String = ""
+    private var isAllowlistMode: Boolean = false
     private var startTime: String = "00:00"
     private var endTime: String = "23:59"
     private var editStartTime: String = "06:00"
@@ -67,8 +69,9 @@ class EditBlockActivity : AppCompatActivity() {
 
         val blockId = intent.getIntExtra(EXTRA_BLOCK_ID, -1)
         if (blockId == -1) {
+            isAllowlistMode = intent.getBooleanExtra(EXTRA_IS_ALLOWLIST, false)
             currentQrSecret = UUID.randomUUID().toString()
-            supportActionBar?.title = "New Block"
+            supportActionBar?.title = if (isAllowlistMode) "New Allowlist Block" else "New Block"
             binding.tvQrSecret.text = currentQrSecret
             setupButtons()
         } else {
@@ -83,6 +86,8 @@ class EditBlockActivity : AppCompatActivity() {
     }
 
     private fun populateForm(block: AppBlock) {
+        isAllowlistMode = block.isAllowlistMode
+        supportActionBar?.title = if (isAllowlistMode) "Edit Allowlist Block" else "Edit Block"
         binding.etTitle.setText(block.title)
         selectedPackages = block.appPackages
         updateSelectedAppsDisplay()
@@ -164,6 +169,11 @@ class EditBlockActivity : AppCompatActivity() {
     }
 
     private fun setupButtons() {
+        binding.btnSelectApps.text = if (isAllowlistMode) {
+            getString(R.string.edit_block_select_allowed_apps)
+        } else {
+            getString(R.string.edit_block_select_apps)
+        }
         binding.btnStartTime.setOnClickListener {
             showTimePicker("Start time", startTime) { t ->
                 startTime = t
@@ -192,6 +202,7 @@ class EditBlockActivity : AppCompatActivity() {
         binding.btnSelectApps.setOnClickListener {
             val intent = Intent(this, AppPickerActivity::class.java).apply {
                 putExtra(AppPickerActivity.EXTRA_PRESELECTED, selectedPackages)
+                putExtra(AppPickerActivity.EXTRA_IS_ALLOWLIST, isAllowlistMode)
             }
             @Suppress("DEPRECATION")
             startActivityForResult(intent, AppPickerActivity.REQ_CODE)
@@ -217,8 +228,11 @@ class EditBlockActivity : AppCompatActivity() {
 
     private fun updateSelectedAppsDisplay() {
         val pkgs = selectedPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-        binding.tvSelectedApps.text = if (pkgs.isEmpty()) "No apps selected"
-            else "${pkgs.size} app(s) selected"
+        binding.tvSelectedApps.text = if (isAllowlistMode) {
+            if (pkgs.isEmpty()) "No allowed apps selected" else "${pkgs.size} app(s) allowed"
+        } else {
+            if (pkgs.isEmpty()) "No apps selected" else "${pkgs.size} app(s) selected"
+        }
     }
 
     private fun saveBlock() {
@@ -244,6 +258,7 @@ class EditBlockActivity : AppCompatActivity() {
             id = existingBlock?.id ?: 0,
             title = title,
             appPackages = selectedPackages,
+            isAllowlistMode = isAllowlistMode,
             startTime = startTime,
             endTime = endTime,
             activeDays = activeDays,
