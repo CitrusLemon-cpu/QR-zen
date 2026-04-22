@@ -89,6 +89,9 @@ class QrZenNotificationListener : NotificationListenerService() {
             "com.android.server.telecom",
             "com.android.phone",
             "com.android.incallui",
+            "com.google.android.dialer",
+            "com.samsung.android.dialer",
+            "com.samsung.android.incallui",
             "com.android.emergency"
         )
     }

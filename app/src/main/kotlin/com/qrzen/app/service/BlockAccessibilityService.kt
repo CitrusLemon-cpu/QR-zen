@@ -3,6 +3,7 @@ package com.qrzen.app.service
 import android.accessibilityservice.AccessibilityService
 import android.app.KeyguardManager
 import android.content.Intent
+import android.net.Uri
 import android.content.pm.PackageManager
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
@@ -38,6 +39,9 @@ class BlockAccessibilityService : AccessibilityService() {
             "com.android.server.telecom",
             "com.android.phone",
             "com.android.incallui",
+            "com.google.android.dialer",
+            "com.samsung.android.dialer",
+            "com.samsung.android.incallui",
             "com.android.emergency"
         )
     }
@@ -65,8 +69,17 @@ class BlockAccessibilityService : AccessibilityService() {
             .toSet()
     }
 
+    private val dialerPackages: Set<String> by lazy {
+        val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+            data = Uri.parse("tel:")
+        }
+        packageManager.queryIntentActivities(dialIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { it.activityInfo?.packageName }
+            .toSet()
+    }
+
     private fun isExemptFromAllowlist(pkg: String): Boolean {
-        return pkg in SYSTEM_EXEMPT_PACKAGES || pkg in launcherPackages
+        return pkg in SYSTEM_EXEMPT_PACKAGES || pkg in launcherPackages || pkg in dialerPackages
     }
 
     private fun isDeviceLocked(): Boolean {
