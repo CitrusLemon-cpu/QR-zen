@@ -45,5 +45,7 @@ data class AppBlock(
     /** Pomodoro: treat this block as a Pomodoro focus timer */
     val isPomodoroBlock: Boolean = false,
     val pomodoroDurationMin: Int = 25,
-    val pomodoroBreakMin: Int = 5
+    val pomodoroBreakMin: Int = 5,
+    /** Whether this block is archived (hidden from main list) */
+    val isArchived: Boolean = false
 )

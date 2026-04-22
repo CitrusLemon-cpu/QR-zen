@@ -6,11 +6,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppBlockDao {
-    @Query("SELECT * FROM app_blocks ORDER BY id ASC")
+    @Query("SELECT * FROM app_blocks WHERE isArchived = 0 ORDER BY id ASC")
     fun observeAll(): Flow<List<AppBlock>>
 
-    @Query("SELECT * FROM app_blocks WHERE isEnabled = 1")
+    @Query("SELECT * FROM app_blocks WHERE isEnabled = 1 AND isArchived = 0")
     fun observeActive(): Flow<List<AppBlock>>
+
+    @Query("SELECT * FROM app_blocks WHERE isArchived = 1 ORDER BY id ASC")
+    fun observeArchived(): Flow<List<AppBlock>>
 
     @Query("SELECT * FROM app_blocks WHERE id = :id")
     suspend fun getById(id: Int): AppBlock?
@@ -30,6 +33,9 @@ interface AppBlockDao {
     @Query("UPDATE app_blocks SET pausedUntil = :until WHERE id = :id")
     suspend fun setPausedUntil(id: Int, until: Long)
 
-    @Query("SELECT * FROM app_blocks")
+    @Query("UPDATE app_blocks SET isArchived = :archived WHERE id = :id")
+    suspend fun setArchived(id: Int, archived: Boolean)
+
+    @Query("SELECT * FROM app_blocks WHERE isArchived = 0")
     suspend fun getAll(): List<AppBlock>
 }

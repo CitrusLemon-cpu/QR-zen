@@ -20,10 +20,9 @@ import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.FragmentHomeBinding
 import com.qrzen.app.ui.block.EditBlockActivity
-import com.qrzen.app.ui.block.QrDisplayFragment
-import com.qrzen.app.ui.pomodoro.PomodoroActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 @AndroidEntryPoint
 class HomeFragment : Fragment() {
@@ -46,7 +45,37 @@ class HomeFragment : Fragment() {
 
         adapter = BlockAdapter(
             onToggle = { block, enabled -> viewModel.setEnabled(block, enabled) },
-            onLongPress = { block -> showBlockOptions(block) }
+            onPause = { block -> showPauseDurationPicker(block) },
+            onBlockNow = { block -> viewModel.blockNow(block) },
+            onEdit = { block ->
+                startActivity(Intent(requireContext(), EditBlockActivity::class.java).apply {
+                    putExtra(EditBlockActivity.EXTRA_BLOCK_ID, block.id)
+                })
+            },
+            onArchive = { block ->
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Archive Block")
+                    .setMessage("Archive '${block.title}'? It will be hidden but can be restored later.")
+                    .setPositiveButton("Archive") { _, _ -> viewModel.archive(block) }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            },
+            onDelete = { block ->
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Delete Block")
+                    .setMessage("Delete '${block.title}'? This cannot be undone.")
+                    .setPositiveButton("Delete") { _, _ -> viewModel.delete(block) }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            },
+            onRestartFromPause = { block ->
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Restart Block")
+                    .setMessage("Restart '${block.title}' now? This will end the pause and resume blocking.")
+                    .setPositiveButton("Restart") { _, _ -> viewModel.unpause(block) }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
         )
         binding.rvBlocks.layoutManager = LinearLayoutManager(requireContext())
         binding.rvBlocks.adapter = adapter
@@ -87,6 +116,36 @@ class HomeFragment : Fragment() {
         updateServiceWarning()
     }
 
+    private fun showPauseDurationPicker(block: AppBlock) {
+        val options = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "Rest of day", "Indefinitely")
+        AlertDialog.Builder(requireContext())
+            .setTitle("Pause '${block.title}'")
+            .setItems(options) { _, which ->
+                val durationMs = when (which) {
+                    0 -> 15 * 60_000L
+                    1 -> 30 * 60_000L
+                    2 -> 60 * 60_000L
+                    3 -> 2 * 60 * 60_000L
+                    4 -> millisUntilMidnight()
+                    5 -> Long.MAX_VALUE
+                    else -> 0L
+                }
+                if (durationMs > 0L) viewModel.pause(block, durationMs)
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun millisUntilMidnight(): Long {
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 23)
+            set(Calendar.MINUTE, 59)
+            set(Calendar.SECOND, 59)
+            set(Calendar.MILLISECOND, 999)
+        }
+        return cal.timeInMillis - System.currentTimeMillis()
+    }
+
     private fun isAccessibilityServiceEnabled(): Boolean {
         val am = requireContext().getSystemService(Context.ACCESSIBILITY_SERVICE) as AccessibilityManager
         val enabledServices = am.getEnabledAccessibilityServiceList(AccessibilityServiceInfo.FEEDBACK_GENERIC)
@@ -98,38 +157,6 @@ class HomeFragment : Fragment() {
     private fun updateServiceWarning() {
         val enabled = isAccessibilityServiceEnabled()
         binding.cardServiceWarning.visibility = if (enabled) View.GONE else View.VISIBLE
-    }
-
-    private fun showBlockOptions(block: AppBlock) {
-        val baseOptions = mutableListOf("Edit", "Delete", "Show QR Code")
-        if (block.isPomodoroBlock) baseOptions.add("Start Pomodoro")
-        val options = baseOptions.toTypedArray()
-        AlertDialog.Builder(requireContext())
-            .setItems(options) { _, which ->
-                when (which) {
-                    0 -> {
-                        startActivity(Intent(requireContext(), EditBlockActivity::class.java).apply {
-                            putExtra(EditBlockActivity.EXTRA_BLOCK_ID, block.id)
-                        })
-                    }
-                    1 -> {
-                        AlertDialog.Builder(requireContext())
-                            .setTitle("Delete Block")
-                            .setMessage("Delete '${block.title}'? This cannot be undone.")
-                            .setPositiveButton("Delete") { _, _ -> viewModel.delete(block) }
-                            .setNegativeButton("Cancel", null)
-                            .show()
-                    }
-                    2 -> QrDisplayFragment.newInstance(block.qrSecret).show(childFragmentManager, "qr")
-                    3 -> {
-                        startActivity(
-                            Intent(requireContext(), PomodoroActivity::class.java).apply {
-                                putExtra(PomodoroActivity.EXTRA_BLOCK_ID, block.id)
-                            }
-                        )
-                    }
-                }
-            }.show()
     }
 
     override fun onDestroyView() {

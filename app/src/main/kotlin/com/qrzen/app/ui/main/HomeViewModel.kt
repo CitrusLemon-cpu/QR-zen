@@ -32,4 +32,26 @@ class HomeViewModel @Inject constructor(
         dao.update(block.copy(isEnabled = enabled))
         WidgetRefresh.refresh(ctx)
     }
+
+    fun pause(block: AppBlock, durationMs: Long) = viewModelScope.launch {
+        val until = if (durationMs == Long.MAX_VALUE) Long.MAX_VALUE
+        else System.currentTimeMillis() + durationMs
+        dao.setPausedUntil(block.id, until)
+        WidgetRefresh.refresh(ctx)
+    }
+
+    fun unpause(block: AppBlock) = viewModelScope.launch {
+        dao.setPausedUntil(block.id, 0L)
+        WidgetRefresh.refresh(ctx)
+    }
+
+    fun blockNow(block: AppBlock) = viewModelScope.launch {
+        dao.update(block.copy(isEnabled = true, pausedUntil = 0L))
+        WidgetRefresh.refresh(ctx)
+    }
+
+    fun archive(block: AppBlock) = viewModelScope.launch {
+        dao.setArchived(block.id, true)
+        WidgetRefresh.refresh(ctx)
+    }
 }
