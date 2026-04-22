@@ -104,4 +104,7 @@
     <string name="settings_resume_all_confirm">All blocks resumed</string>
     <string name="settings_pause_all_duration">Pause duration</string>
     <string name="settings_master_pwd_required">Enter master password to continue</string>
+    <string name="timer_dialog_title">Set usage timer for %1$s</string>
+    <string name="timer_set">Set Timer</string>
+    <string name="timer_clear">Clear Timer</string>
 </resources>
