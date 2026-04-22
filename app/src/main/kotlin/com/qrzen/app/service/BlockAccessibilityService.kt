@@ -122,7 +122,7 @@ class BlockAccessibilityService : AccessibilityService() {
                 .filter { it.isAllowlistMode }
                 .firstOrNull { block ->
                     val allowed = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                    !allowed.contains(pkg)
+                    !allowed.contains(pkg) || Prefs.isAppTimerExpired(pkg)
                 }
             if (allowlistMatch != null) {
                 launchAllowlistOverlay(pkg, allowlistMatch)

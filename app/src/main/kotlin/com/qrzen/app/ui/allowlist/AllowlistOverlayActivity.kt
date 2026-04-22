@@ -106,7 +106,12 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
         binding.tvError.visibility = View.GONE
         binding.tvError.text = ""
-        binding.rvAllowedApps.adapter = AllowedAppAdapter(allowedApps) { launchAllowedApp(it) }
+        binding.rvAllowedApps.adapter = AllowedAppAdapter(
+            allowedApps,
+            onClick = { launchAllowedApp(it) },
+            onLongPress = { showTimerDialog(it) },
+            onTimerExpired = { refreshAllowedApps() }
+        )
         unlockRenderer.render(
             block = block,
             showGoBackButton = false,
@@ -130,13 +135,15 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             .split(',')
             .map { it.trim() }
             .filter { it.isNotEmpty() }
+            .filterNot(Prefs::isAppTimerExpired)
             .mapNotNull { pkg ->
                 try {
                     val info = pm.getApplicationInfo(pkg, 0)
                     AllowedAppItem(
                         packageName = pkg,
                         label = pm.getApplicationLabel(info).toString(),
-                        icon = pm.getApplicationIcon(info)
+                        icon = pm.getApplicationIcon(info),
+                        timerExpiry = Prefs.getAppTimerExpiry(pkg)
                     )
                 } catch (_: PackageManager.NameNotFoundException) {
                     null
@@ -188,6 +195,50 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         SilentModeHelper.restoreRinger(this)
         startActivity(launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         finish()
+    }
+
+    private fun showTimerDialog(appItem: AllowedAppItem) {
+        val options = arrayOf("30 minutes", "1 hour", "2 hours", "4 hours", "8 hours", "12 hours")
+        val durations = longArrayOf(
+            30 * 60_000L,
+            60 * 60_000L,
+            2 * 60 * 60_000L,
+            4 * 60 * 60_000L,
+            8 * 60 * 60_000L,
+            12 * 60 * 60_000L
+        )
+        var selectedIndex = 0
+
+        AlertDialog.Builder(this)
+            .setTitle(getString(R.string.timer_dialog_title, appItem.label))
+            .setSingleChoiceItems(options, 0) { _, which -> selectedIndex = which }
+            .setPositiveButton(R.string.timer_set) { _, _ ->
+                Prefs.setAppTimerExpiry(
+                    appItem.packageName,
+                    System.currentTimeMillis() + durations[selectedIndex]
+                )
+                refreshAllowedApps()
+            }
+            .setNeutralButton(R.string.timer_clear) { _, _ ->
+                Prefs.setAppTimerExpiry(appItem.packageName, 0L)
+                refreshAllowedApps()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun refreshAllowedApps() {
+        val block = currentBlock ?: return
+        lifecycleScope.launch {
+            val allowedApps = withContext(Dispatchers.IO) { buildAllowedApps(block) }
+            (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
+            binding.rvAllowedApps.adapter = AllowedAppAdapter(
+                allowedApps,
+                onClick = { launchAllowedApp(it) },
+                onLongPress = { showTimerDialog(it) },
+                onTimerExpired = { refreshAllowedApps() }
+            )
+        }
     }
 
     private fun showPauseDurationSheet(block: AppBlock) {
@@ -270,23 +321,83 @@ class AllowlistOverlayActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         countDownTimer?.cancel()
+        (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
         unlockRenderer.clear()
         super.onDestroy()
     }
 
-    data class AllowedAppItem(val packageName: String, val label: String, val icon: Drawable)
+    data class AllowedAppItem(
+        val packageName: String,
+        val label: String,
+        val icon: Drawable,
+        val timerExpiry: Long = 0L
+    )
 
     class AllowedAppAdapter(
         private val apps: List<AllowedAppItem>,
-        private val onClick: (String) -> Unit
+        private val onClick: (String) -> Unit,
+        private val onLongPress: (AllowedAppItem) -> Unit,
+        private val onTimerExpired: () -> Unit
     ) : RecyclerView.Adapter<AllowedAppAdapter.ViewHolder>() {
 
+        private val timerHandlers = mutableMapOf<String, CountDownTimer>()
+
         inner class ViewHolder(private val binding: ItemAllowedAppBinding) : RecyclerView.ViewHolder(binding.root) {
+            private var boundPackageName: String? = null
+
             fun bind(item: AllowedAppItem) {
+                boundPackageName?.let { pkg ->
+                    timerHandlers.remove(pkg)?.cancel()
+                }
+                boundPackageName = item.packageName
+
                 binding.ivAppIcon.setImageDrawable(item.icon)
                 binding.tvAppLabel.text = item.label
                 binding.root.setOnClickListener { onClick(item.packageName) }
+                binding.root.setOnLongClickListener {
+                    onLongPress(item)
+                    true
+                }
+
+                val now = System.currentTimeMillis()
+                if (item.timerExpiry > now) {
+                    binding.tvTimerOverlay.visibility = View.VISIBLE
+                    val remaining = item.timerExpiry - now
+                    binding.tvTimerOverlay.text = formatTimerOverlay(remaining)
+                    timerHandlers[item.packageName] = object : CountDownTimer(remaining, 1_000L) {
+                        override fun onTick(millisUntilFinished: Long) {
+                            binding.tvTimerOverlay.text = formatTimerOverlay(millisUntilFinished)
+                        }
+
+                        override fun onFinish() {
+                            binding.tvTimerOverlay.text = formatTimerOverlay(0L)
+                            binding.tvTimerOverlay.visibility = View.GONE
+                            timerHandlers.remove(item.packageName)
+                            onTimerExpired()
+                        }
+                    }.start()
+                } else {
+                    binding.tvTimerOverlay.visibility = View.GONE
+                    binding.tvTimerOverlay.text = ""
+                }
             }
+        }
+
+        private fun formatTimerOverlay(millis: Long): String {
+            val totalSeconds = (millis / 1_000L).coerceAtLeast(0L)
+            val hours = totalSeconds / 3_600L
+            val minutes = (totalSeconds % 3_600L) / 60L
+            val seconds = totalSeconds % 60L
+            return if (hours > 0L) {
+                String.format("%d:%02d:%02d", hours, minutes, seconds)
+            } else {
+                String.format("%02d:%02d", minutes, seconds)
+            }
+        }
+
+        fun cancelAllTimers() {
+            timerHandlers.values.forEach { it.cancel() }
+            timerHandlers.clear()
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
@@ -298,5 +409,13 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         }
 
         override fun getItemCount(): Int = apps.size
+
+        override fun onViewRecycled(holder: ViewHolder) {
+            super.onViewRecycled(holder)
+            holder.boundPackageName?.let { pkg ->
+                timerHandlers.remove(pkg)?.cancel()
+            }
+            holder.boundPackageName = null
+        }
     }
 }

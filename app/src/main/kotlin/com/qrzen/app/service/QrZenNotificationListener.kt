@@ -40,7 +40,12 @@ class QrZenNotificationListener : NotificationListenerService() {
                     } else {
                         allowlistBlocks
                             .map { block ->
-                                block.appPackages.split(",").map(String::trim).filter(String::isNotEmpty).toSet()
+                                block.appPackages
+                                    .split(",")
+                                    .map(String::trim)
+                                    .filter(String::isNotEmpty)
+                                    .filterNot(Prefs::isAppTimerExpired)
+                                    .toSet()
                             }
                             .reduce { acc, allowed -> acc.intersect(allowed) }
                     }
@@ -60,6 +65,10 @@ class QrZenNotificationListener : NotificationListenerService() {
             return
         }
         if (cachedHasAllowlist && pkg !in cachedAllowedPackages && pkg !in SYSTEM_EXEMPT_PACKAGES) {
+            cancelNotification(notification.key)
+            return
+        }
+        if (cachedHasAllowlist && Prefs.isAppTimerExpired(pkg) && pkg !in SYSTEM_EXEMPT_PACKAGES) {
             cancelNotification(notification.key)
         }
     }
