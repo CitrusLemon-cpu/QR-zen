@@ -26,7 +26,7 @@
     <string name="block_scan_qr">Scan QR Code to Unlock</string>
     <string name="block_wrong_qr">Wrong QR code. Please scan the correct code for this block.</string>
     <string name="block_master_password">Enter Master Password</string>
-    <string name="lock_screen_message">This app is blocked. Scan your QR code to take a break.</string>
+    <string name="lock_screen_message">This app is blocked. Complete the configured unlock challenge to take a break.</string>
     <string name="edit_block_title_hint">Block name (e.g. Social Media)</string>
     <string name="edit_block_select_apps">Select Apps to Block</string>
     <string name="edit_block_select_allowed_apps">Select Allowed Apps</string>
@@ -72,4 +72,27 @@
     <string name="unlock_edit_window_end">Window end</string>
     <string name="unlock_timer_lock_until">Lock until</string>
     <string name="unlock_timer_pick_date">Pick date and time</string>
+    <string name="challenge_delay_wait">Please wait %1$s before proceeding</string>
+    <string name="challenge_delay_ready">You may now proceed</string>
+    <string name="challenge_password_title">Enter password to unlock</string>
+    <string name="challenge_password_wrong">Incorrect password</string>
+    <string name="challenge_type_over_title">Type the following text to unlock</string>
+    <string name="challenge_type_over_wrong">Text does not match. Try again.</string>
+    <string name="challenge_qr_title">Scan QR code to unlock</string>
+    <string name="challenge_edit_window_locked">This block can only be edited during %1$s–%2$s on %3$s</string>
+    <string name="challenge_edit_window_next">Next available: %1$s</string>
+    <string name="challenge_timer_locked">This block is locked until %1$s</string>
+    <string name="challenge_timer_remaining">%1$s remaining</string>
+    <string name="challenge_proceed">Proceed</string>
+    <string name="challenge_unlock">Unlock</string>
+    <string name="challenge_go_back">Go Back</string>
+    <string name="settings_emergency_override">Emergency Override</string>
+    <string name="settings_pause_all">Pause All Blocks</string>
+    <string name="settings_pause_all_desc">Temporarily pause all blocks and allow editing. Requires master password.</string>
+    <string name="settings_pause_all_status">All blocks paused until %1$s</string>
+    <string name="settings_pause_all_confirm">All blocks paused for %1$s</string>
+    <string name="settings_old_password_hint">Current password</string>
+    <string name="settings_old_password_wrong">Incorrect current password</string>
+    <string name="settings_pause_all_duration">Pause duration</string>
+    <string name="settings_master_pwd_required">Enter master password to continue</string>
 </resources>

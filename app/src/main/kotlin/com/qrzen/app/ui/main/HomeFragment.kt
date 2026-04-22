@@ -1,6 +1,7 @@
 package com.qrzen.app.ui.main
 
 import android.accessibilityservice.AccessibilityServiceInfo
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -9,6 +10,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -20,6 +22,8 @@ import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.FragmentHomeBinding
 import com.qrzen.app.ui.block.EditBlockActivity
+import com.qrzen.app.ui.unlock.UnlockChallengeActivity
+import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -27,10 +31,25 @@ import java.util.Calendar
 @AndroidEntryPoint
 class HomeFragment : Fragment() {
 
+    private data class PendingUnlockAction(
+        val block: AppBlock,
+        val action: String,
+        val toggleEnabledState: Boolean? = null
+    )
+
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private val viewModel: HomeViewModel by viewModels()
     private lateinit var adapter: BlockAdapter
+    private var pendingUnlockAction: PendingUnlockAction? = null
+
+    private val unlockChallengeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val pending = pendingUnlockAction ?: return@registerForActivityResult
+        pendingUnlockAction = null
+        if (result.resultCode == Activity.RESULT_OK) {
+            completePendingUnlockAction(pending)
+        }
+    }
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -44,29 +63,26 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         adapter = BlockAdapter(
-            onToggle = { block, enabled -> viewModel.setEnabled(block, enabled) },
-            onPause = { block -> showPauseDurationPicker(block) },
+            onToggle = { block, enabled ->
+                if (enabled) {
+                    viewModel.setEnabled(block, true)
+                    true
+                } else {
+                    requestUnlock(block, UnlockChallengeActivity.ACTION_TOGGLE, enabled)
+                }
+            },
+            onPause = { block ->
+                requestUnlock(block, UnlockChallengeActivity.ACTION_PAUSE)
+            },
             onBlockNow = { block -> viewModel.blockNow(block) },
             onEdit = { block ->
-                startActivity(Intent(requireContext(), EditBlockActivity::class.java).apply {
-                    putExtra(EditBlockActivity.EXTRA_BLOCK_ID, block.id)
-                })
+                requestUnlock(block, UnlockChallengeActivity.ACTION_EDIT)
             },
             onArchive = { block ->
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Archive Block")
-                    .setMessage("Archive '${block.title}'? It will be hidden but can be restored later.")
-                    .setPositiveButton("Archive") { _, _ -> viewModel.archive(block) }
-                    .setNegativeButton("Cancel", null)
-                    .show()
+                requestUnlock(block, UnlockChallengeActivity.ACTION_ARCHIVE)
             },
             onDelete = { block ->
-                AlertDialog.Builder(requireContext())
-                    .setTitle("Delete Block")
-                    .setMessage("Delete '${block.title}'? This cannot be undone.")
-                    .setPositiveButton("Delete") { _, _ -> viewModel.delete(block) }
-                    .setNegativeButton("Cancel", null)
-                    .show()
+                requestUnlock(block, UnlockChallengeActivity.ACTION_DELETE)
             },
             onRestartFromPause = { block ->
                 AlertDialog.Builder(requireContext())
@@ -114,6 +130,54 @@ class HomeFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         updateServiceWarning()
+    }
+
+    private fun requestUnlock(block: AppBlock, action: String, toggleEnabledState: Boolean? = null): Boolean {
+        val pending = PendingUnlockAction(block, action, toggleEnabledState)
+        if (shouldSkipUnlock(block, action, toggleEnabledState)) {
+            completePendingUnlockAction(pending)
+            return true
+        }
+        pendingUnlockAction = pending
+        unlockChallengeLauncher.launch(UnlockChallengeActivity.createIntent(requireContext(), block.id, action))
+        return false
+    }
+
+    private fun shouldSkipUnlock(block: AppBlock, action: String, toggleEnabledState: Boolean?): Boolean {
+        if (action == UnlockChallengeActivity.ACTION_TOGGLE && toggleEnabledState == true) return true
+        return UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
+    }
+
+    private fun completePendingUnlockAction(pending: PendingUnlockAction) {
+        when (pending.action) {
+            UnlockChallengeActivity.ACTION_EDIT -> {
+                startActivity(Intent(requireContext(), EditBlockActivity::class.java).apply {
+                    putExtra(EditBlockActivity.EXTRA_BLOCK_ID, pending.block.id)
+                })
+            }
+            UnlockChallengeActivity.ACTION_PAUSE -> showPauseDurationPicker(pending.block)
+            UnlockChallengeActivity.ACTION_TOGGLE -> {
+                pending.toggleEnabledState?.let { enabled ->
+                    viewModel.setEnabled(pending.block, enabled)
+                }
+            }
+            UnlockChallengeActivity.ACTION_ARCHIVE -> {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Archive Block")
+                    .setMessage("Archive '${pending.block.title}'? It will be hidden but can be restored later.")
+                    .setPositiveButton("Archive") { _, _ -> viewModel.archive(pending.block) }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+            UnlockChallengeActivity.ACTION_DELETE -> {
+                AlertDialog.Builder(requireContext())
+                    .setTitle("Delete Block")
+                    .setMessage("Delete '${pending.block.title}'? This cannot be undone.")
+                    .setPositiveButton("Delete") { _, _ -> viewModel.delete(pending.block) }
+                    .setNegativeButton("Cancel", null)
+                    .show()
+            }
+        }
     }
 
     private fun showPauseDurationPicker(block: AppBlock) {
