@@ -21,6 +21,8 @@ import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
 import java.util.UUID
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -370,8 +372,26 @@ class EditBlockActivity : AppCompatActivity() {
             } else {
                 dao.update(block)
             }
+            if (block.isEnabled && block.pausedUntil <= System.currentTimeMillis() && isBlockCurrentlyActive(block)) {
+                startActivity(Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_HOME)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                })
+            }
             finish()
         }
+    }
+
+    private fun isBlockCurrentlyActive(block: AppBlock): Boolean {
+        val now = LocalTime.now()
+        val start = LocalTime.parse(block.startTime, DateTimeFormatter.ofPattern("HH:mm"))
+        val end = LocalTime.parse(block.endTime, DateTimeFormatter.ofPattern("HH:mm"))
+        val timeOk = if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
+        else !now.isBefore(start) || !now.isAfter(end)
+        if (!timeOk) return false
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        return block.activeDays.getOrNull(dayIndex) == '1'
     }
 
     private fun showTimePicker(title: String, current: String, onPicked: (String) -> Unit) {

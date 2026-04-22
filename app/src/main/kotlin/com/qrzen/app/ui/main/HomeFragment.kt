@@ -26,6 +26,8 @@ import com.qrzen.app.ui.unlock.UnlockChallengeActivity
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
 @AndroidEntryPoint
@@ -66,6 +68,7 @@ class HomeFragment : Fragment() {
             onToggle = { block, enabled ->
                 if (enabled) {
                     viewModel.setEnabled(block, true)
+                    goToHomeIfBlockActive(block)
                     true
                 } else {
                     requestUnlock(block, UnlockChallengeActivity.ACTION_TOGGLE, enabled)
@@ -74,7 +77,10 @@ class HomeFragment : Fragment() {
             onPause = { block ->
                 requestUnlock(block, UnlockChallengeActivity.ACTION_PAUSE)
             },
-            onBlockNow = { block -> viewModel.blockNow(block) },
+            onBlockNow = { block ->
+                viewModel.blockNow(block)
+                goToHomeIfBlockActive(block)
+            },
             onEdit = { block ->
                 requestUnlock(block, UnlockChallengeActivity.ACTION_EDIT)
             },
@@ -88,7 +94,10 @@ class HomeFragment : Fragment() {
                 AlertDialog.Builder(requireContext())
                     .setTitle("Restart Block")
                     .setMessage("Restart '${block.title}' now? This will end the pause and resume blocking.")
-                    .setPositiveButton("Restart") { _, _ -> viewModel.unpause(block) }
+                    .setPositiveButton("Restart") { _, _ ->
+                        viewModel.unpause(block)
+                        goToHomeIfBlockActive(block)
+                    }
                     .setNegativeButton("Cancel", null)
                     .show()
             }
@@ -208,6 +217,23 @@ class HomeFragment : Fragment() {
             set(Calendar.MILLISECOND, 999)
         }
         return cal.timeInMillis - System.currentTimeMillis()
+    }
+
+    private fun goToHomeIfBlockActive(block: AppBlock) {
+        val now = LocalTime.now()
+        val fmt = DateTimeFormatter.ofPattern("HH:mm")
+        val start = LocalTime.parse(block.startTime, fmt)
+        val end = LocalTime.parse(block.endTime, fmt)
+        val timeOk = if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
+        else !now.isBefore(start) || !now.isAfter(end)
+        if (!timeOk) return
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        if (block.activeDays.getOrNull(dayIndex) != '1') return
+        startActivity(Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        })
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {
