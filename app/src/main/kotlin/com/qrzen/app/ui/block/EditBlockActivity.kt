@@ -5,7 +5,6 @@ import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.timepicker.MaterialTimePicker
 import com.google.android.material.timepicker.TimeFormat
 import com.qrzen.app.R
@@ -15,8 +14,6 @@ import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityEditBlockBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.UUID
 import javax.inject.Inject
 
@@ -37,10 +34,6 @@ class EditBlockActivity : AppCompatActivity() {
     private var isAllowlistMode: Boolean = false
     private var startTime: String = "00:00"
     private var endTime: String = "23:59"
-    private var editStartTime: String = "06:00"
-    private var editEndTime: String = "07:00"
-
-    private val fmt = DateTimeFormatter.ofPattern("HH:mm")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,13 +87,9 @@ class EditBlockActivity : AppCompatActivity() {
 
         startTime = block.startTime
         endTime = block.endTime
-        editStartTime = block.editStartTime
-        editEndTime = block.editEndTime
 
         binding.btnStartTime.text = "Start: $startTime"
         binding.btnEndTime.text = "End: $endTime"
-        binding.btnEditStart.text = "Edit from: $editStartTime"
-        binding.btnEditEnd.text = "Edit until: $editEndTime"
 
         val days = block.activeDays.padEnd(7, '0')
         binding.toggleMon.isChecked = days[0] == '1'
@@ -124,48 +113,7 @@ class EditBlockActivity : AppCompatActivity() {
             binding.npPomodoroBreak.value = block.pomodoroBreakMin.coerceIn(1, 60)
         }
 
-        enforceEditWindow(block)
         setupButtons()
-    }
-
-    private fun enforceEditWindow(block: AppBlock) {
-        val now = LocalTime.now()
-        val editStart = LocalTime.parse(block.editStartTime, fmt)
-        val editEnd = LocalTime.parse(block.editEndTime, fmt)
-        val inEditWindow = if (editEnd.isAfter(editStart)) {
-            now.isAfter(editStart) && now.isBefore(editEnd)
-        } else {
-            now.isAfter(editStart) || now.isBefore(editEnd)
-        }
-        if (!inEditWindow) {
-            setFormEnabled(false)
-            Snackbar.make(
-                binding.root,
-                getString(R.string.edit_window_locked, block.editStartTime, block.editEndTime),
-                Snackbar.LENGTH_LONG
-            ).show()
-        }
-    }
-
-    private fun setFormEnabled(enabled: Boolean) {
-        binding.etTitle.isEnabled = enabled
-        binding.btnSelectApps.isEnabled = enabled
-        binding.btnStartTime.isEnabled = enabled
-        binding.btnEndTime.isEnabled = enabled
-        binding.btnEditStart.isEnabled = enabled
-        binding.btnEditEnd.isEnabled = enabled
-        binding.toggleMon.isEnabled = enabled
-        binding.toggleTue.isEnabled = enabled
-        binding.toggleWed.isEnabled = enabled
-        binding.toggleThu.isEnabled = enabled
-        binding.toggleFri.isEnabled = enabled
-        binding.toggleSat.isEnabled = enabled
-        binding.toggleSun.isEnabled = enabled
-        binding.cbMasterPassword.isEnabled = enabled
-        binding.cbPomodoro.isEnabled = enabled
-        binding.npPomodoroDuration.isEnabled = enabled
-        binding.npPomodoroBreak.isEnabled = enabled
-        binding.btnSave.isEnabled = enabled
     }
 
     private fun setupButtons() {
@@ -184,18 +132,6 @@ class EditBlockActivity : AppCompatActivity() {
             showTimePicker("End time", endTime) { t ->
                 endTime = t
                 binding.btnEndTime.text = "End: $t"
-            }
-        }
-        binding.btnEditStart.setOnClickListener {
-            showTimePicker("Edit window start", editStartTime) { t ->
-                editStartTime = t
-                binding.btnEditStart.text = "Edit from: $t"
-            }
-        }
-        binding.btnEditEnd.setOnClickListener {
-            showTimePicker("Edit window end", editEndTime) { t ->
-                editEndTime = t
-                binding.btnEditEnd.text = "Edit until: $t"
             }
         }
 
@@ -262,8 +198,6 @@ class EditBlockActivity : AppCompatActivity() {
             startTime = startTime,
             endTime = endTime,
             activeDays = activeDays,
-            editStartTime = editStartTime,
-            editEndTime = editEndTime,
             qrSecret = currentQrSecret,
             masterPasswordEnabled = binding.cbMasterPassword.isChecked,
             pausedUntil = existingBlock?.pausedUntil ?: 0L,
