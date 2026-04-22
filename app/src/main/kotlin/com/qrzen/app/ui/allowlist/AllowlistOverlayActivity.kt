@@ -343,7 +343,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         private val timerHandlers = mutableMapOf<String, CountDownTimer>()
 
         inner class ViewHolder(private val binding: ItemAllowedAppBinding) : RecyclerView.ViewHolder(binding.root) {
-            private var boundPackageName: String? = null
+            var boundPackageName: String? = null
 
             fun bind(item: AllowedAppItem) {
                 boundPackageName?.let { pkg ->
