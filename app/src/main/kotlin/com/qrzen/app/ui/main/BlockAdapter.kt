@@ -32,10 +32,13 @@ class BlockAdapter(
 
     inner class ViewHolder(val binding: ItemBlockBinding) : RecyclerView.ViewHolder(binding.root) {
         private var countDownTimer: CountDownTimer? = null
+        private var blockNowTimer: CountDownTimer? = null
 
         fun bind(block: AppBlock) {
             countDownTimer?.cancel()
             countDownTimer = null
+            blockNowTimer?.cancel()
+            blockNowTimer = null
 
             binding.tvTitle.text = block.title
             binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
@@ -55,6 +58,7 @@ class BlockAdapter(
             }
 
             setupPauseTimer(block)
+            setupBlockNowTimer(block)
         }
 
         private fun bindToggleListener(block: AppBlock) {
@@ -99,6 +103,26 @@ class BlockAdapter(
             }
         }
 
+        private fun setupBlockNowTimer(block: AppBlock) {
+            val now = System.currentTimeMillis()
+            if (block.blockNowUntil > now) {
+                binding.tvBlockNowTimer.visibility = View.VISIBLE
+                val remaining = block.blockNowUntil - now
+                binding.tvBlockNowTimer.text = "⏱ Blocking for ${formatDuration(remaining)}"
+                blockNowTimer = object : CountDownTimer(remaining, 1000L) {
+                    override fun onTick(ms: Long) {
+                        binding.tvBlockNowTimer.text = "⏱ Blocking for ${formatDuration(ms)}"
+                    }
+
+                    override fun onFinish() {
+                        binding.tvBlockNowTimer.visibility = View.GONE
+                    }
+                }.start()
+            } else {
+                binding.tvBlockNowTimer.visibility = View.GONE
+            }
+        }
+
         private fun showPopupMenu(anchor: View, block: AppBlock) {
             val popup = PopupMenu(anchor.context, anchor)
             popup.menuInflater.inflate(R.menu.menu_block_overflow, popup.menu)
@@ -138,6 +162,8 @@ class BlockAdapter(
         fun cancelTimer() {
             countDownTimer?.cancel()
             countDownTimer = null
+            blockNowTimer?.cancel()
+            blockNowTimer = null
         }
     }
 

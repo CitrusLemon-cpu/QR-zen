@@ -43,6 +43,7 @@ class LockScreenActivity : AppCompatActivity() {
     private lateinit var binding: ActivityLockScreenBinding
     private lateinit var unlockRenderer: UnlockChallengeRenderer
     private var currentBlock: AppBlock? = null
+    private var pauseSheetShown = false
 
     private val qrScanLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         unlockRenderer.handleQrScanResult(result.data?.getStringExtra(CameraScan.SCAN_RESULT))
@@ -64,6 +65,7 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun loadBlock(blockId: Int) {
+        pauseSheetShown = false
         lifecycleScope.launch {
             val block = dao.getById(blockId) ?: run {
                 finish()
@@ -101,6 +103,8 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun showPauseDurationSheet(block: AppBlock) {
+        if (pauseSheetShown) return
+        pauseSheetShown = true
         val sheet = BottomSheetDialog(this)
         val sb = BottomSheetPauseDurationBinding.inflate(LayoutInflater.from(this))
         sheet.setContentView(sb.root)

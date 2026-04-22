@@ -45,8 +45,10 @@ class HomeViewModel @Inject constructor(
         WidgetRefresh.refresh(ctx)
     }
 
-    fun blockNow(block: AppBlock) = viewModelScope.launch {
-        dao.update(block.copy(isEnabled = true, pausedUntil = 0L))
+    fun blockNow(block: AppBlock, durationMs: Long) = viewModelScope.launch {
+        val until = if (durationMs == Long.MAX_VALUE) Long.MAX_VALUE
+        else System.currentTimeMillis() + durationMs
+        dao.update(block.copy(isEnabled = true, pausedUntil = 0L, blockNowUntil = until))
         WidgetRefresh.refresh(ctx)
     }
 

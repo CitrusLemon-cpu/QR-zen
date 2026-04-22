@@ -37,7 +37,7 @@ class UnlockChallengeRenderer(
         clear()
         hideError()
         when (UnlockMethodUtils.getNormalizedMethod(block)) {
-            UnlockMethodUtils.METHOD_NONE -> onUnlocked()
+            UnlockMethodUtils.METHOD_NONE -> showNoneChallenge(onUnlocked)
             UnlockMethodUtils.METHOD_DELAY -> showDelay(block, onUnlocked)
             UnlockMethodUtils.METHOD_PASSWORD -> showPassword(block, onUnlocked)
             UnlockMethodUtils.METHOD_TYPE_OVER_TEXT -> showTypeOverText(block, onUnlocked)
@@ -59,6 +59,17 @@ class UnlockChallengeRenderer(
             }
             else -> onUnlocked()
         }
+    }
+
+    private fun showNoneChallenge(onUnlocked: () -> Unit) {
+        val binding = ViewUnlockInfoBinding.inflate(LayoutInflater.from(activity), container, false)
+        container.addView(binding.root)
+        binding.tvChallengeTitle.text = activity.getString(R.string.unlock_method_none)
+        binding.tvChallengeBody.text = activity.getString(R.string.unlock_none_lock_desc)
+        binding.tvChallengeSecondary.visibility = View.GONE
+        binding.btnGoBack.visibility = View.VISIBLE
+        binding.btnGoBack.text = activity.getString(R.string.challenge_pause_block)
+        binding.btnGoBack.setOnClickListener { onUnlocked() }
     }
 
     fun handleQrScanResult(scannedText: String?) {
