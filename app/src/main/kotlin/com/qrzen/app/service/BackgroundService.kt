@@ -13,6 +13,7 @@ import android.os.Looper
 import androidx.core.app.NotificationCompat
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -61,6 +62,11 @@ class BackgroundService : Service() {
 
     private suspend fun checkExpiredPauses() {
         val now = System.currentTimeMillis()
+        var shouldRefresh = false
+        if (Prefs.pauseAllUntil != 0L && now > Prefs.pauseAllUntil) {
+            Prefs.pauseAllUntil = 0L
+            shouldRefresh = true
+        }
         dao.getAll()
             .filter { block ->
                 block.pausedUntil != 0L &&
@@ -69,8 +75,9 @@ class BackgroundService : Service() {
             }
             .forEach { block ->
                 dao.setPausedUntil(block.id, 0L)
-                WidgetRefresh.refresh(applicationContext)
+                shouldRefresh = true
             }
+        if (shouldRefresh) WidgetRefresh.refresh(applicationContext)
     }
 
     private fun buildNotification(): Notification {

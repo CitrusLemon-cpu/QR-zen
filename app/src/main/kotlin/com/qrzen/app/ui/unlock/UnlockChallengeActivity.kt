@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.king.zxing.CameraScan
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityUnlockChallengeBinding
 import com.qrzen.app.ui.lock.QrScanActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -46,6 +47,11 @@ class UnlockChallengeActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (Prefs.pauseAllUntil > System.currentTimeMillis()) {
+            setResult(RESULT_OK)
+            finish()
+            return
+        }
         binding = ActivityUnlockChallengeBinding.inflate(layoutInflater)
         setContentView(binding.root)
         renderer = UnlockChallengeRenderer(this, binding.challengeContainer, binding.tvError)
@@ -80,7 +86,7 @@ class UnlockChallengeActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        renderer.clear()
+        if (::renderer.isInitialized) renderer.clear()
         super.onDestroy()
     }
 }
