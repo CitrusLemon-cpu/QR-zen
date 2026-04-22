@@ -2,14 +2,15 @@ package com.qrzen.app.service
 
 import android.accessibilityservice.AccessibilityService
 import android.content.Intent
+import android.util.Log
 import android.view.accessibility.AccessibilityEvent
-import com.qrzen.app.data.db.AppBlockDao
-import com.qrzen.app.data.db.BlockEventDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
+import com.qrzen.app.di.WidgetEntryPoint
 import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
 import com.qrzen.app.ui.lock.LockScreenActivity
-import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.EntryPointAccessors
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -18,15 +19,25 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-import javax.inject.Inject
 
-@AndroidEntryPoint
 class BlockAccessibilityService : AccessibilityService() {
 
-    @Inject lateinit var dao: AppBlockDao
-    @Inject lateinit var blockEventDao: BlockEventDao
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    companion object {
+        private const val TAG = "QrZenAccessibility"
+    }
+
+    private val exceptionHandler = CoroutineExceptionHandler { _, throwable ->
+        Log.e(TAG, "Coroutine error in accessibility service", throwable)
+    }
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
     private val fmt = DateTimeFormatter.ofPattern("HH:mm")
+
+    private val entryPoint by lazy {
+        EntryPointAccessors.fromApplication(
+            applicationContext,
+            WidgetEntryPoint::class.java
+        )
+    }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
@@ -34,8 +45,10 @@ class BlockAccessibilityService : AccessibilityService() {
         if (pkg == packageName) return
 
         scope.launch {
+            val dao = entryPoint.appBlockDao()
             val now = System.currentTimeMillis()
             val activeBlocks = dao.getAll().filter { it.isEnabled && now > it.pausedUntil && isBlockActive(it) }
+
             val blocklistMatch = activeBlocks
                 .filter { !it.isAllowlistMode }
                 .firstOrNull { block ->
@@ -45,6 +58,7 @@ class BlockAccessibilityService : AccessibilityService() {
                 launchLockScreen(pkg, blocklistMatch)
                 return@launch
             }
+
             val allowlistMatch = activeBlocks
                 .filter { it.isAllowlistMode }
                 .firstOrNull { block ->
@@ -75,16 +89,7 @@ class BlockAccessibilityService : AccessibilityService() {
             putExtra(LockScreenActivity.EXTRA_BLOCK_ID, block.id)
             putExtra(LockScreenActivity.EXTRA_BLOCKED_PKG, blockedPkg)
         })
-        scope.launch {
-            blockEventDao.insert(
-                BlockEvent(
-                    blockId = block.id,
-                    blockTitle = block.title,
-                    packageName = blockedPkg,
-                    eventType = "BLOCKED"
-                )
-            )
-        }
+        logBlockEvent(block, blockedPkg)
     }
 
     private fun launchAllowlistOverlay(blockedPkg: String, block: AppBlock) {
@@ -93,8 +98,12 @@ class BlockAccessibilityService : AccessibilityService() {
             putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_ID, block.id)
             putExtra(AllowlistOverlayActivity.EXTRA_BLOCKED_PKG, blockedPkg)
         })
+        logBlockEvent(block, blockedPkg)
+    }
+
+    private fun logBlockEvent(block: AppBlock, blockedPkg: String) {
         scope.launch {
-            blockEventDao.insert(
+            entryPoint.blockEventDao().insert(
                 BlockEvent(
                     blockId = block.id,
                     blockTitle = block.title,
