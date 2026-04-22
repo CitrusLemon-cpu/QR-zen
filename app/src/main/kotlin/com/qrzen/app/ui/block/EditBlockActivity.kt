@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import android.widget.ToggleButton
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.datepicker.MaterialDatePicker
@@ -59,6 +60,15 @@ class EditBlockActivity : AppCompatActivity() {
     private var editWindowEnd: String = "10:00"
     private var editWindowDays: String = "1111111"
     private var lockUntil: Long = 0L
+    private val qrScanForSetLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val scanned = result.data?.getStringExtra(com.king.zxing.CameraScan.SCAN_RESULT)
+            if (!scanned.isNullOrBlank()) {
+                currentQrSecret = scanned
+                binding.tvQrSecret.text = scanned
+            }
+        }
+    }
 
     private val unlockMethods by lazy {
         listOf(
@@ -166,6 +176,9 @@ class EditBlockActivity : AppCompatActivity() {
         binding.btnShowQr.setOnClickListener {
             QrDisplayFragment.newInstance(currentQrSecret)
                 .show(supportFragmentManager, "qr_display")
+        }
+        binding.btnScanQrToSet.setOnClickListener {
+            qrScanForSetLauncher.launch(Intent(this, com.qrzen.app.ui.lock.QrScanActivity::class.java))
         }
 
         binding.btnSave.setOnClickListener { saveBlock() }
