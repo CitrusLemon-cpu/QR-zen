@@ -165,6 +165,7 @@ class SettingsFragment : Fragment() {
             titleRes = R.string.block_master_password,
             onVerified = {
                 Prefs.masterPassword = ""
+                Prefs.pauseAllUntil = 0L
                 Prefs.masterPasswordEnabled = false
                 binding.etOldPwd.text?.clear()
                 binding.etMasterPwd.text?.clear()
@@ -226,7 +227,9 @@ class SettingsFragment : Fragment() {
             val until = System.currentTimeMillis() + option.durationMs
             Prefs.pauseAllUntil = until
             dao.getAll().forEach { block ->
-                dao.setPausedUntil(block.id, until)
+                if (until > block.pausedUntil) {
+                    dao.setPausedUntil(block.id, until)
+                }
             }
             WidgetRefresh.refresh(requireContext().applicationContext)
             updatePauseAllViews()
