@@ -29,11 +29,14 @@ class BlockAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "QrZenAccessibility"
+        @Volatile var isRunning: Boolean = false
 
         /** System packages that must never be blocked by allowlist mode. */
         private val SYSTEM_EXEMPT_PACKAGES = setOf(
             "com.android.systemui",
             "com.android.settings",
+            "com.miui.securitycenter",
+            "com.miui.guardprovider",
             "com.android.permissioncontroller",
             "com.google.android.permissioncontroller",
             "com.android.packageinstaller",
@@ -92,6 +95,11 @@ class BlockAccessibilityService : AccessibilityService() {
     private fun isDeviceLocked(): Boolean {
         val km = getSystemService(KeyguardManager::class.java) ?: return false
         return km.isKeyguardLocked
+    }
+
+    override fun onServiceConnected() {
+        super.onServiceConnected()
+        isRunning = true
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -177,6 +185,7 @@ class BlockAccessibilityService : AccessibilityService() {
     override fun onInterrupt() {}
 
     override fun onDestroy() {
+        isRunning = false
         super.onDestroy()
         scope.cancel()
     }
