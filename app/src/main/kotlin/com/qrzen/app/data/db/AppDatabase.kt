@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
 
-@Database(entities = [AppBlock::class, BlockEvent::class], version = 2, exportSchema = false)
+@Database(entities = [AppBlock::class, BlockEvent::class], version = 3, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appBlockDao(): AppBlockDao
     abstract fun blockEventDao(): BlockEventDao

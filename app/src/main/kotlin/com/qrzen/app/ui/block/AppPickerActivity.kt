@@ -26,6 +26,7 @@ class AppPickerActivity : AppCompatActivity() {
     companion object {
         const val EXTRA_PRESELECTED = "extra_preselected"
         const val EXTRA_RESULT = "extra_result"
+        const val EXTRA_IS_ALLOWLIST = "extra_is_allowlist"
         const val REQ_CODE = 2001
     }
 
@@ -39,6 +40,11 @@ class AppPickerActivity : AppCompatActivity() {
 
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
+        supportActionBar?.title = if (intent.getBooleanExtra(EXTRA_IS_ALLOWLIST, false)) {
+            "Select Allowed Apps"
+        } else {
+            getString(com.qrzen.app.R.string.app_picker_title)
+        }
         binding.toolbar.setNavigationOnClickListener { finish() }
 
         val preselected = intent.getStringExtra(EXTRA_PRESELECTED)
