@@ -62,18 +62,21 @@ class AppPickerActivity : AppCompatActivity() {
         lifecycleScope.launch {
             val apps = withContext(Dispatchers.IO) {
                 val pm = packageManager
-                pm.getInstalledApplications(PackageManager.GET_META_DATA)
-                    .filter { info ->
-                        (info.flags and ApplicationInfo.FLAG_SYSTEM) == 0 &&
-                        info.packageName != packageName
-                    }
-                    .map { info ->
+                val launcherIntent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
+                pm.queryIntentActivities(launcherIntent, 0)
+                    .mapNotNull { resolveInfo ->
+                        val ai = resolveInfo.activityInfo?.applicationInfo ?: return@mapNotNull null
+                        val pkg = ai.packageName
+                        if (pkg == packageName) return@mapNotNull null
                         AppItem(
-                            packageName = info.packageName,
-                            label = pm.getApplicationLabel(info).toString(),
-                            icon = pm.getApplicationIcon(info)
+                            packageName = pkg,
+                            label = resolveInfo.loadLabel(pm).toString(),
+                            icon = resolveInfo.loadIcon(pm)
                         )
                     }
+                    .distinctBy { it.packageName }
                     .sortedBy { it.label.lowercase() }
             }
             adapter.submitList(apps)
