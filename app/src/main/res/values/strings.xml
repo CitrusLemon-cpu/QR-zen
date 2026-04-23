@@ -107,4 +107,6 @@
     <string name="timer_dialog_title">Set usage timer for %1$s</string>
     <string name="timer_set">Set Timer</string>
     <string name="timer_clear">Clear Timer</string>
+    <string name="overlay_remove_app_message">Temporarily remove this app from the allowed list? It will reappear next time the block activates.</string>
+    <string name="overlay_remove_app_confirm">Remove</string>
 </resources>

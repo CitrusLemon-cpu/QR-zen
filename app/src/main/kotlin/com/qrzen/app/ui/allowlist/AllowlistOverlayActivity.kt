@@ -58,6 +58,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     private lateinit var binding: ActivityAllowlistOverlayBinding
     private lateinit var unlockRenderer: UnlockChallengeRenderer
     private var currentBlock: AppBlock? = null
+    private val sessionRemovedApps = mutableSetOf<String>()
     private var countDownTimer: CountDownTimer? = null
     private var pauseSheetShown = false
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
@@ -79,6 +80,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        sessionRemovedApps.clear()
         loadBlock(intent.getIntExtra(EXTRA_BLOCK_ID, -1))
     }
 
@@ -109,7 +111,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         binding.rvAllowedApps.adapter = AllowedAppAdapter(
             allowedApps,
             onClick = { launchAllowedApp(it) },
-            onLongPress = { showTimerDialog(it) },
+            onLongPress = { showRemoveAppDialog(it) },
             onTimerExpired = { refreshAllowedApps() }
         )
         unlockRenderer.render(
@@ -136,6 +138,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .filterNot(Prefs::isAppTimerExpired)
+            .filterNot { it in sessionRemovedApps }
             .mapNotNull { pkg ->
                 try {
                     val info = pm.getApplicationInfo(pkg, 0)
@@ -197,30 +200,12 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         finish()
     }
 
-    private fun showTimerDialog(appItem: AllowedAppItem) {
-        val options = arrayOf("30 minutes", "1 hour", "2 hours", "4 hours", "8 hours", "12 hours")
-        val durations = longArrayOf(
-            30 * 60_000L,
-            60 * 60_000L,
-            2 * 60 * 60_000L,
-            4 * 60 * 60_000L,
-            8 * 60 * 60_000L,
-            12 * 60 * 60_000L
-        )
-        var selectedIndex = 0
-
+    private fun showRemoveAppDialog(appItem: AllowedAppItem) {
         AlertDialog.Builder(this)
-            .setTitle(getString(R.string.timer_dialog_title, appItem.label))
-            .setSingleChoiceItems(options, 0) { _, which -> selectedIndex = which }
-            .setPositiveButton(R.string.timer_set) { _, _ ->
-                Prefs.setAppTimerExpiry(
-                    appItem.packageName,
-                    System.currentTimeMillis() + durations[selectedIndex]
-                )
-                refreshAllowedApps()
-            }
-            .setNeutralButton(R.string.timer_clear) { _, _ ->
-                Prefs.setAppTimerExpiry(appItem.packageName, 0L)
+            .setTitle(appItem.label)
+            .setMessage(getString(R.string.overlay_remove_app_message))
+            .setPositiveButton(R.string.overlay_remove_app_confirm) { _, _ ->
+                sessionRemovedApps.add(appItem.packageName)
                 refreshAllowedApps()
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -235,7 +220,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             binding.rvAllowedApps.adapter = AllowedAppAdapter(
                 allowedApps,
                 onClick = { launchAllowedApp(it) },
-                onLongPress = { showTimerDialog(it) },
+                onLongPress = { showRemoveAppDialog(it) },
                 onTimerExpired = { refreshAllowedApps() }
             )
         }
