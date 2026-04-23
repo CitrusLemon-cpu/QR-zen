@@ -23,6 +23,8 @@ import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.receiver.AlarmKeepaliveReceiver
+import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
+import com.qrzen.app.ui.lock.LockScreenActivity
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -169,12 +171,8 @@ class BackgroundService : Service() {
         }
         if (shouldRefresh) WidgetRefresh.refresh(applicationContext)
 
-        val accessibilityRunning = BlockAccessibilityService.isRunning
         val hasActiveBlocks = currentlyActiveIds.isNotEmpty()
-        val hasActiveAllowlistBlocks = allBlocks.any {
-            it.isEnabled && !it.isArchived && it.pausedUntil <= now && isBlockActive(it) && it.isAllowlistMode
-        }
-        val needsPolling = (hasActiveBlocks && !accessibilityRunning) || hasActiveAllowlistBlocks
+        val needsPolling = hasActiveBlocks
         if (needsPolling) {
             startUsagePolling()
         } else {
@@ -264,35 +262,48 @@ class BackgroundService : Service() {
             it.isEnabled && !it.isArchived && now > it.pausedUntil && isBlockActive(it)
         }
 
-        if (!BlockAccessibilityService.isRunning) {
-            val blocklistMatch = activeBlocks
-                .filter { !it.isAllowlistMode }
-                .any { block ->
-                    block.appPackages.split(",").map { it.trim() }.contains(pkg)
-                }
-            if (blocklistMatch) {
-                lastBlockedPkg = pkg
-                lastBlockedTime = now
-                sendToHome()
-                return
+        val blocklistBlock = activeBlocks
+            .filter { !it.isAllowlistMode }
+            .firstOrNull { block ->
+                block.appPackages.split(",").map { it.trim() }.contains(pkg)
             }
+        if (blocklistBlock != null) {
+            lastBlockedPkg = pkg
+            lastBlockedTime = now
+            launchLockScreen(pkg, blocklistBlock)
+            return
         }
 
-        val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
-        if (allowlistBlocks.isNotEmpty()) {
-            val isAllowed = allowlistBlocks.all { block ->
+        val allowlistBlock = activeBlocks
+            .filter { it.isAllowlistMode }
+            .firstOrNull { block ->
                 val allowed = block.appPackages.split(",")
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
                     .toSet()
-                allowed.contains(pkg) && !Prefs.isAppTimerExpired(pkg)
+                !allowed.contains(pkg) || Prefs.isAppTimerExpired(pkg)
             }
-            if (!isAllowed) {
-                lastBlockedPkg = pkg
-                lastBlockedTime = now
-                sendToHome()
-            }
+        if (allowlistBlock != null) {
+            lastBlockedPkg = pkg
+            lastBlockedTime = now
+            launchAllowlistOverlay(pkg, allowlistBlock)
         }
+    }
+
+    private fun launchLockScreen(blockedPkg: String, block: AppBlock) {
+        startActivity(Intent(this, LockScreenActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(LockScreenActivity.EXTRA_BLOCK_ID, block.id)
+            putExtra(LockScreenActivity.EXTRA_BLOCKED_PKG, blockedPkg)
+        })
+    }
+
+    private fun launchAllowlistOverlay(blockedPkg: String, block: AppBlock) {
+        startActivity(Intent(this, AllowlistOverlayActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_ID, block.id)
+            putExtra(AllowlistOverlayActivity.EXTRA_BLOCKED_PKG, blockedPkg)
+        })
     }
 
     private fun sendToHome() {
