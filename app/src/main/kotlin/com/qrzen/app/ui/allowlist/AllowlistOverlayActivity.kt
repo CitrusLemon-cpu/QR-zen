@@ -63,7 +63,6 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var timeBlockDao: TimeBlockDao
     @Inject lateinit var blockEventDao: BlockEventDao
-    @Inject lateinit var timeBlockDao: TimeBlockDao
 
     private lateinit var binding: ActivityAllowlistOverlayBinding
     private lateinit var unlockRenderer: UnlockChallengeRenderer
