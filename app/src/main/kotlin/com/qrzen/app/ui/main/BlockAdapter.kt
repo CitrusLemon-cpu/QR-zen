@@ -75,9 +75,30 @@ class BlockAdapter(
             iconLoadJob = null
 
             binding.tvTitle.text = block.title
-            binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
             val modePrefix = if (block.isAllowlistMode) "Allowlist" else "Blocklist"
-            binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
+            when (block.blockingStyle) {
+                UnlockMethodUtils.STYLE_MANUAL -> {
+                    binding.tvTimeRange.text = "Manual"
+                    binding.tvDays.text = modePrefix
+                }
+                UnlockMethodUtils.STYLE_SCHEDULE -> {
+                    binding.tvTimeRange.text = "Scheduled"
+                    binding.tvDays.text = modePrefix
+                }
+                UnlockMethodUtils.STYLE_USAGE_LIMIT -> {
+                    val period = if (block.usageLimitPeriod == "HOURLY") "per hour" else "per day"
+                    binding.tvTimeRange.text = "${block.usageLimitMinutes} min $period"
+                    binding.tvDays.text = "$modePrefix · Usage Limit"
+                }
+                UnlockMethodUtils.STYLE_WAIT_TIMER -> {
+                    binding.tvTimeRange.text = "Wait ${block.waitTimerWaitMinutes}m after ${block.waitTimerUseMinutes}m use"
+                    binding.tvDays.text = "$modePrefix · Wait Timer"
+                }
+                else -> {
+                    binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
+                    binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
+                }
+            }
 
             val unlockSummary = UnlockMethodUtils.getUnlockMethodSummary(binding.root.context, block)
             binding.tvUnlockMethod.visibility = if (unlockSummary.isNullOrBlank()) View.GONE else View.VISIBLE

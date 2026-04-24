@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -17,6 +19,7 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val dao: AppBlockDao,
+    private val timeBlockDao: TimeBlockDao,
     @ApplicationContext private val ctx: Context
 ) : ViewModel() {
 
@@ -55,5 +58,10 @@ class HomeViewModel @Inject constructor(
     fun archive(block: AppBlock) = viewModelScope.launch {
         dao.setArchived(block.id, true)
         WidgetRefresh.refresh(ctx)
+    }
+
+    suspend fun isBlockCurrentlyActive(block: AppBlock): Boolean {
+        val timeBlocks = timeBlockDao.getByBlockId(block.id)
+        return UnlockMethodUtils.isBlockCurrentlyActive(block, timeBlocks)
     }
 }

@@ -16,8 +16,10 @@ import com.king.zxing.CameraScan
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.BlockEventDao
+import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
+import com.qrzen.app.data.model.TimeBlock
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityLockScreenBinding
 import com.qrzen.app.databinding.BottomSheetPauseDurationBinding
@@ -39,6 +41,7 @@ class LockScreenActivity : AppCompatActivity() {
 
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var blockEventDao: BlockEventDao
+    @Inject lateinit var timeBlockDao: TimeBlockDao
 
     private lateinit var binding: ActivityLockScreenBinding
     private lateinit var unlockRenderer: UnlockChallengeRenderer
@@ -72,21 +75,23 @@ class LockScreenActivity : AppCompatActivity() {
                 return@launch
             }
             currentBlock = block
+            val timeBlocks = timeBlockDao.getByBlockId(block.id)
             if (Prefs.pauseAllUntil > System.currentTimeMillis()) {
                 binding.tvBlockTitle.text = block.title
                 binding.tvBlockMessage.text = getString(R.string.lock_screen_message)
                 showPauseDurationSheet(block)
                 return@launch
             }
-            setupUi(block)
+            setupUi(block, timeBlocks)
         }
     }
 
-    private fun setupUi(block: AppBlock) {
+    private fun setupUi(block: AppBlock, timeBlocks: List<TimeBlock>) {
         binding.tvBlockTitle.text = block.title
         binding.tvBlockMessage.text = getString(R.string.lock_screen_message)
         unlockRenderer.render(
             block = block,
+            timeBlocks = timeBlocks,
             showGoBackButton = false,
             onRequestQrScan = {
                 qrScanLauncher.launch(Intent(this, QrScanActivity::class.java))
@@ -113,7 +118,15 @@ class LockScreenActivity : AppCompatActivity() {
         sb.btn1hr.setOnClickListener { applyPause(block, 60 * 60_000L); sheet.dismiss() }
         sb.btn2hr.setOnClickListener { applyPause(block, 2 * 60 * 60_000L); sheet.dismiss() }
         sb.btnRestOfDay.setOnClickListener { applyPause(block, millisUntilMidnight()); sheet.dismiss() }
-        sb.btnIndefinitely.setOnClickListener { applyPause(block, Long.MAX_VALUE); sheet.dismiss() }
+        sb.btnIndefinitely.setOnClickListener {
+            lifecycleScope.launch {
+                dao.update(block.copy(isEnabled = false, pausedUntil = 0L))
+                WidgetRefresh.refresh(applicationContext)
+                SilentModeHelper.restoreRinger(this@LockScreenActivity)
+                finish()
+            }
+            sheet.dismiss()
+        }
         sheet.show()
     }
 
