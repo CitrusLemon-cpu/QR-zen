@@ -1,5 +1,6 @@
 package com.qrzen.app.ui.main
 
+import android.content.Context
 import android.os.CountDownTimer
 import android.view.LayoutInflater
 import android.view.View
@@ -63,7 +64,9 @@ class BlockAdapter(
     inner class ViewHolder(val binding: ItemBlockBinding) : RecyclerView.ViewHolder(binding.root) {
         private var countDownTimer: CountDownTimer? = null
         private var blockNowTimer: CountDownTimer? = null
+        private var usageStatusTimer: CountDownTimer? = null
         private var iconLoadJob: Job? = null
+        private var usageQueryJob: Job? = null
         private var boundPackages: List<String> = emptyList()
 
         fun bind(block: AppBlock) {
@@ -71,8 +74,12 @@ class BlockAdapter(
             countDownTimer = null
             blockNowTimer?.cancel()
             blockNowTimer = null
+            usageStatusTimer?.cancel()
+            usageStatusTimer = null
             iconLoadJob?.cancel()
             iconLoadJob = null
+            usageQueryJob?.cancel()
+            usageQueryJob = null
 
             binding.tvTitle.text = block.title
             val modePrefix = if (block.isAllowlistMode) "Allowlist" else "Blocklist"
@@ -89,10 +96,46 @@ class BlockAdapter(
                     val period = if (block.usageLimitPeriod == "HOURLY") "per hour" else "per day"
                     binding.tvTimeRange.text = "${block.usageLimitMinutes} min $period"
                     binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
+
+                    val lifecycleOwner = binding.root.findViewTreeLifecycleOwner()
+                    if (lifecycleOwner != null) {
+                        usageQueryJob = lifecycleOwner.lifecycleScope.launch {
+                            val remainingText = withContext(Dispatchers.IO) {
+                                computeUsageLimitRemaining(binding.root.context, block)
+                            }
+                            binding.tvTimeRange.text = remainingText
+                        }
+                    }
                 }
                 UnlockMethodUtils.STYLE_WAIT_TIMER -> {
                     binding.tvTimeRange.text = "Wait ${block.waitTimerWaitMinutes}m after ${block.waitTimerUseMinutes}m use"
                     binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
+
+                    val lifecycleOwner = binding.root.findViewTreeLifecycleOwner()
+                    if (lifecycleOwner != null) {
+                        usageQueryJob = lifecycleOwner.lifecycleScope.launch {
+                            val status = withContext(Dispatchers.IO) {
+                                computeWaitTimerStatus(binding.root.context, block)
+                            }
+                            binding.tvTimeRange.text = status.text
+
+                            if (status.blockingRemainingMs > 0L) {
+                                usageStatusTimer?.cancel()
+                                usageStatusTimer = object : CountDownTimer(status.blockingRemainingMs, 1000L) {
+                                    override fun onTick(ms: Long) {
+                                        val min = ms / 60_000
+                                        val sec = (ms % 60_000) / 1000
+                                        binding.tvTimeRange.text = "Blocked for ${min}m ${sec}s"
+                                    }
+
+                                    override fun onFinish() {
+                                        binding.tvTimeRange.text = "${block.waitTimerUseMinutes}m of use left"
+                                    }
+                                }.start()
+                            }
+                        }
+                    }
+>>>>>>> origin/main
                 }
                 else -> {
                     binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
@@ -262,8 +305,91 @@ class BlockAdapter(
             countDownTimer = null
             blockNowTimer?.cancel()
             blockNowTimer = null
+            usageStatusTimer?.cancel()
+            usageStatusTimer = null
             iconLoadJob?.cancel()
             iconLoadJob = null
+            usageQueryJob?.cancel()
+            usageQueryJob = null
+        }
+    }
+
+    private data class WaitTimerStatus(val text: String, val blockingRemainingMs: Long)
+
+    private fun computeUsageLimitRemaining(context: Context, block: AppBlock): String {
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+            ?: return "${block.usageLimitMinutes}m left"
+
+        val now = System.currentTimeMillis()
+        val startTime = when (block.usageLimitPeriod) {
+            "HOURLY" -> now - 3_600_000L
+            else -> {
+                java.util.Calendar.getInstance().apply {
+                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+                    set(java.util.Calendar.MINUTE, 0)
+                    set(java.util.Calendar.SECOND, 0)
+                    set(java.util.Calendar.MILLISECOND, 0)
+                }.timeInMillis
+            }
+        }
+        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val usageStats = usageStatsManager.queryUsageStats(
+            android.app.usage.UsageStatsManager.INTERVAL_BEST,
+            startTime,
+            now
+        )
+        val totalUsageMs = usageStats
+            ?.filter { it.packageName in packages }
+            ?.sumOf { it.totalTimeInForeground } ?: 0L
+
+        val limitMs = block.usageLimitMinutes * 60_000L
+        val remainingMs = (limitMs - totalUsageMs).coerceAtLeast(0L)
+        val remainingMin = remainingMs / 60_000L
+
+        val periodLabel = if (block.usageLimitPeriod == "HOURLY") "this hour" else "today"
+        return if (remainingMs <= 0L) {
+            "Limit reached"
+        } else {
+            "${remainingMin}m left $periodLabel"
+        }
+    }
+
+    private fun computeWaitTimerStatus(context: Context, block: AppBlock): WaitTimerStatus {
+        val now = System.currentTimeMillis()
+        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
+        val blockingUntilKey = "wait_timer_blocking_${block.id}"
+        val blockingUntil = kv.decodeLong(blockingUntilKey, 0L)
+
+        if (blockingUntil > now) {
+            val remainingMs = blockingUntil - now
+            val remainingMin = remainingMs / 60_000L
+            return WaitTimerStatus("Blocked for ${remainingMin}m", remainingMs)
+        }
+
+        val lastResetKey = "wait_timer_reset_${block.id}"
+        val lastReset = kv.decodeLong(lastResetKey, now)
+
+        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+            ?: return WaitTimerStatus("${block.waitTimerUseMinutes}m of use left", 0L)
+
+        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val usageStats = usageStatsManager.queryUsageStats(
+            android.app.usage.UsageStatsManager.INTERVAL_BEST,
+            lastReset,
+            now
+        )
+        val totalUsageMs = usageStats
+            ?.filter { it.packageName in packages }
+            ?.sumOf { it.totalTimeInForeground } ?: 0L
+
+        val thresholdMs = block.waitTimerUseMinutes * 60_000L
+        val remainingUseMs = (thresholdMs - totalUsageMs).coerceAtLeast(0L)
+        val remainingUseMin = remainingUseMs / 60_000L
+
+        return if (remainingUseMs <= 0L) {
+            WaitTimerStatus("Block pending", 0L)
+        } else {
+            WaitTimerStatus("${remainingUseMin}m of use left", 0L)
         }
     }
 
