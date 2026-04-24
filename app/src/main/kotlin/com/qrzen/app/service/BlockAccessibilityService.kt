@@ -14,6 +14,7 @@ import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.di.WidgetEntryPoint
 import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
 import com.qrzen.app.ui.lock.LockScreenActivity
+import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -150,10 +151,10 @@ class BlockAccessibilityService : AccessibilityService() {
     private suspend fun isBlockActive(block: AppBlock): Boolean {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
         return when (block.blockingStyle) {
-            "MANUAL" -> false
-            "SCHEDULE" -> isScheduleActive(block)
-            "USAGE_LIMIT" -> isDayActiveToday(block.activeDays)
-            "WAIT_TIMER" -> isDayActiveToday(block.activeDays)
+            UnlockMethodUtils.STYLE_MANUAL -> false
+            UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
+            UnlockMethodUtils.STYLE_USAGE_LIMIT -> isDayActiveToday(block.activeDays)
+            UnlockMethodUtils.STYLE_WAIT_TIMER -> isDayActiveToday(block.activeDays)
             else -> isScheduleActive(block)
         }
     }
