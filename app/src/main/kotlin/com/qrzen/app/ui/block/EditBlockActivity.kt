@@ -960,11 +960,7 @@ class EditBlockActivity : AppCompatActivity() {
     }
 
     private fun isBlockCurrentlyActive(block: AppBlock): Boolean {
-        if (block.blockNowUntil > System.currentTimeMillis()) return true
-        return when (block.blockingStyle.ifBlank { UnlockMethodUtils.STYLE_MANUAL }) {
-            UnlockMethodUtils.STYLE_SCHEDULE -> currentTimeBlocks.any { isTimeBlockCurrentlyActive(it) }
-            else -> false
-        }
+        return UnlockMethodUtils.isBlockCurrentlyActive(block, currentTimeBlocks)
     }
 
     private fun isTimeBlockCurrentlyActive(timeBlock: TimeBlock): Boolean {
