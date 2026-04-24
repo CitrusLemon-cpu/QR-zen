@@ -1,7 +1,7 @@
 package com.qrzen.app.ui.block;
 
 @dagger.hilt.android.AndroidEntryPoint()
-@kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000\u0084\u0001\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u000e\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0010\b\n\u0002\b\u0005\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u000b\n\u0000\n\u0002\u0010\t\n\u0000\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\u0006\n\u0002\u0010 \n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0010\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\u0010\n\u0002\u0018\u0002\n\u0002\b\t\n\u0002\u0018\u0002\n\u0002\b\u0007\n\u0002\u0018\u0002\n\u0002\b\u000b\b\u0007\u0018\u0000 [2\u00020\u0001:\u0003[\\]B\u0005\u00a2\u0006\u0002\u0010\u0002J\b\u0010,\u001a\u00020-H\u0002J\u0016\u0010.\u001a\u00020\u00062\f\u0010/\u001a\b\u0012\u0004\u0012\u0002000&H\u0002J\u000e\u00101\u001a\b\u0012\u0004\u0012\u0002000&H\u0002J\u0010\u00102\u001a\u00020\u00062\u0006\u00103\u001a\u00020\u0019H\u0002J\u0010\u00104\u001a\u00020\u00062\u0006\u00105\u001a\u00020\u0019H\u0002J\u000e\u00106\u001a\b\u0012\u0004\u0012\u00020\u00060&H\u0002J\u0010\u00107\u001a\u00020\u00062\u0006\u00108\u001a\u00020\u0006H\u0002J\u0010\u00109\u001a\u00020\u00172\u0006\u0010:\u001a\u00020\u0015H\u0002J\"\u0010;\u001a\u00020-2\u0006\u0010<\u001a\u00020\u000f2\u0006\u0010=\u001a\u00020\u000f2\b\u0010>\u001a\u0004\u0018\u00010\u001cH\u0015J\u0012\u0010?\u001a\u00020-2\b\u0010@\u001a\u0004\u0018\u00010AH\u0014J\u0010\u0010B\u001a\u00020-2\u0006\u0010:\u001a\u00020\u0015H\u0002J\b\u0010C\u001a\u00020-H\u0002J\u000e\u0010D\u001a\b\u0012\u0004\u0012\u0002000&H\u0002J\u001e\u0010E\u001a\u00020-2\f\u0010/\u001a\b\u0012\u0004\u0012\u0002000&2\u0006\u0010F\u001a\u00020\u0006H\u0002J\b\u0010G\u001a\u00020-H\u0002J\b\u0010H\u001a\u00020-H\u0002J\u0010\u0010I\u001a\u00020-2\u0006\u0010J\u001a\u00020KH\u0002J\b\u0010L\u001a\u00020-H\u0002J\u0010\u0010M\u001a\u00020-2\u0006\u0010N\u001a\u00020\u0019H\u0002J,\u0010O\u001a\u00020-2\u0006\u0010P\u001a\u00020\u00062\u0006\u0010Q\u001a\u00020\u00062\u0012\u0010R\u001a\u000e\u0012\u0004\u0012\u00020\u0006\u0012\u0004\u0012\u00020-0SH\u0002J\u0010\u0010T\u001a\u00020\u00192\u0006\u00103\u001a\u00020\u0019H\u0002J\b\u0010U\u001a\u00020-H\u0002J\b\u0010V\u001a\u00020-H\u0002J\b\u0010W\u001a\u00020-H\u0002J\b\u0010X\u001a\u00020-H\u0002J\b\u0010Y\u001a\u00020-H\u0002J\b\u0010Z\u001a\u00020-H\u0002R\u000e\u0010\u0003\u001a\u00020\u0004X\u0082.\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0005\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0007\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u001e\u0010\b\u001a\u00020\t8\u0006@\u0006X\u0087.\u00a2\u0006\u000e\n\u0000\u001a\u0004\b\n\u0010\u000b\"\u0004\b\f\u0010\rR\u000e\u0010\u000e\u001a\u00020\u000fX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0010\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0011\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0012\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0013\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u0010\u0010\u0014\u001a\u0004\u0018\u00010\u0015X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0016\u001a\u00020\u0017X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0018\u001a\u00020\u0019X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u001c\u0010\u001a\u001a\u0010\u0012\f\u0012\n \u001d*\u0004\u0018\u00010\u001c0\u001c0\u001bX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0010\u0010\u001e\u001a\u0004\u0018\u00010\u001fX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010 \u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010!\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\"\u001a\u00020\u0017X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010#\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010$\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R-\u0010%\u001a\u0014\u0012\u0010\u0012\u000e\u0012\u0004\u0012\u00020\u0006\u0012\u0004\u0012\u00020\u00060\'0&8BX\u0082\u0084\u0002\u00a2\u0006\f\n\u0004\b*\u0010+\u001a\u0004\b(\u0010)\u00a8\u0006^"}, d2 = {"Lcom/qrzen/app/ui/block/EditBlockActivity;", "Landroidx/appcompat/app/AppCompatActivity;", "()V", "binding", "Lcom/qrzen/app/databinding/ActivityEditBlockBinding;", "blockPassword", "", "currentQrSecret", "dao", "Lcom/qrzen/app/data/db/AppBlockDao;", "getDao", "()Lcom/qrzen/app/data/db/AppBlockDao;", "setDao", "(Lcom/qrzen/app/data/db/AppBlockDao;)V", "delayMinutes", "", "editWindowDays", "editWindowEnd", "editWindowStart", "endTime", "existingBlock", "Lcom/qrzen/app/data/model/AppBlock;", "isAllowlistMode", "", "lockUntil", "", "qrScanForSetLauncher", "Landroidx/activity/result/ActivityResultLauncher;", "Landroid/content/Intent;", "kotlin.jvm.PlatformType", "selectedAppsLoadJob", "Lkotlinx/coroutines/Job;", "selectedPackages", "startTime", "typeOverIsRandom", "typeOverText", "unlockMethod", "unlockMethods", "", "Lkotlin/Pair;", "getUnlockMethods", "()Ljava/util/List;", "unlockMethods$delegate", "Lkotlin/Lazy;", "applyCurrentStateToUi", "", "buildDaysString", "toggles", "Landroid/widget/ToggleButton;", "editWindowDayToggles", "formatDateTime", "epochMillis", "formatTimerBadge", "millis", "getSelectedPackageList", "getUnlockMethodLabel", "method", "isBlockCurrentlyActive", "block", "onActivityResult", "requestCode", "resultCode", "data", "onCreate", "savedInstanceState", "Landroid/os/Bundle;", "populateForm", "saveBlock", "scheduleDayToggles", "setToggleStates", "days", "setupUi", "setupUnlockMethodDropdown", "showAppTimerDialog", "appItem", "Lcom/qrzen/app/ui/block/EditBlockActivity$SelectedAppIcon;", "showLockUntilPicker", "showLockUntilTimePicker", "selectedDateUtcMillis", "showTimePicker", "title", "current", "onPicked", "Lkotlin/Function1;", "toUtcDateSelection", "updateEditWindowButtons", "updateLockUntilDisplay", "updateScheduleButtons", "updateSelectedAppsDisplay", "updateTypeOverUi", "updateUnlockMethodUi", "Companion", "SelectedAppIcon", "SelectedAppsAdapter", "app_debug"})
+@kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000\u00bc\u0001\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u000e\n\u0002\b\u0002\n\u0002\u0010 \n\u0002\u0018\u0002\n\u0002\b\u0004\n\u0002\u0010!\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0010\b\n\u0002\b\u0004\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u000b\n\u0002\b\u0002\n\u0002\u0010\t\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0003\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0018\u0002\n\u0002\b\r\n\u0002\u0010\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b \n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0012\n\u0002\u0018\u0002\n\u0002\b\t\n\u0002\u0018\u0002\n\u0002\b\u000f\b\u0007\u0018\u0000 \u0097\u00012\u00020\u0001:\u0006\u0097\u0001\u0098\u0001\u0099\u0001B\u0005\u00a2\u0006\u0002\u0010\u0002J\b\u0010G\u001a\u00020HH\u0002J\u0016\u0010I\u001a\u00020\u00062\f\u0010J\u001a\b\u0012\u0004\u0012\u00020K0\tH\u0002J*\u0010L\u001a\u0014\u0012\u0010\u0012\u000e\u0012\u0004\u0012\u00020\u0018\u0012\u0004\u0012\u00020\u00180\n0\t2\u0006\u0010M\u001a\u00020\u00062\u0006\u0010N\u001a\u00020\u0006H\u0002J\b\u0010O\u001a\u00020HH\u0002J\b\u0010P\u001a\u00020\u0018H\u0002J\u000e\u0010Q\u001a\b\u0012\u0004\u0012\u00020K0\tH\u0002J\u0010\u0010R\u001a\u00020\u00062\u0006\u0010S\u001a\u00020\"H\u0002J\u0010\u0010T\u001a\u00020\u00062\u0006\u0010U\u001a\u00020\"H\u0002J\u0010\u0010V\u001a\u00020\u00062\u0006\u0010W\u001a\u00020\u0006H\u0002J\u000e\u0010X\u001a\b\u0012\u0004\u0012\u00020\u00060\tH\u0002J\u0010\u0010Y\u001a\u00020\u00062\u0006\u0010Z\u001a\u00020\u0006H\u0002J1\u0010[\u001a\u00020\u001f2\u0006\u0010M\u001a\u00020\u00062\u0006\u0010N\u001a\u00020\u00062\u0006\u0010\\\u001a\u00020\u00062\n\b\u0002\u0010]\u001a\u0004\u0018\u00010\u0018H\u0002\u00a2\u0006\u0002\u0010^J\b\u0010_\u001a\u00020HH\u0002J\u0010\u0010`\u001a\u00020H2\u0006\u0010\\\u001a\u00020\u0006H\u0002J\u0010\u0010a\u001a\u00020\u001f2\u0006\u0010b\u001a\u00020\u001dH\u0002J\u0010\u0010c\u001a\u00020\u001f2\u0006\u0010d\u001a\u00020\u0010H\u0002J\b\u0010e\u001a\u00020HH\u0002J\"\u0010f\u001a\u00020H2\u0006\u0010g\u001a\u00020\u00182\u0006\u0010h\u001a\u00020\u00182\b\u0010i\u001a\u0004\u0018\u00010&H\u0015J\u0012\u0010j\u001a\u00020H2\b\u0010k\u001a\u0004\u0018\u00010lH\u0014J\u0010\u0010m\u001a\u00020n2\u0006\u0010o\u001a\u00020\u0006H\u0002J\u0010\u0010p\u001a\u00020\u00182\u0006\u0010o\u001a\u00020\u0006H\u0002J\u0010\u0010q\u001a\u00020H2\u0006\u0010b\u001a\u00020\u001dH\u0002J<\u0010r\u001a\u00020\u001f2\u0018\u0010s\u001a\u0014\u0012\u0010\u0012\u000e\u0012\u0004\u0012\u00020\u0018\u0012\u0004\u0012\u00020\u00180\n0\t2\u0018\u0010t\u001a\u0014\u0012\u0010\u0012\u000e\u0012\u0004\u0012\u00020\u0018\u0012\u0004\u0012\u00020\u00180\n0\tH\u0002J\b\u0010u\u001a\u00020HH\u0002J\u0010\u0010v\u001a\u00020H2\u0006\u0010w\u001a\u00020\u0010H\u0002J\b\u0010x\u001a\u00020HH\u0002J\u001e\u0010y\u001a\u00020H2\f\u0010J\u001a\b\u0012\u0004\u0012\u00020K0\t2\u0006\u0010z\u001a\u00020\u0006H\u0002J\b\u0010{\u001a\u00020HH\u0002J\b\u0010|\u001a\u00020HH\u0002J\b\u0010}\u001a\u00020HH\u0002J\b\u0010~\u001a\u00020HH\u0002J\u0012\u0010\u007f\u001a\u00020H2\b\u0010\u0080\u0001\u001a\u00030\u0081\u0001H\u0002J\t\u0010\u0082\u0001\u001a\u00020HH\u0002J\t\u0010\u0083\u0001\u001a\u00020HH\u0002J\u0012\u0010\u0084\u0001\u001a\u00020H2\u0007\u0010\u0085\u0001\u001a\u00020\"H\u0002J\u0011\u0010\u0086\u0001\u001a\u00020H2\u0006\u0010d\u001a\u00020\u0010H\u0002J1\u0010\u0087\u0001\u001a\u00020H2\u0007\u0010\u0088\u0001\u001a\u00020\u00062\u0007\u0010\u0089\u0001\u001a\u00020\u00062\u0014\u0010\u008a\u0001\u001a\u000f\u0012\u0004\u0012\u00020\u0006\u0012\u0004\u0012\u00020H0\u008b\u0001H\u0002J\u001b\u0010\u008c\u0001\u001a\u00020H2\u0007\u0010\u008d\u0001\u001a\u0002012\u0007\u0010\u008e\u0001\u001a\u00020\u001fH\u0002J\t\u0010\u008f\u0001\u001a\u00020HH\u0002J\u0011\u0010\u0090\u0001\u001a\u00020\"2\u0006\u0010S\u001a\u00020\"H\u0002J\t\u0010\u0091\u0001\u001a\u00020HH\u0002J\t\u0010\u0092\u0001\u001a\u00020HH\u0002J\t\u0010\u0093\u0001\u001a\u00020HH\u0002J\t\u0010\u0094\u0001\u001a\u00020HH\u0002J\t\u0010\u0095\u0001\u001a\u00020HH\u0002J\t\u0010\u0096\u0001\u001a\u00020HH\u0002R\u000e\u0010\u0003\u001a\u00020\u0004X\u0082.\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0005\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0007\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R&\u0010\b\u001a\u0014\u0012\u0010\u0012\u000e\u0012\u0004\u0012\u00020\u0006\u0012\u0004\u0012\u00020\u00060\n0\t8BX\u0082\u0004\u00a2\u0006\u0006\u001a\u0004\b\u000b\u0010\fR\u000e\u0010\r\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u0014\u0010\u000e\u001a\b\u0012\u0004\u0012\u00020\u00100\u000fX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u001e\u0010\u0011\u001a\u00020\u00128\u0006@\u0006X\u0087.\u00a2\u0006\u000e\n\u0000\u001a\u0004\b\u0013\u0010\u0014\"\u0004\b\u0015\u0010\u0016R\u000e\u0010\u0017\u001a\u00020\u0018X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0019\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001a\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001b\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u0010\u0010\u001c\u001a\u0004\u0018\u00010\u001dX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u001e\u001a\u00020\u001fX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010 \u001a\u00020\u001fX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010!\u001a\u00020\"X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010#\u001a\u00020\u0018X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u001c\u0010$\u001a\u0010\u0012\f\u0012\n \'*\u0004\u0018\u00010&0&0%X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0010\u0010(\u001a\u0004\u0018\u00010)X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010*\u001a\u00020+X\u0082.\u00a2\u0006\u0002\n\u0000R\u000e\u0010,\u001a\u00020-X\u0082.\u00a2\u0006\u0002\n\u0000R\u000e\u0010.\u001a\u00020+X\u0082.\u00a2\u0006\u0002\n\u0000R\u000e\u0010/\u001a\u00020+X\u0082.\u00a2\u0006\u0002\n\u0000R\u0014\u00100\u001a\b\u0012\u0004\u0012\u0002010\tX\u0082.\u00a2\u0006\u0002\n\u0000R\u000e\u00102\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u001e\u00103\u001a\u0002048\u0006@\u0006X\u0087.\u00a2\u0006\u000e\n\u0000\u001a\u0004\b5\u00106\"\u0004\b7\u00108R\u000e\u00109\u001a\u00020:X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010;\u001a\u00020\u0018X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010<\u001a\u00020\u001fX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010=\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010>\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R-\u0010?\u001a\u0014\u0012\u0010\u0012\u000e\u0012\u0004\u0012\u00020\u0006\u0012\u0004\u0012\u00020\u00060\n0\t8BX\u0082\u0084\u0002\u00a2\u0006\f\n\u0004\bA\u0010B\u001a\u0004\b@\u0010\fR\u000e\u0010C\u001a\u00020\u0018X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010D\u001a\u00020\u0006X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010E\u001a\u00020\u0018X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010F\u001a\u00020\u0018X\u0082\u000e\u00a2\u0006\u0002\n\u0000\u00a8\u0006\u009a\u0001"}, d2 = {"Lcom/qrzen/app/ui/block/EditBlockActivity;", "Landroidx/appcompat/app/AppCompatActivity;", "()V", "binding", "Lcom/qrzen/app/databinding/ActivityEditBlockBinding;", "blockPassword", "", "blockingStyle", "blockingStyles", "", "Lkotlin/Pair;", "getBlockingStyles", "()Ljava/util/List;", "currentQrSecret", "currentTimeBlocks", "", "Lcom/qrzen/app/data/model/TimeBlock;", "dao", "Lcom/qrzen/app/data/db/AppBlockDao;", "getDao", "()Lcom/qrzen/app/data/db/AppBlockDao;", "setDao", "(Lcom/qrzen/app/data/db/AppBlockDao;)V", "delayMinutes", "", "editWindowDays", "editWindowEnd", "editWindowStart", "existingBlock", "Lcom/qrzen/app/data/model/AppBlock;", "isAllowlistMode", "", "isUpdatingTimerBreakPresets", "lockUntil", "", "nextTempId", "qrScanForSetLauncher", "Landroidx/activity/result/ActivityResultLauncher;", "Landroid/content/Intent;", "kotlin.jvm.PlatformType", "selectedAppsLoadJob", "Lkotlinx/coroutines/Job;", "selectedBlockDeleteButton", "Lcom/google/android/material/button/MaterialButton;", "selectedBlockDetailView", "Landroid/view/View;", "selectedBlockEndButton", "selectedBlockStartButton", "selectedDayViews", "Landroid/widget/TextView;", "selectedPackages", "timeBlockDao", "Lcom/qrzen/app/data/db/TimeBlockDao;", "getTimeBlockDao", "()Lcom/qrzen/app/data/db/TimeBlockDao;", "setTimeBlockDao", "(Lcom/qrzen/app/data/db/TimeBlockDao;)V", "timeFormatter", "Ljava/time/format/DateTimeFormatter;", "timerBreakMinutes", "typeOverIsRandom", "typeOverText", "unlockMethod", "unlockMethods", "getUnlockMethods", "unlockMethods$delegate", "Lkotlin/Lazy;", "usageLimitMinutes", "usageLimitPeriod", "waitTimerUseMinutes", "waitTimerWaitMinutes", "applyCurrentStateToUi", "", "buildDaysString", "toggles", "Landroid/widget/ToggleButton;", "buildSegments", "startTime", "endTime", "clearTimerBreakPresetSelection", "currentDayIndex", "editWindowDayToggles", "formatDateTime", "epochMillis", "formatTimerBadge", "millis", "getBlockingStyleLabel", "style", "getSelectedPackageList", "getUnlockMethodLabel", "method", "hasTimeBlockOverlap", "activeDays", "ignoreBlockId", "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Integer;)Z", "hideSelectedBlockDetail", "highlightSelectedDays", "isBlockCurrentlyActive", "block", "isTimeBlockCurrentlyActive", "timeBlock", "normalizeBlockingStyle", "onActivityResult", "requestCode", "resultCode", "data", "onCreate", "savedInstanceState", "Landroid/os/Bundle;", "parseLocalTime", "Ljava/time/LocalTime;", "value", "parseMinutes", "populateForm", "rangesOverlap", "first", "second", "refreshBlockingStyleDropdown", "replaceTimeBlock", "updated", "saveBlock", "setToggleStates", "days", "setupBlockingStyleDropdown", "setupUi", "setupUnlockMethodDropdown", "showAddTimeBlockDialog", "showAppTimerDialog", "appItem", "Lcom/qrzen/app/ui/block/EditBlockActivity$SelectedAppIcon;", "showCustomBreakDurationPicker", "showLockUntilPicker", "showLockUntilTimePicker", "selectedDateUtcMillis", "showSelectedBlockDetail", "showTimePicker", "title", "current", "onPicked", "Lkotlin/Function1;", "styleSelectedDay", "textView", "isActive", "syncTimerBreakPresetSelection", "toUtcDateSelection", "updateBlockingStyleUi", "updateEditWindowButtons", "updateLockUntilDisplay", "updateSelectedAppsDisplay", "updateTypeOverUi", "updateUnlockMethodUi", "Companion", "SelectedAppIcon", "SelectedAppsAdapter", "app_debug"})
 public final class EditBlockActivity extends androidx.appcompat.app.AppCompatActivity {
     @org.jetbrains.annotations.NotNull()
     public static final java.lang.String EXTRA_BLOCK_ID = "extra_block_id";
@@ -21,9 +21,18 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
     private static final java.lang.String UNLOCK_EDIT_WINDOW = "EDIT_WINDOW";
     @org.jetbrains.annotations.NotNull()
     private static final java.lang.String UNLOCK_TIMER = "TIMER";
+    @org.jetbrains.annotations.NotNull()
+    private static final java.lang.String UNLOCK_WHILE_ACTIVE = "WHILE_ACTIVE";
     @javax.inject.Inject()
     public com.qrzen.app.data.db.AppBlockDao dao;
+    @javax.inject.Inject()
+    public com.qrzen.app.data.db.TimeBlockDao timeBlockDao;
     private com.qrzen.app.databinding.ActivityEditBlockBinding binding;
+    private android.view.View selectedBlockDetailView;
+    private com.google.android.material.button.MaterialButton selectedBlockStartButton;
+    private com.google.android.material.button.MaterialButton selectedBlockEndButton;
+    private com.google.android.material.button.MaterialButton selectedBlockDeleteButton;
+    private java.util.List<? extends android.widget.TextView> selectedDayViews;
     @org.jetbrains.annotations.Nullable()
     private com.qrzen.app.data.model.AppBlock existingBlock;
     @org.jetbrains.annotations.NotNull()
@@ -32,9 +41,7 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
     private java.lang.String selectedPackages = "";
     private boolean isAllowlistMode = false;
     @org.jetbrains.annotations.NotNull()
-    private java.lang.String startTime = "00:00";
-    @org.jetbrains.annotations.NotNull()
-    private java.lang.String endTime = "23:59";
+    private java.lang.String blockingStyle = "MANUAL";
     @org.jetbrains.annotations.NotNull()
     private java.lang.String unlockMethod = "NONE";
     private int delayMinutes = 5;
@@ -49,9 +56,21 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
     private java.lang.String editWindowEnd = "10:00";
     @org.jetbrains.annotations.NotNull()
     private java.lang.String editWindowDays = "1111111";
+    private int usageLimitMinutes = 30;
+    @org.jetbrains.annotations.NotNull()
+    private java.lang.String usageLimitPeriod = "DAILY";
+    private int waitTimerWaitMinutes = 30;
+    private int waitTimerUseMinutes = 5;
+    private int timerBreakMinutes = 0;
     private long lockUntil = 0L;
+    @org.jetbrains.annotations.NotNull()
+    private java.util.List<com.qrzen.app.data.model.TimeBlock> currentTimeBlocks;
+    private int nextTempId = -1;
     @org.jetbrains.annotations.Nullable()
     private kotlinx.coroutines.Job selectedAppsLoadJob;
+    private boolean isUpdatingTimerBreakPresets = false;
+    @org.jetbrains.annotations.NotNull()
+    private final java.time.format.DateTimeFormatter timeFormatter = null;
     @org.jetbrains.annotations.NotNull()
     private final androidx.activity.result.ActivityResultLauncher<android.content.Intent> qrScanForSetLauncher = null;
     @org.jetbrains.annotations.NotNull()
@@ -72,6 +91,19 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
     com.qrzen.app.data.db.AppBlockDao p0) {
     }
     
+    @org.jetbrains.annotations.NotNull()
+    public final com.qrzen.app.data.db.TimeBlockDao getTimeBlockDao() {
+        return null;
+    }
+    
+    public final void setTimeBlockDao(@org.jetbrains.annotations.NotNull()
+    com.qrzen.app.data.db.TimeBlockDao p0) {
+    }
+    
+    private final java.util.List<kotlin.Pair<java.lang.String, java.lang.String>> getBlockingStyles() {
+        return null;
+    }
+    
     private final java.util.List<kotlin.Pair<java.lang.String, java.lang.String>> getUnlockMethods() {
         return null;
     }
@@ -82,6 +114,12 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
     }
     
     private final void setupUi() {
+    }
+    
+    private final void setupBlockingStyleDropdown() {
+    }
+    
+    private final void refreshBlockingStyleDropdown() {
     }
     
     private final void setupUnlockMethodDropdown() {
@@ -113,10 +151,10 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
         return null;
     }
     
-    private final void updateScheduleButtons() {
+    private final void updateEditWindowButtons() {
     }
     
-    private final void updateEditWindowButtons() {
+    private final void updateBlockingStyleUi() {
     }
     
     private final void updateUnlockMethodUi() {
@@ -128,10 +166,53 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
     private final void updateLockUntilDisplay() {
     }
     
+    private final void showAddTimeBlockDialog() {
+    }
+    
+    private final void showSelectedBlockDetail(com.qrzen.app.data.model.TimeBlock timeBlock) {
+    }
+    
+    private final void hideSelectedBlockDetail() {
+    }
+    
+    private final void highlightSelectedDays(java.lang.String activeDays) {
+    }
+    
+    private final void styleSelectedDay(android.widget.TextView textView, boolean isActive) {
+    }
+    
+    private final void replaceTimeBlock(com.qrzen.app.data.model.TimeBlock updated) {
+    }
+    
+    private final boolean hasTimeBlockOverlap(java.lang.String startTime, java.lang.String endTime, java.lang.String activeDays, java.lang.Integer ignoreBlockId) {
+        return false;
+    }
+    
+    private final java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Integer>> buildSegments(java.lang.String startTime, java.lang.String endTime) {
+        return null;
+    }
+    
+    private final boolean rangesOverlap(java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Integer>> first, java.util.List<kotlin.Pair<java.lang.Integer, java.lang.Integer>> second) {
+        return false;
+    }
+    
+    private final void showCustomBreakDurationPicker() {
+    }
+    
+    private final void syncTimerBreakPresetSelection() {
+    }
+    
+    private final void clearTimerBreakPresetSelection() {
+    }
+    
     private final void saveBlock() {
     }
     
     private final boolean isBlockCurrentlyActive(com.qrzen.app.data.model.AppBlock block) {
+        return false;
+    }
+    
+    private final boolean isTimeBlockCurrentlyActive(com.qrzen.app.data.model.TimeBlock timeBlock) {
         return false;
     }
     
@@ -151,11 +232,14 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
     private final void setToggleStates(java.util.List<? extends android.widget.ToggleButton> toggles, java.lang.String days) {
     }
     
-    private final java.util.List<android.widget.ToggleButton> scheduleDayToggles() {
+    private final java.util.List<android.widget.ToggleButton> editWindowDayToggles() {
         return null;
     }
     
-    private final java.util.List<android.widget.ToggleButton> editWindowDayToggles() {
+    private final void normalizeBlockingStyle() {
+    }
+    
+    private final java.lang.String getBlockingStyleLabel(java.lang.String style) {
         return null;
     }
     
@@ -171,7 +255,19 @@ public final class EditBlockActivity extends androidx.appcompat.app.AppCompatAct
         return 0L;
     }
     
-    @kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000\u0014\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0002\n\u0002\u0010\u000e\n\u0002\b\t\b\u0086\u0003\u0018\u00002\u00020\u0001B\u0007\b\u0002\u00a2\u0006\u0002\u0010\u0002R\u000e\u0010\u0003\u001a\u00020\u0004X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0005\u001a\u00020\u0004X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0006\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0007\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\b\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\t\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\n\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000b\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\f\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000\u00a8\u0006\r"}, d2 = {"Lcom/qrzen/app/ui/block/EditBlockActivity$Companion;", "", "()V", "EXTRA_BLOCK_ID", "", "EXTRA_IS_ALLOWLIST", "UNLOCK_DELAY", "UNLOCK_EDIT_WINDOW", "UNLOCK_NONE", "UNLOCK_PASSWORD", "UNLOCK_QR_CODE", "UNLOCK_TIMER", "UNLOCK_TYPE_OVER_TEXT", "app_debug"})
+    private final int currentDayIndex() {
+        return 0;
+    }
+    
+    private final int parseMinutes(java.lang.String value) {
+        return 0;
+    }
+    
+    private final java.time.LocalTime parseLocalTime(java.lang.String value) {
+        return null;
+    }
+    
+    @kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000\u0014\n\u0002\u0018\u0002\n\u0002\u0010\u0000\n\u0002\b\u0002\n\u0002\u0010\u000e\n\u0002\b\n\b\u0086\u0003\u0018\u00002\u00020\u0001B\u0007\b\u0002\u00a2\u0006\u0002\u0010\u0002R\u000e\u0010\u0003\u001a\u00020\u0004X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0005\u001a\u00020\u0004X\u0086T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0006\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0007\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\b\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\t\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\n\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u000b\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\f\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000R\u000e\u0010\r\u001a\u00020\u0004X\u0082T\u00a2\u0006\u0002\n\u0000\u00a8\u0006\u000e"}, d2 = {"Lcom/qrzen/app/ui/block/EditBlockActivity$Companion;", "", "()V", "EXTRA_BLOCK_ID", "", "EXTRA_IS_ALLOWLIST", "UNLOCK_DELAY", "UNLOCK_EDIT_WINDOW", "UNLOCK_NONE", "UNLOCK_PASSWORD", "UNLOCK_QR_CODE", "UNLOCK_TIMER", "UNLOCK_TYPE_OVER_TEXT", "UNLOCK_WHILE_ACTIVE", "app_debug"})
     public static final class Companion {
         
         private Companion() {
