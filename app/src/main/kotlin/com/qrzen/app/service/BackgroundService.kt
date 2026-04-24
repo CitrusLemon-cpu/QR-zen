@@ -364,19 +364,21 @@ class BackgroundService : Service() {
             return
         }
 
-        val allowlistBlock = activeBlocks
-            .filter { it.isAllowlistMode }
-            .firstOrNull { block ->
-                val allowed = block.appPackages.split(",")
+        val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
+        if (allowlistBlocks.isNotEmpty()) {
+            val allowedSets = allowlistBlocks.map { block ->
+                block.appPackages.split(",")
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
+                    .filterNot { Prefs.isAppTimerExpired(it) }
                     .toSet()
-                !allowed.contains(pkg) || Prefs.isAppTimerExpired(pkg)
             }
-        if (allowlistBlock != null) {
-            lastBlockedPkg = pkg
-            lastBlockedTime = now
-            launchAllowlistOverlay(pkg, allowlistBlock)
+            val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }
+            if (!intersection.contains(pkg)) {
+                lastBlockedPkg = pkg
+                lastBlockedTime = now
+                launchAllowlistOverlay(pkg, allowlistBlocks)
+            }
         }
     }
 
@@ -388,10 +390,10 @@ class BackgroundService : Service() {
         })
     }
 
-    private fun launchAllowlistOverlay(blockedPkg: String, block: AppBlock) {
+    private fun launchAllowlistOverlay(blockedPkg: String, blocks: List<AppBlock>) {
         startActivity(Intent(this, AllowlistOverlayActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_ID, block.id)
+            putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_IDS, blocks.map { it.id }.toIntArray())
             putExtra(AllowlistOverlayActivity.EXTRA_BLOCKED_PKG, blockedPkg)
         })
     }
