@@ -111,7 +111,11 @@ class BlockAccessibilityService : AccessibilityService() {
             val dao = entryPoint.appBlockDao()
             val now = System.currentTimeMillis()
             if (Prefs.pauseAllUntil > now) return@launch
-            val activeBlocks = dao.getAll().filter { it.isEnabled && now > it.pausedUntil && isBlockActive(it) }
+            val allBlocks = dao.getAll().filter { it.isEnabled && !it.isArchived && now > it.pausedUntil }
+            val activeBlocks = mutableListOf<AppBlock>()
+            for (block in allBlocks) {
+                if (isBlockActive(block)) activeBlocks.add(block)
+            }
 
             val blocklistMatch = activeBlocks
                 .filter { !it.isAllowlistMode }
@@ -126,20 +130,50 @@ class BlockAccessibilityService : AccessibilityService() {
             // Skip allowlist blocking for exempt packages and locked device
             if (isExemptFromAllowlist(pkg) || isDeviceLocked()) return@launch
 
-            val allowlistMatch = activeBlocks
-                .filter { it.isAllowlistMode }
-                .firstOrNull { block ->
-                    val allowed = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                    !allowed.contains(pkg) || Prefs.isAppTimerExpired(pkg)
+            val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
+            if (allowlistBlocks.isNotEmpty()) {
+                val allowedSets = allowlistBlocks.map { block ->
+                    block.appPackages.split(",")
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .filterNot { Prefs.isAppTimerExpired(it) }
+                        .toSet()
                 }
-            if (allowlistMatch != null) {
-                launchAllowlistOverlay(pkg, allowlistMatch)
+                val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }
+                if (!intersection.contains(pkg)) {
+                    launchAllowlistOverlay(pkg, allowlistBlocks)
+                }
             }
         }
     }
 
-    private fun isBlockActive(block: AppBlock): Boolean {
+    private suspend fun isBlockActive(block: AppBlock): Boolean {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
+        return when (block.blockingStyle) {
+            "MANUAL" -> false
+            "SCHEDULE" -> isScheduleActive(block)
+            "USAGE_LIMIT" -> isDayActiveToday(block.activeDays)
+            "WAIT_TIMER" -> isDayActiveToday(block.activeDays)
+            else -> isScheduleActive(block)
+        }
+    }
+
+    private suspend fun isScheduleActive(block: AppBlock): Boolean {
+        val timeBlocks = entryPoint.timeBlockDao().getByBlockId(block.id)
+        if (timeBlocks.isEmpty()) return isLegacyScheduleActive(block)
+        val now = LocalTime.now()
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        return timeBlocks.any { tb ->
+            if (tb.activeDays.getOrNull(dayIndex) != '1') return@any false
+            val start = LocalTime.parse(tb.startTime, fmt)
+            val end = LocalTime.parse(tb.endTime, fmt)
+            if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
+            else !now.isBefore(start) || !now.isAfter(end)
+        }
+    }
+
+    private fun isLegacyScheduleActive(block: AppBlock): Boolean {
         val now = LocalTime.now()
         val start = LocalTime.parse(block.startTime, fmt)
         val end = LocalTime.parse(block.endTime, fmt)
@@ -151,6 +185,12 @@ class BlockAccessibilityService : AccessibilityService() {
         return block.activeDays.getOrNull(dayIndex) == '1'
     }
 
+    private fun isDayActiveToday(activeDays: String): Boolean {
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        return activeDays.getOrNull(dayIndex) == '1'
+    }
+
     private fun launchLockScreen(blockedPkg: String, block: AppBlock) {
         startActivity(Intent(this, LockScreenActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -160,13 +200,15 @@ class BlockAccessibilityService : AccessibilityService() {
         logBlockEvent(block, blockedPkg)
     }
 
-    private fun launchAllowlistOverlay(blockedPkg: String, block: AppBlock) {
+    private fun launchAllowlistOverlay(blockedPkg: String, blocks: List<AppBlock>) {
         startActivity(Intent(this, AllowlistOverlayActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_ID, block.id)
+            putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_IDS, blocks.map { it.id }.toIntArray())
             putExtra(AllowlistOverlayActivity.EXTRA_BLOCKED_PKG, blockedPkg)
         })
-        logBlockEvent(block, blockedPkg)
+        for (block in blocks) {
+            logBlockEvent(block, blockedPkg)
+        }
     }
 
     private fun logBlockEvent(block: AppBlock, blockedPkg: String) {

@@ -92,6 +92,21 @@ class LockScreenActivity : AppCompatActivity() {
         binding.tvBlockTitle.text = block.title
         binding.tvBlockMessage.text = getString(R.string.lock_screen_message)
         setupWaitTimerCountdown(block)
+        if (block.blockNowUntil > System.currentTimeMillis() && block.blockNowUntil != Long.MAX_VALUE) {
+            val remaining = block.blockNowUntil - System.currentTimeMillis()
+            binding.tvBlockMessage.text = "Block Now ends in ${formatCountdown(remaining)}"
+            waitTimerCountdown?.cancel()
+            waitTimerCountdown = object : CountDownTimer(remaining, 1_000L) {
+                override fun onTick(ms: Long) {
+                    binding.tvBlockMessage.text = "Block Now ends in ${formatCountdown(ms)}"
+                }
+
+                override fun onFinish() {
+                    binding.tvBlockMessage.text = "Block Now ended"
+                    finish()
+                }
+            }.start()
+        }
         unlockRenderer.render(
             block = block,
             timeBlocks = timeBlocks,

@@ -209,6 +209,9 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                 expiredBlockIds += block.id
                 continue
             }
+            if (millis > 86_400_000L * 30) {
+                continue
+            }
             countdownTimers[block.id] = object : CountDownTimer(millis, 1_000L) {
                 override fun onTick(millisUntilFinished: Long) {
                     if (displayedCountdownIndex < activeBlocks.size && activeBlocks[displayedCountdownIndex].id == block.id) {
@@ -267,25 +270,36 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             block.title
         }
         val millis = calculateMillisUntilBlockEnd(block)
-        if (millis <= 0L) {
+        if (millis > 86_400_000L * 30) {
+            binding.tvCountdown.text = "--:--:--"
+        } else if (millis <= 0L) {
             binding.tvCountdown.text = formatCountdown(0L)
             refreshOverlay()
             return
+        } else {
+            binding.tvCountdown.text = formatCountdown(millis)
         }
-        binding.tvCountdown.text = formatCountdown(millis)
     }
 
     private fun calculateMillisUntilBlockEnd(block: AppBlock): Long {
-        if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) {
-            return calculateMillisUntilEnd(block.endTime)
+        val now = System.currentTimeMillis()
+        if (block.blockNowUntil > now && block.blockNowUntil != Long.MAX_VALUE) {
+            return block.blockNowUntil - now
         }
-        val now = LocalDateTime.now()
-        val timeBlocks = timeBlocksByBlockId[block.id].orEmpty()
-        val activeEnd = timeBlocks.mapNotNull { timeBlock ->
-            findActiveTimeBlockEnd(timeBlock, now)
-        }.minOrNull()
-        return activeEnd?.let { Duration.between(now, it).toMillis().coerceAtLeast(0L) }
-            ?: calculateMillisUntilEnd(block.endTime)
+        if (block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL) {
+            return Long.MAX_VALUE / 2
+        }
+        if (block.blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE) {
+            val nowDt = LocalDateTime.now()
+            val timeBlocks = timeBlocksByBlockId[block.id].orEmpty()
+            val activeEnd = timeBlocks.mapNotNull { timeBlock ->
+                findActiveTimeBlockEnd(timeBlock, nowDt)
+            }.minOrNull()
+            if (activeEnd != null) {
+                return Duration.between(nowDt, activeEnd).toMillis().coerceAtLeast(0L)
+            }
+        }
+        return calculateMillisUntilEnd(block.endTime)
     }
 
     private fun findActiveTimeBlockEnd(timeBlock: TimeBlock, now: LocalDateTime): LocalDateTime? {
