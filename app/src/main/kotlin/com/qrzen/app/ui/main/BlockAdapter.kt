@@ -135,6 +135,7 @@ class BlockAdapter(
                             }
                         }
                     }
+>>>>>>> origin/main
                 }
                 else -> {
                     binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"

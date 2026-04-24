@@ -86,6 +86,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var editWindowStart: String = "09:00"
     private var editWindowEnd: String = "10:00"
     private var editWindowDays: String = "1111111"
+    private var activeDays: String = "1111111"
     private var usageLimitMinutes: Int = 30
     private var usageLimitPeriod: String = "DAILY"
     private var waitTimerWaitMinutes: Int = 30
@@ -348,6 +349,7 @@ class EditBlockActivity : AppCompatActivity() {
         editWindowStart = block.editWindowStart.ifBlank { "09:00" }
         editWindowEnd = block.editWindowEnd.ifBlank { "10:00" }
         editWindowDays = block.editWindowDays.ifBlank { "1111111" }
+        activeDays = block.activeDays.ifBlank { "1111111" }
         usageLimitMinutes = block.usageLimitMinutes.coerceIn(1, 480)
         usageLimitPeriod = block.usageLimitPeriod.ifBlank { "DAILY" }
         waitTimerWaitMinutes = block.waitTimerWaitMinutes.coerceIn(1, 120)
@@ -366,6 +368,8 @@ class EditBlockActivity : AppCompatActivity() {
         binding.etTypeOverText.setText(typeOverText)
 
         setToggleStates(editWindowDayToggles(), editWindowDays)
+        setToggleStates(usageLimitDayToggles(), activeDays)
+        setToggleStates(waitTimerDayToggles(), activeDays)
 
         binding.cbPomodoro.isChecked = block.isPomodoroBlock
         if (block.isPomodoroBlock) {
@@ -399,6 +403,8 @@ class EditBlockActivity : AppCompatActivity() {
         binding.etTypeOverText.setText(typeOverText)
         binding.switchTypeOverRandom.isChecked = typeOverIsRandom
         binding.cgUsagePeriod.check(if (usageLimitPeriod == "HOURLY") R.id.chipHourly else R.id.chipDaily)
+        setToggleStates(usageLimitDayToggles(), activeDays)
+        setToggleStates(waitTimerDayToggles(), activeDays)
         updateSelectedAppsDisplay()
         updateEditWindowButtons()
         updateLockUntilDisplay()
@@ -868,6 +874,11 @@ class EditBlockActivity : AppCompatActivity() {
         typeOverIsRandom = binding.switchTypeOverRandom.isChecked
         typeOverText = binding.etTypeOverText.text?.toString()?.trim() ?: ""
         editWindowDays = buildDaysString(editWindowDayToggles())
+        val activeDays = when (blockingStyle) {
+            UnlockMethodUtils.STYLE_USAGE_LIMIT -> buildDaysString(usageLimitDayToggles())
+            UnlockMethodUtils.STYLE_WAIT_TIMER -> buildDaysString(waitTimerDayToggles())
+            else -> "1111111"
+        }
 
         when (unlockMethod) {
             UNLOCK_PASSWORD -> {
@@ -907,7 +918,7 @@ class EditBlockActivity : AppCompatActivity() {
             isAllowlistMode = isAllowlistMode,
             startTime = "00:00",
             endTime = "23:59",
-            activeDays = "1111111",
+            activeDays = activeDays,
             qrSecret = currentQrSecret,
             unlockMethod = unlockMethod,
             delayMinutes = delayMinutes,
@@ -1057,6 +1068,26 @@ class EditBlockActivity : AppCompatActivity() {
         binding.toggleEditFri,
         binding.toggleEditSat,
         binding.toggleEditSun
+    )
+
+    private fun usageLimitDayToggles(): List<ToggleButton> = listOf(
+        binding.toggleUsageMon,
+        binding.toggleUsageTue,
+        binding.toggleUsageWed,
+        binding.toggleUsageThu,
+        binding.toggleUsageFri,
+        binding.toggleUsageSat,
+        binding.toggleUsageSun
+    )
+
+    private fun waitTimerDayToggles(): List<ToggleButton> = listOf(
+        binding.toggleWaitMon,
+        binding.toggleWaitTue,
+        binding.toggleWaitWed,
+        binding.toggleWaitThu,
+        binding.toggleWaitFri,
+        binding.toggleWaitSat,
+        binding.toggleWaitSun
     )
 
     private fun normalizeBlockingStyle() {
