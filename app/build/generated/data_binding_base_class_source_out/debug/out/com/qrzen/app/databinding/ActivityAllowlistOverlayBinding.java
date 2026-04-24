@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,6 +33,9 @@ public final class ActivityAllowlistOverlayBinding implements ViewBinding {
   public final RecyclerView rvAllowedApps;
 
   @NonNull
+  public final Spinner spinnerBlockSelector;
+
+  @NonNull
   public final TextView tvBlockTitle;
 
   @NonNull
@@ -45,12 +49,14 @@ public final class ActivityAllowlistOverlayBinding implements ViewBinding {
 
   private ActivityAllowlistOverlayBinding(@NonNull LinearLayout rootView,
       @NonNull MaterialButton btnMasterPassword, @NonNull FrameLayout challengeContainer,
-      @NonNull RecyclerView rvAllowedApps, @NonNull TextView tvBlockTitle,
-      @NonNull TextView tvCountdown, @NonNull TextView tvError, @NonNull TextView tvTimeRange) {
+      @NonNull RecyclerView rvAllowedApps, @NonNull Spinner spinnerBlockSelector,
+      @NonNull TextView tvBlockTitle, @NonNull TextView tvCountdown, @NonNull TextView tvError,
+      @NonNull TextView tvTimeRange) {
     this.rootView = rootView;
     this.btnMasterPassword = btnMasterPassword;
     this.challengeContainer = challengeContainer;
     this.rvAllowedApps = rvAllowedApps;
+    this.spinnerBlockSelector = spinnerBlockSelector;
     this.tvBlockTitle = tvBlockTitle;
     this.tvCountdown = tvCountdown;
     this.tvError = tvError;
@@ -102,6 +108,12 @@ public final class ActivityAllowlistOverlayBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.spinnerBlockSelector;
+      Spinner spinnerBlockSelector = ViewBindings.findChildViewById(rootView, id);
+      if (spinnerBlockSelector == null) {
+        break missingId;
+      }
+
       id = R.id.tvBlockTitle;
       TextView tvBlockTitle = ViewBindings.findChildViewById(rootView, id);
       if (tvBlockTitle == null) {
@@ -127,7 +139,8 @@ public final class ActivityAllowlistOverlayBinding implements ViewBinding {
       }
 
       return new ActivityAllowlistOverlayBinding((LinearLayout) rootView, btnMasterPassword,
-          challengeContainer, rvAllowedApps, tvBlockTitle, tvCountdown, tvError, tvTimeRange);
+          challengeContainer, rvAllowedApps, spinnerBlockSelector, tvBlockTitle, tvCountdown,
+          tvError, tvTimeRange);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

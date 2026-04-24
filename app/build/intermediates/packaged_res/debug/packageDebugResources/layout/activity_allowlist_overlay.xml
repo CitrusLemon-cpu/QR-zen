@@ -80,6 +80,15 @@
         android:textSize="14sp"
         android:visibility="gone" />
 
+    <Spinner
+        android:id="@+id/spinnerBlockSelector"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"
+        android:backgroundTint="@color/white"
+        android:popupBackground="?attr/colorSurface" />
+
     <FrameLayout
         android:id="@+id/challengeContainer"
         android:layout_width="match_parent"

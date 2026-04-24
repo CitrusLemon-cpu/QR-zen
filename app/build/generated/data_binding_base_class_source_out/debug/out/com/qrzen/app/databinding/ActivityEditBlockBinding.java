@@ -226,6 +226,48 @@ public final class ActivityEditBlockBinding implements ViewBinding {
   public final ToggleButton toggleEditWed;
 
   @NonNull
+  public final ToggleButton toggleUsageFri;
+
+  @NonNull
+  public final ToggleButton toggleUsageMon;
+
+  @NonNull
+  public final ToggleButton toggleUsageSat;
+
+  @NonNull
+  public final ToggleButton toggleUsageSun;
+
+  @NonNull
+  public final ToggleButton toggleUsageThu;
+
+  @NonNull
+  public final ToggleButton toggleUsageTue;
+
+  @NonNull
+  public final ToggleButton toggleUsageWed;
+
+  @NonNull
+  public final ToggleButton toggleWaitFri;
+
+  @NonNull
+  public final ToggleButton toggleWaitMon;
+
+  @NonNull
+  public final ToggleButton toggleWaitSat;
+
+  @NonNull
+  public final ToggleButton toggleWaitSun;
+
+  @NonNull
+  public final ToggleButton toggleWaitThu;
+
+  @NonNull
+  public final ToggleButton toggleWaitTue;
+
+  @NonNull
+  public final ToggleButton toggleWaitWed;
+
+  @NonNull
   public final MaterialToolbar toolbar;
 
   @NonNull
@@ -278,6 +320,13 @@ public final class ActivityEditBlockBinding implements ViewBinding {
       @NonNull ToggleButton toggleEditMon, @NonNull ToggleButton toggleEditSat,
       @NonNull ToggleButton toggleEditSun, @NonNull ToggleButton toggleEditThu,
       @NonNull ToggleButton toggleEditTue, @NonNull ToggleButton toggleEditWed,
+      @NonNull ToggleButton toggleUsageFri, @NonNull ToggleButton toggleUsageMon,
+      @NonNull ToggleButton toggleUsageSat, @NonNull ToggleButton toggleUsageSun,
+      @NonNull ToggleButton toggleUsageThu, @NonNull ToggleButton toggleUsageTue,
+      @NonNull ToggleButton toggleUsageWed, @NonNull ToggleButton toggleWaitFri,
+      @NonNull ToggleButton toggleWaitMon, @NonNull ToggleButton toggleWaitSat,
+      @NonNull ToggleButton toggleWaitSun, @NonNull ToggleButton toggleWaitThu,
+      @NonNull ToggleButton toggleWaitTue, @NonNull ToggleButton toggleWaitWed,
       @NonNull MaterialToolbar toolbar, @NonNull TextView tvBlockingStyleDesc,
       @NonNull TextView tvLockUntilValue, @NonNull TextView tvQrSecret,
       @NonNull TextView tvSelectedApps, @NonNull TextView tvTypeOverRandomInfo,
@@ -347,6 +396,20 @@ public final class ActivityEditBlockBinding implements ViewBinding {
     this.toggleEditThu = toggleEditThu;
     this.toggleEditTue = toggleEditTue;
     this.toggleEditWed = toggleEditWed;
+    this.toggleUsageFri = toggleUsageFri;
+    this.toggleUsageMon = toggleUsageMon;
+    this.toggleUsageSat = toggleUsageSat;
+    this.toggleUsageSun = toggleUsageSun;
+    this.toggleUsageThu = toggleUsageThu;
+    this.toggleUsageTue = toggleUsageTue;
+    this.toggleUsageWed = toggleUsageWed;
+    this.toggleWaitFri = toggleWaitFri;
+    this.toggleWaitMon = toggleWaitMon;
+    this.toggleWaitSat = toggleWaitSat;
+    this.toggleWaitSun = toggleWaitSun;
+    this.toggleWaitThu = toggleWaitThu;
+    this.toggleWaitTue = toggleWaitTue;
+    this.toggleWaitWed = toggleWaitWed;
     this.toolbar = toolbar;
     this.tvBlockingStyleDesc = tvBlockingStyleDesc;
     this.tvLockUntilValue = tvLockUntilValue;
@@ -768,6 +831,90 @@ public final class ActivityEditBlockBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.toggleUsageFri;
+      ToggleButton toggleUsageFri = ViewBindings.findChildViewById(rootView, id);
+      if (toggleUsageFri == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleUsageMon;
+      ToggleButton toggleUsageMon = ViewBindings.findChildViewById(rootView, id);
+      if (toggleUsageMon == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleUsageSat;
+      ToggleButton toggleUsageSat = ViewBindings.findChildViewById(rootView, id);
+      if (toggleUsageSat == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleUsageSun;
+      ToggleButton toggleUsageSun = ViewBindings.findChildViewById(rootView, id);
+      if (toggleUsageSun == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleUsageThu;
+      ToggleButton toggleUsageThu = ViewBindings.findChildViewById(rootView, id);
+      if (toggleUsageThu == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleUsageTue;
+      ToggleButton toggleUsageTue = ViewBindings.findChildViewById(rootView, id);
+      if (toggleUsageTue == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleUsageWed;
+      ToggleButton toggleUsageWed = ViewBindings.findChildViewById(rootView, id);
+      if (toggleUsageWed == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleWaitFri;
+      ToggleButton toggleWaitFri = ViewBindings.findChildViewById(rootView, id);
+      if (toggleWaitFri == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleWaitMon;
+      ToggleButton toggleWaitMon = ViewBindings.findChildViewById(rootView, id);
+      if (toggleWaitMon == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleWaitSat;
+      ToggleButton toggleWaitSat = ViewBindings.findChildViewById(rootView, id);
+      if (toggleWaitSat == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleWaitSun;
+      ToggleButton toggleWaitSun = ViewBindings.findChildViewById(rootView, id);
+      if (toggleWaitSun == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleWaitThu;
+      ToggleButton toggleWaitThu = ViewBindings.findChildViewById(rootView, id);
+      if (toggleWaitThu == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleWaitTue;
+      ToggleButton toggleWaitTue = ViewBindings.findChildViewById(rootView, id);
+      if (toggleWaitTue == null) {
+        break missingId;
+      }
+
+      id = R.id.toggleWaitWed;
+      ToggleButton toggleWaitWed = ViewBindings.findChildViewById(rootView, id);
+      if (toggleWaitWed == null) {
+        break missingId;
+      }
+
       id = R.id.toolbar;
       MaterialToolbar toolbar = ViewBindings.findChildViewById(rootView, id);
       if (toolbar == null) {
@@ -823,8 +970,10 @@ public final class ActivityEditBlockBinding implements ViewBinding {
           binding_selectedBlockDetail, switchTypeOverRandom, tilBlockPassword, tilBlockingStyle,
           tilConfirmPassword, tilTitle, tilTypeOverText, tilUnlockMethod, toggleEditFri,
           toggleEditMon, toggleEditSat, toggleEditSun, toggleEditThu, toggleEditTue, toggleEditWed,
-          toolbar, tvBlockingStyleDesc, tvLockUntilValue, tvQrSecret, tvSelectedApps,
-          tvTypeOverRandomInfo, weeklyGrid);
+          toggleUsageFri, toggleUsageMon, toggleUsageSat, toggleUsageSun, toggleUsageThu,
+          toggleUsageTue, toggleUsageWed, toggleWaitFri, toggleWaitMon, toggleWaitSat,
+          toggleWaitSun, toggleWaitThu, toggleWaitTue, toggleWaitWed, toolbar, tvBlockingStyleDesc,
+          tvLockUntilValue, tvQrSecret, tvSelectedApps, tvTypeOverRandomInfo, weeklyGrid);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

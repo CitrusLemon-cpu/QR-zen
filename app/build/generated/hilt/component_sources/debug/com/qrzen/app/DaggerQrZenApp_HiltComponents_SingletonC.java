@@ -470,6 +470,7 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
     private AllowlistOverlayActivity injectAllowlistOverlayActivity2(
         AllowlistOverlayActivity instance) {
       AllowlistOverlayActivity_MembersInjector.injectDao(instance, singletonCImpl.provideAppBlockDaoProvider.get());
+      AllowlistOverlayActivity_MembersInjector.injectTimeBlockDao(instance, singletonCImpl.provideTimeBlockDaoProvider.get());
       AllowlistOverlayActivity_MembersInjector.injectBlockEventDao(instance, singletonCImpl.provideBlockEventDaoProvider.get());
       return instance;
     }
@@ -491,6 +492,7 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
     private LockScreenActivity injectLockScreenActivity2(LockScreenActivity instance4) {
       LockScreenActivity_MembersInjector.injectDao(instance4, singletonCImpl.provideAppBlockDaoProvider.get());
       LockScreenActivity_MembersInjector.injectBlockEventDao(instance4, singletonCImpl.provideBlockEventDaoProvider.get());
+      LockScreenActivity_MembersInjector.injectTimeBlockDao(instance4, singletonCImpl.provideTimeBlockDaoProvider.get());
       return instance4;
     }
 
@@ -504,6 +506,7 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
     private UnlockChallengeActivity injectUnlockChallengeActivity2(
         UnlockChallengeActivity instance6) {
       UnlockChallengeActivity_MembersInjector.injectDao(instance6, singletonCImpl.provideAppBlockDaoProvider.get());
+      UnlockChallengeActivity_MembersInjector.injectTimeBlockDao(instance6, singletonCImpl.provideTimeBlockDaoProvider.get());
       return instance6;
     }
 
@@ -594,7 +597,7 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
       public T get() {
         switch (id) {
           case 0: // com.qrzen.app.ui.main.HomeViewModel 
-          return (T) new HomeViewModel(singletonCImpl.provideAppBlockDaoProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
+          return (T) new HomeViewModel(singletonCImpl.provideAppBlockDaoProvider.get(), singletonCImpl.provideTimeBlockDaoProvider.get(), ApplicationContextModule_ProvideContextFactory.provideContext(singletonCImpl.applicationContextModule));
 
           case 1: // com.qrzen.app.ui.main.StatsViewModel 
           return (T) new StatsViewModel(singletonCImpl.provideBlockEventDaoProvider.get());
@@ -681,6 +684,7 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
     @CanIgnoreReturnValue
     private BackgroundService injectBackgroundService2(BackgroundService instance) {
       BackgroundService_MembersInjector.injectDao(instance, singletonCImpl.provideAppBlockDaoProvider.get());
+      BackgroundService_MembersInjector.injectTimeBlockDao(instance, singletonCImpl.provideTimeBlockDaoProvider.get());
       return instance;
     }
   }
