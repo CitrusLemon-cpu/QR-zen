@@ -2,6 +2,7 @@ package com.qrzen.app.ui.lock
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.CountDownTimer
 import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
@@ -47,6 +48,7 @@ class LockScreenActivity : AppCompatActivity() {
     private lateinit var unlockRenderer: UnlockChallengeRenderer
     private var currentBlock: AppBlock? = null
     private var pauseSheetShown = false
+    private var waitTimerCountdown: CountDownTimer? = null
 
     private val qrScanLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         unlockRenderer.handleQrScanResult(result.data?.getStringExtra(CameraScan.SCAN_RESULT))
@@ -89,6 +91,7 @@ class LockScreenActivity : AppCompatActivity() {
     private fun setupUi(block: AppBlock, timeBlocks: List<TimeBlock>) {
         binding.tvBlockTitle.text = block.title
         binding.tvBlockMessage.text = getString(R.string.lock_screen_message)
+        setupWaitTimerCountdown(block)
         unlockRenderer.render(
             block = block,
             timeBlocks = timeBlocks,
@@ -180,6 +183,34 @@ class LockScreenActivity : AppCompatActivity() {
             .show()
     }
 
+    private fun setupWaitTimerCountdown(block: AppBlock) {
+        waitTimerCountdown?.cancel()
+        waitTimerCountdown = null
+        if (block.blockingStyle != com.qrzen.app.ui.unlock.UnlockMethodUtils.STYLE_WAIT_TIMER) return
+        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
+        val blockingUntil = kv.decodeLong("wait_timer_blocking_${block.id}", 0L)
+        val now = System.currentTimeMillis()
+        if (blockingUntil <= now) return
+        val remaining = blockingUntil - now
+        binding.tvBlockMessage.text = "Resets in ${formatCountdown(remaining)}"
+        waitTimerCountdown = object : CountDownTimer(remaining, 1_000L) {
+            override fun onTick(ms: Long) {
+                binding.tvBlockMessage.text = "Resets in ${formatCountdown(ms)}"
+            }
+            override fun onFinish() {
+                binding.tvBlockMessage.text = "Block reset"
+                finish()
+            }
+        }.start()
+    }
+
+    private fun formatCountdown(millis: Long): String {
+        val totalSeconds = (millis / 1000).coerceAtLeast(0L)
+        val minutes = totalSeconds / 60
+        val seconds = totalSeconds % 60
+        return if (minutes > 0) "${minutes}m ${seconds}s" else "${seconds}s"
+    }
+
     private fun goToLauncher() {
         SilentModeHelper.restoreRinger(this)
         startActivity(Intent(Intent.ACTION_MAIN).apply {
@@ -194,6 +225,7 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
+        waitTimerCountdown?.cancel()
         unlockRenderer.clear()
         super.onDestroy()
     }
