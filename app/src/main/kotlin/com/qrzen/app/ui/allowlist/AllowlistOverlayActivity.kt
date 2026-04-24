@@ -10,6 +10,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.EditText
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -22,14 +24,17 @@ import com.king.zxing.CameraScan
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.BlockEventDao
+import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
+import com.qrzen.app.data.model.TimeBlock
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityAllowlistOverlayBinding
 import com.qrzen.app.databinding.BottomSheetPauseDurationBinding
 import com.qrzen.app.databinding.ItemAllowedAppBinding
 import com.qrzen.app.ui.lock.QrScanActivity
 import com.qrzen.app.ui.unlock.UnlockChallengeRenderer
+import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.util.SilentModeHelper
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,10 +42,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.Duration
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -48,18 +55,23 @@ import javax.inject.Inject
 class AllowlistOverlayActivity : AppCompatActivity() {
 
     companion object {
+        const val EXTRA_BLOCK_IDS = "extra_block_ids"
         const val EXTRA_BLOCK_ID = "extra_block_id"
         const val EXTRA_BLOCKED_PKG = "extra_blocked_pkg"
     }
 
     @Inject lateinit var dao: AppBlockDao
+    @Inject lateinit var timeBlockDao: TimeBlockDao
     @Inject lateinit var blockEventDao: BlockEventDao
 
     private lateinit var binding: ActivityAllowlistOverlayBinding
     private lateinit var unlockRenderer: UnlockChallengeRenderer
-    private var currentBlock: AppBlock? = null
+    private var activeBlocks: MutableList<AppBlock> = mutableListOf()
+    private var selectedBlockIndex: Int = 0
+    private var displayedCountdownIndex: Int = 0
+    private var countdownTimers: MutableMap<Int, CountDownTimer> = mutableMapOf()
+    private var timeBlocksByBlockId: Map<Int, List<TimeBlock>> = emptyMap()
     private val sessionRemovedApps = mutableSetOf<String>()
-    private var countDownTimer: CountDownTimer? = null
     private var pauseSheetShown = false
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -74,105 +86,225 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         setContentView(binding.root)
         unlockRenderer = UnlockChallengeRenderer(this, binding.challengeContainer, binding.tvError)
         binding.rvAllowedApps.layoutManager = GridLayoutManager(this, 3)
-        loadBlock(intent.getIntExtra(EXTRA_BLOCK_ID, -1))
+        val blockIds = intent.getIntArrayExtra(EXTRA_BLOCK_IDS)
+            ?: intent.getIntExtra(EXTRA_BLOCK_ID, -1).let { if (it == -1) intArrayOf() else intArrayOf(it) }
+        if (blockIds.isEmpty()) {
+            finish()
+            return
+        }
+        loadBlocks(blockIds)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         sessionRemovedApps.clear()
-        loadBlock(intent.getIntExtra(EXTRA_BLOCK_ID, -1))
+        cancelAllCountdowns()
+        val blockIds = intent.getIntArrayExtra(EXTRA_BLOCK_IDS)
+            ?: intent.getIntExtra(EXTRA_BLOCK_ID, -1).let { if (it == -1) intArrayOf() else intArrayOf(it) }
+        if (blockIds.isEmpty()) {
+            finish()
+            return
+        }
+        loadBlocks(blockIds)
     }
 
-    private fun loadBlock(blockId: Int) {
+    private fun loadBlocks(blockIds: IntArray) {
         pauseSheetShown = false
         lifecycleScope.launch {
-            val block = dao.getById(blockId) ?: run {
+            val now = System.currentTimeMillis()
+            val loadedBlocks = mutableListOf<AppBlock>()
+            for (blockId in blockIds) {
+                val block = dao.getById(blockId)
+                if (block != null && block.isEnabled && !block.isArchived && block.pausedUntil <= now) {
+                    loadedBlocks += block
+                }
+            }
+            activeBlocks = loadedBlocks.toMutableList()
+            if (activeBlocks.isEmpty()) {
                 finish()
                 return@launch
             }
-            currentBlock = block
             if (Prefs.pauseAllUntil > System.currentTimeMillis()) {
-                binding.tvBlockTitle.text = block.title
-                binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
-                showPauseDurationSheet(block)
+                setupHeader()
+                showPauseDurationSheet(activeBlocks.first())
                 return@launch
             }
-            val allowedApps = withContext(Dispatchers.IO) { buildAllowedApps(block) }
-            setupUi(block, allowedApps)
+            val intersectedApps = withContext(Dispatchers.IO) { buildIntersectedAllowedApps() }
+            val timeBlocksMap = withContext(Dispatchers.IO) { loadTimeBlocksMap(activeBlocks) }
+            setupUi(intersectedApps, timeBlocksMap)
         }
     }
 
-    private fun setupUi(block: AppBlock, allowedApps: List<AllowedAppItem>) {
-        binding.tvBlockTitle.text = block.title
-        binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
+    private suspend fun loadTimeBlocksMap(blocks: List<AppBlock>): Map<Int, List<TimeBlock>> {
+        val map = linkedMapOf<Int, List<TimeBlock>>()
+        for (block in blocks) {
+            map[block.id] = timeBlockDao.getByBlockId(block.id)
+        }
+        return map
+    }
+
+    private fun buildIntersectedAllowedApps(): List<AllowedAppItem> {
+        if (activeBlocks.isEmpty()) return emptyList()
+        val pm = packageManager
+        val allowedSets = activeBlocks.map { block ->
+            block.appPackages.split(',')
+                .map { it.trim() }
+                .filter { it.isNotEmpty() }
+                .filterNot(Prefs::isAppTimerExpired)
+                .filterNot { it in sessionRemovedApps }
+                .toSet()
+        }
+        val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }
+        return intersection.mapNotNull { pkg ->
+            try {
+                val info = pm.getApplicationInfo(pkg, 0)
+                AllowedAppItem(
+                    packageName = pkg,
+                    label = pm.getApplicationLabel(info).toString(),
+                    icon = pm.getApplicationIcon(info),
+                    timerExpiry = Prefs.getAppTimerExpiry(pkg)
+                )
+            } catch (_: PackageManager.NameNotFoundException) {
+                null
+            }
+        }.sortedBy { it.label.lowercase() }
+    }
+
+    private fun setupUi(allowedApps: List<AllowedAppItem>, timeBlocksMap: Map<Int, List<TimeBlock>>) {
+        timeBlocksByBlockId = timeBlocksMap
         binding.tvError.visibility = View.GONE
         binding.tvError.text = ""
+        setupHeader()
+        setupCountdowns()
+        setupBlockSelector(timeBlocksMap)
+        (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
         binding.rvAllowedApps.adapter = AllowedAppAdapter(
             allowedApps,
             onClick = { launchAllowedApp(it) },
             onLongPress = { showRemoveAppDialog(it) },
-            onTimerExpired = { refreshAllowedApps() }
+            onTimerExpired = { refreshOverlay() }
         )
-        unlockRenderer.render(
-            block = block,
-            showGoBackButton = false,
-            onRequestQrScan = {
-                qrScanLauncher.launch(Intent(this, QrScanActivity::class.java))
-            },
-            onUnlocked = {
-                showPauseDurationSheet(block)
-            }
-        )
-        val showMasterPwd = block.masterPasswordEnabled && Prefs.masterPasswordEnabled
-        binding.btnMasterPassword.visibility = if (showMasterPwd) View.VISIBLE else View.GONE
-        binding.btnMasterPassword.setOnClickListener { showMasterPasswordDialog(block) }
         SilentModeHelper.applySilentMode(this)
-        startCountdown(block)
     }
 
-    private suspend fun buildAllowedApps(block: AppBlock): List<AllowedAppItem> {
-        val pm = packageManager
-        return block.appPackages
-            .split(',')
-            .map { it.trim() }
-            .filter { it.isNotEmpty() }
-            .filterNot(Prefs::isAppTimerExpired)
-            .filterNot { it in sessionRemovedApps }
-            .mapNotNull { pkg ->
-                try {
-                    val info = pm.getApplicationInfo(pkg, 0)
-                    AllowedAppItem(
-                        packageName = pkg,
-                        label = pm.getApplicationLabel(info).toString(),
-                        icon = pm.getApplicationIcon(info),
-                        timerExpiry = Prefs.getAppTimerExpiry(pkg)
-                    )
-                } catch (_: PackageManager.NameNotFoundException) {
-                    null
-                }
+    private fun setupHeader() {
+        binding.tvBlockTitle.text = if (activeBlocks.size == 1) {
+            activeBlocks.first().title
+        } else {
+            getString(R.string.allowlist_multi_title, activeBlocks.size)
+        }
+        binding.tvTimeRange.visibility = View.GONE
+    }
+
+    private fun setupCountdowns() {
+        cancelAllCountdowns()
+        if (activeBlocks.isEmpty()) return
+        displayedCountdownIndex = displayedCountdownIndex.coerceIn(0, activeBlocks.lastIndex)
+        val expiredBlockIds = mutableSetOf<Int>()
+        for (block in activeBlocks) {
+            val millis = calculateMillisUntilBlockEnd(block)
+            if (millis <= 0L) {
+                expiredBlockIds += block.id
+                continue
             }
-            .sortedBy { it.label.lowercase() }
+            countdownTimers[block.id] = object : CountDownTimer(millis, 1_000L) {
+                override fun onTick(millisUntilFinished: Long) {
+                    if (displayedCountdownIndex < activeBlocks.size && activeBlocks[displayedCountdownIndex].id == block.id) {
+                        binding.tvCountdown.text = formatCountdown(millisUntilFinished)
+                    }
+                }
+
+                override fun onFinish() {
+                    activeBlocks.removeAll { it.id == block.id }
+                    timeBlocksByBlockId = timeBlocksByBlockId - block.id
+                    countdownTimers.remove(block.id)
+                    if (activeBlocks.isEmpty()) {
+                        SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)
+                        finish()
+                    } else {
+                        displayedCountdownIndex = displayedCountdownIndex.coerceAtMost(activeBlocks.size - 1)
+                        refreshOverlay()
+                    }
+                }
+            }.start()
+        }
+        if (expiredBlockIds.isNotEmpty()) {
+            activeBlocks.removeAll { it.id in expiredBlockIds }
+            timeBlocksByBlockId = timeBlocksByBlockId.filterKeys { it !in expiredBlockIds }
+            if (activeBlocks.isEmpty()) {
+                SilentModeHelper.restoreRinger(this)
+                finish()
+            } else {
+                displayedCountdownIndex = displayedCountdownIndex.coerceAtMost(activeBlocks.size - 1)
+                refreshOverlay()
+            }
+            return
+        }
+        updateCountdownDisplay()
+        binding.tvCountdown.setOnClickListener {
+            if (activeBlocks.size > 1) {
+                displayedCountdownIndex = (displayedCountdownIndex + 1) % activeBlocks.size
+                updateCountdownDisplay()
+            }
+        }
+        binding.tvTimeRange.setOnClickListener {
+            if (activeBlocks.size > 1) {
+                displayedCountdownIndex = (displayedCountdownIndex + 1) % activeBlocks.size
+                updateCountdownDisplay()
+            }
+        }
     }
 
-    private fun startCountdown(block: AppBlock) {
-        countDownTimer?.cancel()
-        val millis = calculateMillisUntilEnd(block.endTime)
+    private fun updateCountdownDisplay() {
+        if (activeBlocks.isEmpty()) return
+        val block = activeBlocks[displayedCountdownIndex]
+        binding.tvTimeRange.visibility = View.VISIBLE
+        binding.tvTimeRange.text = if (activeBlocks.size > 1) {
+            getString(R.string.allowlist_tap_switch, block.title)
+        } else {
+            block.title
+        }
+        val millis = calculateMillisUntilBlockEnd(block)
         if (millis <= 0L) {
-            finish()
+            binding.tvCountdown.text = formatCountdown(0L)
+            refreshOverlay()
             return
         }
         binding.tvCountdown.text = formatCountdown(millis)
-        countDownTimer = object : CountDownTimer(millis, 1_000L) {
-            override fun onTick(millisUntilFinished: Long) {
-                binding.tvCountdown.text = formatCountdown(millisUntilFinished)
-            }
+    }
 
-            override fun onFinish() {
-                binding.tvCountdown.text = formatCountdown(0L)
-                finish()
+    private fun calculateMillisUntilBlockEnd(block: AppBlock): Long {
+        if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) {
+            return calculateMillisUntilEnd(block.endTime)
+        }
+        val now = LocalDateTime.now()
+        val timeBlocks = timeBlocksByBlockId[block.id].orEmpty()
+        val activeEnd = timeBlocks.mapNotNull { timeBlock ->
+            findActiveTimeBlockEnd(timeBlock, now)
+        }.minOrNull()
+        return activeEnd?.let { Duration.between(now, it).toMillis().coerceAtLeast(0L) }
+            ?: calculateMillisUntilEnd(block.endTime)
+    }
+
+    private fun findActiveTimeBlockEnd(timeBlock: TimeBlock, now: LocalDateTime): LocalDateTime? {
+        val start = LocalTime.parse(timeBlock.startTime, timeFormatter)
+        val end = LocalTime.parse(timeBlock.endTime, timeFormatter)
+        val candidateDates = listOf(now.toLocalDate().minusDays(1), now.toLocalDate())
+        for (date in candidateDates) {
+            if (!isDayActive(timeBlock.activeDays, date)) continue
+            val startDateTime = date.atTime(start)
+            val endDateTime = if (end <= start) date.plusDays(1).atTime(end) else date.atTime(end)
+            if (!now.isBefore(startDateTime) && now.isBefore(endDateTime)) {
+                return endDateTime
             }
-        }.start()
+        }
+        return null
+    }
+
+    private fun isDayActive(activeDays: String, date: LocalDate): Boolean {
+        val dayIndex = date.dayOfWeek.value - 1
+        return activeDays.padEnd(7, '0').getOrNull(dayIndex) == '1'
     }
 
     private fun calculateMillisUntilEnd(endTime: String): Long {
@@ -185,12 +317,60 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         return Duration.between(now, endDateTime).toMillis().coerceAtLeast(0L)
     }
 
+    private fun setupBlockSelector(timeBlocksMap: Map<Int, List<TimeBlock>>) {
+        if (activeBlocks.isEmpty()) return
+        if (activeBlocks.size <= 1) {
+            binding.spinnerBlockSelector.visibility = View.GONE
+            selectedBlockIndex = 0
+            val block = activeBlocks.first()
+            renderUnlockChallenge(block, timeBlocksMap[block.id] ?: emptyList())
+            return
+        }
+        binding.spinnerBlockSelector.visibility = View.VISIBLE
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            activeBlocks.map { it.title }
+        )
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        binding.spinnerBlockSelector.adapter = adapter
+        binding.spinnerBlockSelector.setSelection(selectedBlockIndex.coerceIn(0, activeBlocks.lastIndex), false)
+        binding.spinnerBlockSelector.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
+                selectedBlockIndex = position
+                val block = activeBlocks[position]
+                renderUnlockChallenge(block, timeBlocksMap[block.id] ?: emptyList())
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
+        }
+        val initialBlock = activeBlocks[selectedBlockIndex.coerceIn(0, activeBlocks.lastIndex)]
+        renderUnlockChallenge(initialBlock, timeBlocksMap[initialBlock.id] ?: emptyList())
+    }
+
+    private fun renderUnlockChallenge(block: AppBlock, timeBlocks: List<TimeBlock>) {
+        unlockRenderer.render(
+            block = block,
+            timeBlocks = timeBlocks,
+            showGoBackButton = false,
+            onRequestQrScan = {
+                qrScanLauncher.launch(Intent(this, QrScanActivity::class.java))
+            },
+            onUnlocked = {
+                showPauseDurationSheet(block)
+            }
+        )
+        val showMasterPwd = block.masterPasswordEnabled && Prefs.masterPasswordEnabled
+        binding.btnMasterPassword.visibility = if (showMasterPwd) View.VISIBLE else View.GONE
+        binding.btnMasterPassword.setOnClickListener { showMasterPasswordDialog(block) }
+    }
+
     private fun formatCountdown(millis: Long): String {
         val totalSeconds = TimeUnit.MILLISECONDS.toSeconds(millis).coerceAtLeast(0L)
         val hours = totalSeconds / 3600
         val minutes = (totalSeconds % 3600) / 60
         val seconds = totalSeconds % 60
-        return String.format("%02d:%02d:%02d", hours, minutes, seconds)
+        return String.format(Locale.getDefault(), "%02d:%02d:%02d", hours, minutes, seconds)
     }
 
     private fun launchAllowedApp(packageName: String) {
@@ -206,24 +386,10 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             .setMessage(getString(R.string.overlay_remove_app_message))
             .setPositiveButton(R.string.overlay_remove_app_confirm) { _, _ ->
                 sessionRemovedApps.add(appItem.packageName)
-                refreshAllowedApps()
+                refreshOverlay()
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
-    }
-
-    private fun refreshAllowedApps() {
-        val block = currentBlock ?: return
-        lifecycleScope.launch {
-            val allowedApps = withContext(Dispatchers.IO) { buildAllowedApps(block) }
-            (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
-            binding.rvAllowedApps.adapter = AllowedAppAdapter(
-                allowedApps,
-                onClick = { launchAllowedApp(it) },
-                onLongPress = { showRemoveAppDialog(it) },
-                onTimerExpired = { refreshAllowedApps() }
-            )
-        }
     }
 
     private fun showPauseDurationSheet(block: AppBlock) {
@@ -232,6 +398,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         val sheet = BottomSheetDialog(this)
         val sb = BottomSheetPauseDurationBinding.inflate(LayoutInflater.from(this))
         sheet.setContentView(sb.root)
+        sheet.setOnDismissListener { pauseSheetShown = false }
         sb.btn15min.setOnClickListener { applyPause(block, 15 * 60_000L); sheet.dismiss() }
         sb.btn30min.setOnClickListener { applyPause(block, 30 * 60_000L); sheet.dismiss() }
         sb.btn1hr.setOnClickListener { applyPause(block, 60 * 60_000L); sheet.dismiss() }
@@ -255,8 +422,47 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                     eventType = "PAUSED"
                 )
             )
-            SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)
-            finish()
+            activeBlocks.removeAll { it.id == block.id }
+            timeBlocksByBlockId = timeBlocksByBlockId - block.id
+            countdownTimers.remove(block.id)?.cancel()
+            if (activeBlocks.isEmpty()) {
+                SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)
+                finish()
+            } else {
+                selectedBlockIndex = 0
+                displayedCountdownIndex = displayedCountdownIndex.coerceAtMost(activeBlocks.size - 1)
+                refreshOverlay()
+            }
+        }
+    }
+
+    private fun refreshOverlay() {
+        lifecycleScope.launch {
+            val now = System.currentTimeMillis()
+            val previousSelectedId = activeBlocks.getOrNull(selectedBlockIndex)?.id
+            val previousDisplayedId = activeBlocks.getOrNull(displayedCountdownIndex)?.id
+            val refreshedBlocks = mutableListOf<AppBlock>()
+            for (block in activeBlocks) {
+                val refreshed = dao.getById(block.id)
+                if (refreshed != null && refreshed.isEnabled && !refreshed.isArchived && refreshed.pausedUntil <= now) {
+                    refreshedBlocks += refreshed
+                }
+            }
+            activeBlocks = refreshedBlocks.toMutableList()
+            if (activeBlocks.isEmpty()) {
+                SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)
+                finish()
+                return@launch
+            }
+            selectedBlockIndex = activeBlocks.indexOfFirst { it.id == previousSelectedId }
+                .takeIf { it >= 0 } ?: 0
+            displayedCountdownIndex = activeBlocks.indexOfFirst { it.id == previousDisplayedId }
+                .takeIf { it >= 0 } ?: displayedCountdownIndex.coerceAtMost(activeBlocks.size - 1)
+            val intersectedApps = withContext(Dispatchers.IO) { buildIntersectedAllowedApps() }
+            val timeBlocksMap = withContext(Dispatchers.IO) { loadTimeBlocksMap(activeBlocks) }
+            pauseSheetShown = false
+            (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
+            setupUi(intersectedApps, timeBlocksMap)
         }
     }
 
@@ -305,10 +511,15 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        countDownTimer?.cancel()
+        cancelAllCountdowns()
         (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
         unlockRenderer.clear()
         super.onDestroy()
+    }
+
+    private fun cancelAllCountdowns() {
+        countdownTimers.values.forEach { it.cancel() }
+        countdownTimers.clear()
     }
 
     data class AllowedAppItem(
@@ -374,9 +585,9 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             val minutes = (totalSeconds % 3_600L) / 60L
             val seconds = totalSeconds % 60L
             return if (hours > 0L) {
-                String.format("%d:%02d:%02d", hours, minutes, seconds)
+                String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
             } else {
-                String.format("%02d:%02d", minutes, seconds)
+                String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds)
             }
         }
 

@@ -11,6 +11,7 @@ import androidx.fragment.app.FragmentActivity
 import com.google.android.material.textfield.TextInputEditText
 import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.TimeBlock
 import com.qrzen.app.databinding.ViewUnlockDelayBinding
 import com.qrzen.app.databinding.ViewUnlockInfoBinding
 import com.qrzen.app.databinding.ViewUnlockPasswordBinding
@@ -29,6 +30,7 @@ class UnlockChallengeRenderer(
 
     fun render(
         block: AppBlock,
+        timeBlocks: List<TimeBlock> = emptyList(),
         showGoBackButton: Boolean,
         onRequestQrScan: () -> Unit,
         onUnlocked: () -> Unit,
