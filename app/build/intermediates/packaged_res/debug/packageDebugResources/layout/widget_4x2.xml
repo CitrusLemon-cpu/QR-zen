@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/green_500" android:orientation="vertical" android:padding="12dp">
+    <TextView android:id="@+id/tvStatus" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="No blocks active" android:textColor="@color/white" android:textSize="14sp" android:textStyle="bold" android:layout_marginBottom="8dp" />
+    <TextView android:id="@+id/tvBlock1" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/white" android:textSize="12sp" android:visibility="gone" />
+    <TextView android:id="@+id/tvBlock2" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/white" android:textSize="12sp" android:visibility="gone" />
+    <TextView android:id="@+id/tvBlock3" android:layout_width="match_parent" android:layout_height="wrap_content" android:textColor="@color/white" android:textSize="12sp" android:visibility="gone" />
+    <TextView android:id="@+id/tvNoBlocks" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="No active blocks" android:textColor="#CCFFFFFF" android:textSize="12sp" />
+</LinearLayout>

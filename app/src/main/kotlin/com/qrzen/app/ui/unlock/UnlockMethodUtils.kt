@@ -20,6 +20,11 @@ object UnlockMethodUtils {
     const val METHOD_QR_CODE = "QR_CODE"
     const val METHOD_EDIT_WINDOW = "EDIT_WINDOW"
     const val METHOD_TIMER = "TIMER"
+    const val METHOD_WHILE_ACTIVE = "WHILE_ACTIVE"
+    const val STYLE_MANUAL = "MANUAL"
+    const val STYLE_SCHEDULE = "SCHEDULE"
+    const val STYLE_USAGE_LIMIT = "USAGE_LIMIT"
+    const val STYLE_WAIT_TIMER = "WAIT_TIMER"
 
     private val displayDateTimeFormatter = SimpleDateFormat("EEE, MMM d, yyyy HH:mm", Locale.getDefault())
     private val challengeWords = listOf(

@@ -1,0 +1,866 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.qrzen.app"
+4    android:versionCode="1"
+5    android:versionName="1.0.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="26"
+9        android:targetSdkVersion="35" />
+10
+11    <!-- Allow queryIntentActivities to see all launcher apps (Android 11+) -->
+12    <queries>
+12-->/home/QR-zen/app/src/main/AndroidManifest.xml:6:5-11:15
+13        <intent>
+13-->/home/QR-zen/app/src/main/AndroidManifest.xml:7:9-10:18
+14            <action android:name="android.intent.action.MAIN" />
+14-->/home/QR-zen/app/src/main/AndroidManifest.xml:8:13-65
+14-->/home/QR-zen/app/src/main/AndroidManifest.xml:8:21-62
+15
+16            <category android:name="android.intent.category.LAUNCHER" />
+16-->/home/QR-zen/app/src/main/AndroidManifest.xml:9:13-73
+16-->/home/QR-zen/app/src/main/AndroidManifest.xml:9:23-70
+17        </intent>
+18    </queries>
+19
+20    <!-- ─── Permissions ─────────────────────────────────────────────────── -->
+21    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+21-->/home/QR-zen/app/src/main/AndroidManifest.xml:14:5-81
+21-->/home/QR-zen/app/src/main/AndroidManifest.xml:14:22-78
+22    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+22-->/home/QR-zen/app/src/main/AndroidManifest.xml:15:5-77
+22-->/home/QR-zen/app/src/main/AndroidManifest.xml:15:22-74
+23    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+23-->/home/QR-zen/app/src/main/AndroidManifest.xml:16:5-89
+23-->/home/QR-zen/app/src/main/AndroidManifest.xml:16:22-86
+24    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+24-->/home/QR-zen/app/src/main/AndroidManifest.xml:17:5-78
+24-->/home/QR-zen/app/src/main/AndroidManifest.xml:17:22-75
+25    <uses-permission android:name="android.permission.WAKE_LOCK" />
+25-->/home/QR-zen/app/src/main/AndroidManifest.xml:18:5-68
+25-->/home/QR-zen/app/src/main/AndroidManifest.xml:18:22-65
+26    <uses-permission android:name="android.permission.VIBRATE" />
+26-->/home/QR-zen/app/src/main/AndroidManifest.xml:19:5-66
+26-->/home/QR-zen/app/src/main/AndroidManifest.xml:19:22-63
+27    <uses-permission android:name="android.permission.CAMERA" />
+27-->/home/QR-zen/app/src/main/AndroidManifest.xml:20:5-65
+27-->/home/QR-zen/app/src/main/AndroidManifest.xml:20:22-62
+28    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+28-->/home/QR-zen/app/src/main/AndroidManifest.xml:21:5-85
+28-->/home/QR-zen/app/src/main/AndroidManifest.xml:21:22-82
+29    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+29-->/home/QR-zen/app/src/main/AndroidManifest.xml:22:5-79
+29-->/home/QR-zen/app/src/main/AndroidManifest.xml:22:22-76
+30    <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
+30-->/home/QR-zen/app/src/main/AndroidManifest.xml:23:5-24:47
+30-->/home/QR-zen/app/src/main/AndroidManifest.xml:23:22-75
+31    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
+31-->/home/QR-zen/app/src/main/AndroidManifest.xml:25:5-95
+31-->/home/QR-zen/app/src/main/AndroidManifest.xml:25:22-92
+32    <uses-permission
+32-->/home/QR-zen/app/src/main/AndroidManifest.xml:26:5-28:38
+33        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+33-->/home/QR-zen/app/src/main/AndroidManifest.xml:27:9-65
+34        android:maxSdkVersion="28" />
+34-->/home/QR-zen/app/src/main/AndroidManifest.xml:28:9-35
+35    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+35-->/home/QR-zen/app/src/main/AndroidManifest.xml:29:5-77
+35-->/home/QR-zen/app/src/main/AndroidManifest.xml:29:22-74
+36    <uses-permission android:name="android.permission.FLASHLIGHT" />
+36-->[com.github.jenly1314:zxing-lite:2.4.0] /root/.gradle/caches/8.9/transforms/cded55655c84ed1531a5a7c4c2996274/transformed/jetified-zxing-lite-2.4.0/AndroidManifest.xml:9:5-69
+36-->[com.github.jenly1314:zxing-lite:2.4.0] /root/.gradle/caches/8.9/transforms/cded55655c84ed1531a5a7c4c2996274/transformed/jetified-zxing-lite-2.4.0/AndroidManifest.xml:9:22-66
+37    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+37-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:24:5-79
+37-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:24:22-76
+38
+39    <permission
+39-->[androidx.core:core:1.13.1] /root/.gradle/caches/8.9/transforms/99973c819fc5bd83912583dc0424747a/transformed/core-1.13.1/AndroidManifest.xml:22:5-24:47
+40        android:name="com.qrzen.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+40-->[androidx.core:core:1.13.1] /root/.gradle/caches/8.9/transforms/99973c819fc5bd83912583dc0424747a/transformed/core-1.13.1/AndroidManifest.xml:23:9-81
+41        android:protectionLevel="signature" />
+41-->[androidx.core:core:1.13.1] /root/.gradle/caches/8.9/transforms/99973c819fc5bd83912583dc0424747a/transformed/core-1.13.1/AndroidManifest.xml:24:9-44
+42
+43    <uses-permission android:name="com.qrzen.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+43-->[androidx.core:core:1.13.1] /root/.gradle/caches/8.9/transforms/99973c819fc5bd83912583dc0424747a/transformed/core-1.13.1/AndroidManifest.xml:26:5-97
+43-->[androidx.core:core:1.13.1] /root/.gradle/caches/8.9/transforms/99973c819fc5bd83912583dc0424747a/transformed/core-1.13.1/AndroidManifest.xml:26:22-94
+44
+45    <application
+45-->/home/QR-zen/app/src/main/AndroidManifest.xml:31:5-295:19
+46        android:name="com.qrzen.app.QrZenApp"
+46-->/home/QR-zen/app/src/main/AndroidManifest.xml:32:9-33
+47        android:allowBackup="false"
+47-->/home/QR-zen/app/src/main/AndroidManifest.xml:33:9-36
+48        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+48-->[androidx.core:core:1.13.1] /root/.gradle/caches/8.9/transforms/99973c819fc5bd83912583dc0424747a/transformed/core-1.13.1/AndroidManifest.xml:28:18-86
+49        android:debuggable="true"
+50        android:extractNativeLibs="false"
+51        android:hardwareAccelerated="true"
+51-->/home/QR-zen/app/src/main/AndroidManifest.xml:34:9-43
+52        android:icon="@mipmap/ic_launcher"
+52-->/home/QR-zen/app/src/main/AndroidManifest.xml:35:9-43
+53        android:label="@string/app_name"
+53-->/home/QR-zen/app/src/main/AndroidManifest.xml:36:9-41
+54        android:roundIcon="@mipmap/ic_launcher_round"
+54-->/home/QR-zen/app/src/main/AndroidManifest.xml:37:9-54
+55        android:supportsRtl="true"
+55-->/home/QR-zen/app/src/main/AndroidManifest.xml:38:9-35
+56        android:theme="@style/Theme.QrZen"
+56-->/home/QR-zen/app/src/main/AndroidManifest.xml:39:9-43
+57        android:usesCleartextTraffic="false" >
+57-->/home/QR-zen/app/src/main/AndroidManifest.xml:40:9-45
+58
+59        <!-- ─── Activities ──────────────────────────────────────────────── -->
+60        <activity
+60-->/home/QR-zen/app/src/main/AndroidManifest.xml:43:9-51:20
+61            android:name="com.qrzen.app.ui.SplashActivity"
+61-->/home/QR-zen/app/src/main/AndroidManifest.xml:44:13-46
+62            android:exported="true"
+62-->/home/QR-zen/app/src/main/AndroidManifest.xml:45:13-36
+63            android:theme="@style/Theme.QrZen" >
+63-->/home/QR-zen/app/src/main/AndroidManifest.xml:46:13-47
+64            <intent-filter>
+64-->/home/QR-zen/app/src/main/AndroidManifest.xml:47:13-50:29
+65                <action android:name="android.intent.action.MAIN" />
+65-->/home/QR-zen/app/src/main/AndroidManifest.xml:8:13-65
+65-->/home/QR-zen/app/src/main/AndroidManifest.xml:8:21-62
+66
+67                <category android:name="android.intent.category.LAUNCHER" />
+67-->/home/QR-zen/app/src/main/AndroidManifest.xml:9:13-73
+67-->/home/QR-zen/app/src/main/AndroidManifest.xml:9:23-70
+68            </intent-filter>
+69        </activity>
+70        <activity
+70-->/home/QR-zen/app/src/main/AndroidManifest.xml:53:9-55:40
+71            android:name="com.qrzen.app.ui.permission.PermissionActivity"
+71-->/home/QR-zen/app/src/main/AndroidManifest.xml:54:13-61
+72            android:exported="false" />
+72-->/home/QR-zen/app/src/main/AndroidManifest.xml:55:13-37
+73        <activity
+73-->/home/QR-zen/app/src/main/AndroidManifest.xml:57:9-60:47
+74            android:name="com.qrzen.app.ui.main.MainActivity"
+74-->/home/QR-zen/app/src/main/AndroidManifest.xml:58:13-49
+75            android:exported="false"
+75-->/home/QR-zen/app/src/main/AndroidManifest.xml:59:13-37
+76            android:launchMode="singleTask" />
+76-->/home/QR-zen/app/src/main/AndroidManifest.xml:60:13-44
+77        <activity
+77-->/home/QR-zen/app/src/main/AndroidManifest.xml:62:9-69:55
+78            android:name="com.qrzen.app.ui.lock.LockScreenActivity"
+78-->/home/QR-zen/app/src/main/AndroidManifest.xml:63:13-55
+79            android:excludeFromRecents="true"
+79-->/home/QR-zen/app/src/main/AndroidManifest.xml:66:13-46
+80            android:exported="false"
+80-->/home/QR-zen/app/src/main/AndroidManifest.xml:64:13-37
+81            android:launchMode="singleInstance"
+81-->/home/QR-zen/app/src/main/AndroidManifest.xml:65:13-48
+82            android:showWhenLocked="true"
+82-->/home/QR-zen/app/src/main/AndroidManifest.xml:67:13-42
+83            android:theme="@style/Theme.QrZen.Lock"
+83-->/home/QR-zen/app/src/main/AndroidManifest.xml:69:13-52
+84            android:turnScreenOn="true" />
+84-->/home/QR-zen/app/src/main/AndroidManifest.xml:68:13-40
+85        <activity
+85-->/home/QR-zen/app/src/main/AndroidManifest.xml:71:9-73:40
+86            android:name="com.qrzen.app.ui.lock.QrScanActivity"
+86-->/home/QR-zen/app/src/main/AndroidManifest.xml:72:13-51
+87            android:exported="false" />
+87-->/home/QR-zen/app/src/main/AndroidManifest.xml:73:13-37
+88        <activity
+88-->/home/QR-zen/app/src/main/AndroidManifest.xml:75:9-78:55
+89            android:name="com.qrzen.app.ui.unlock.UnlockChallengeActivity"
+89-->/home/QR-zen/app/src/main/AndroidManifest.xml:76:13-62
+90            android:exported="false"
+90-->/home/QR-zen/app/src/main/AndroidManifest.xml:77:13-37
+91            android:theme="@style/Theme.QrZen.Lock" />
+91-->/home/QR-zen/app/src/main/AndroidManifest.xml:78:13-52
+92        <activity
+92-->/home/QR-zen/app/src/main/AndroidManifest.xml:80:9-83:58
+93            android:name="com.qrzen.app.ui.block.EditBlockActivity"
+93-->/home/QR-zen/app/src/main/AndroidManifest.xml:81:13-55
+94            android:exported="false"
+94-->/home/QR-zen/app/src/main/AndroidManifest.xml:82:13-37
+95            android:windowSoftInputMode="adjustResize" />
+95-->/home/QR-zen/app/src/main/AndroidManifest.xml:83:13-55
+96        <activity
+96-->/home/QR-zen/app/src/main/AndroidManifest.xml:85:9-87:40
+97            android:name="com.qrzen.app.ui.block.AppPickerActivity"
+97-->/home/QR-zen/app/src/main/AndroidManifest.xml:86:13-55
+98            android:exported="false" />
+98-->/home/QR-zen/app/src/main/AndroidManifest.xml:87:13-37
+99        <activity
+99-->/home/QR-zen/app/src/main/AndroidManifest.xml:89:9-94:55
+100            android:name="com.qrzen.app.ui.allowlist.AllowlistOverlayActivity"
+100-->/home/QR-zen/app/src/main/AndroidManifest.xml:90:13-66
+101            android:excludeFromRecents="true"
+101-->/home/QR-zen/app/src/main/AndroidManifest.xml:93:13-46
+102            android:exported="false"
+102-->/home/QR-zen/app/src/main/AndroidManifest.xml:91:13-37
+103            android:launchMode="singleInstance"
+103-->/home/QR-zen/app/src/main/AndroidManifest.xml:92:13-48
+104            android:theme="@style/Theme.QrZen.Lock" />
+104-->/home/QR-zen/app/src/main/AndroidManifest.xml:94:13-52
+105        <activity
+105-->/home/QR-zen/app/src/main/AndroidManifest.xml:96:9-99:46
+106            android:name="com.qrzen.app.ui.pomodoro.PomodoroActivity"
+106-->/home/QR-zen/app/src/main/AndroidManifest.xml:97:13-57
+107            android:exported="false"
+107-->/home/QR-zen/app/src/main/AndroidManifest.xml:98:13-37
+108            android:launchMode="singleTop" />
+108-->/home/QR-zen/app/src/main/AndroidManifest.xml:99:13-43
+109
+110        <!-- 1px survival activity: brings process to foreground silently -->
+111        <activity
+111-->/home/QR-zen/app/src/main/AndroidManifest.xml:102:9-108:56
+112            android:name="com.qrzen.app.ui.StartApp1PxActivity"
+112-->/home/QR-zen/app/src/main/AndroidManifest.xml:103:13-51
+113            android:excludeFromRecents="true"
+113-->/home/QR-zen/app/src/main/AndroidManifest.xml:105:13-46
+114            android:exported="false"
+114-->/home/QR-zen/app/src/main/AndroidManifest.xml:104:13-37
+115            android:finishOnTaskLaunch="true"
+115-->/home/QR-zen/app/src/main/AndroidManifest.xml:106:13-46
+116            android:launchMode="singleInstance"
+116-->/home/QR-zen/app/src/main/AndroidManifest.xml:107:13-48
+117            android:theme="@style/Theme.Transparent" />
+117-->/home/QR-zen/app/src/main/AndroidManifest.xml:108:13-53
+118
+119        <!-- ─── Services ────────────────────────────────────────────────── -->
+120        <service
+120-->/home/QR-zen/app/src/main/AndroidManifest.xml:111:9-120:19
+121            android:name="com.qrzen.app.service.BackgroundService"
+121-->/home/QR-zen/app/src/main/AndroidManifest.xml:112:13-54
+122            android:enabled="true"
+122-->/home/QR-zen/app/src/main/AndroidManifest.xml:113:13-35
+123            android:exported="false"
+123-->/home/QR-zen/app/src/main/AndroidManifest.xml:114:13-37
+124            android:foregroundServiceType="specialUse"
+124-->/home/QR-zen/app/src/main/AndroidManifest.xml:115:13-55
+125            android:stopWithTask="false" >
+125-->/home/QR-zen/app/src/main/AndroidManifest.xml:116:13-41
+126            <property
+126-->/home/QR-zen/app/src/main/AndroidManifest.xml:117:13-119:58
+127                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+127-->/home/QR-zen/app/src/main/AndroidManifest.xml:118:17-76
+128                android:value="app_blocker_keep_alive" />
+128-->/home/QR-zen/app/src/main/AndroidManifest.xml:119:17-55
+129        </service>
+130        <service
+130-->/home/QR-zen/app/src/main/AndroidManifest.xml:122:9-133:19
+131            android:name="com.qrzen.app.service.BlockAccessibilityService"
+131-->/home/QR-zen/app/src/main/AndroidManifest.xml:123:13-62
+132            android:enabled="true"
+132-->/home/QR-zen/app/src/main/AndroidManifest.xml:124:13-35
+133            android:exported="true"
+133-->/home/QR-zen/app/src/main/AndroidManifest.xml:125:13-36
+134            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE" >
+134-->/home/QR-zen/app/src/main/AndroidManifest.xml:126:13-79
+135            <intent-filter>
+135-->/home/QR-zen/app/src/main/AndroidManifest.xml:127:13-129:29
+136                <action android:name="android.accessibilityservice.AccessibilityService" />
+136-->/home/QR-zen/app/src/main/AndroidManifest.xml:128:17-92
+136-->/home/QR-zen/app/src/main/AndroidManifest.xml:128:25-89
+137            </intent-filter>
+138
+139            <meta-data
+139-->/home/QR-zen/app/src/main/AndroidManifest.xml:130:13-132:65
+140                android:name="android.accessibilityservice"
+140-->/home/QR-zen/app/src/main/AndroidManifest.xml:131:17-60
+141                android:resource="@xml/accessibility_service" />
+141-->/home/QR-zen/app/src/main/AndroidManifest.xml:132:17-62
+142        </service>
+143        <service
+143-->/home/QR-zen/app/src/main/AndroidManifest.xml:135:9-146:19
+144            android:name="com.qrzen.app.service.QrZenNotificationListener"
+144-->/home/QR-zen/app/src/main/AndroidManifest.xml:136:13-62
+145            android:enabled="true"
+145-->/home/QR-zen/app/src/main/AndroidManifest.xml:137:13-35
+146            android:exported="true"
+146-->/home/QR-zen/app/src/main/AndroidManifest.xml:138:13-36
+147            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" >
+147-->/home/QR-zen/app/src/main/AndroidManifest.xml:139:13-87
+148            <intent-filter>
+148-->/home/QR-zen/app/src/main/AndroidManifest.xml:140:13-142:29
+149                <action android:name="android.service.notification.NotificationListenerService" />
+149-->/home/QR-zen/app/src/main/AndroidManifest.xml:141:17-99
+149-->/home/QR-zen/app/src/main/AndroidManifest.xml:141:25-96
+150            </intent-filter>
+151
+152            <meta-data
+152-->/home/QR-zen/app/src/main/AndroidManifest.xml:143:13-145:65
+153                android:name="android.service.notification"
+153-->/home/QR-zen/app/src/main/AndroidManifest.xml:144:17-60
+154                android:resource="@xml/notification_listener" />
+154-->/home/QR-zen/app/src/main/AndroidManifest.xml:145:17-62
+155        </service>
+156        <service
+156-->/home/QR-zen/app/src/main/AndroidManifest.xml:148:9-159:19
+157            android:name="com.qrzen.app.wallpaper.QrZenWallpaper"
+157-->/home/QR-zen/app/src/main/AndroidManifest.xml:149:13-53
+158            android:enabled="true"
+158-->/home/QR-zen/app/src/main/AndroidManifest.xml:150:13-35
+159            android:exported="true"
+159-->/home/QR-zen/app/src/main/AndroidManifest.xml:151:13-36
+160            android:permission="android.permission.BIND_WALLPAPER" >
+160-->/home/QR-zen/app/src/main/AndroidManifest.xml:152:13-67
+161            <intent-filter>
+161-->/home/QR-zen/app/src/main/AndroidManifest.xml:153:13-155:29
+162                <action android:name="android.service.wallpaper.WallpaperService" />
+162-->/home/QR-zen/app/src/main/AndroidManifest.xml:154:17-85
+162-->/home/QR-zen/app/src/main/AndroidManifest.xml:154:25-82
+163            </intent-filter>
+164
+165            <meta-data
+165-->/home/QR-zen/app/src/main/AndroidManifest.xml:156:13-158:53
+166                android:name="android.service.wallpaper"
+166-->/home/QR-zen/app/src/main/AndroidManifest.xml:157:17-57
+167                android:resource="@xml/wallpaper" />
+167-->/home/QR-zen/app/src/main/AndroidManifest.xml:158:17-50
+168        </service>
+169
+170        <!-- ─── Broadcast Receivers ─────────────────────────────────────── -->
+171        <!--
+172            25-broadcast RebootReceiver at MAX priority.
+173            This is the primary ultra-battery-saver survival mechanism:
+174            we listen to every possible system broadcast so the service
+175            is restarted as quickly as possible after any system event.
+176        -->
+177        <receiver
+177-->/home/QR-zen/app/src/main/AndroidManifest.xml:168:9-199:20
+178            android:name="com.qrzen.app.receiver.RebootReceiver"
+178-->/home/QR-zen/app/src/main/AndroidManifest.xml:169:13-52
+179            android:enabled="true"
+179-->/home/QR-zen/app/src/main/AndroidManifest.xml:170:13-35
+180            android:exported="false" >
+180-->/home/QR-zen/app/src/main/AndroidManifest.xml:171:13-37
+181            <intent-filter android:priority="2147483647" >
+181-->/home/QR-zen/app/src/main/AndroidManifest.xml:172:13-198:29
+181-->/home/QR-zen/app/src/main/AndroidManifest.xml:172:28-57
+182                <action android:name="android.intent.action.BOOT_COMPLETED" />
+182-->/home/QR-zen/app/src/main/AndroidManifest.xml:173:17-79
+182-->/home/QR-zen/app/src/main/AndroidManifest.xml:173:25-76
+183                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+183-->/home/QR-zen/app/src/main/AndroidManifest.xml:174:17-86
+183-->/home/QR-zen/app/src/main/AndroidManifest.xml:174:25-83
+184                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+184-->/home/QR-zen/app/src/main/AndroidManifest.xml:175:17-82
+184-->/home/QR-zen/app/src/main/AndroidManifest.xml:175:25-79
+185                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+185-->/home/QR-zen/app/src/main/AndroidManifest.xml:176:17-84
+185-->/home/QR-zen/app/src/main/AndroidManifest.xml:176:25-81
+186                <action android:name="android.intent.action.PACKAGE_REPLACED" />
+186-->/home/QR-zen/app/src/main/AndroidManifest.xml:177:17-81
+186-->/home/QR-zen/app/src/main/AndroidManifest.xml:177:25-78
+187                <action android:name="android.intent.action.EXTERNAL_APPLICATIONS_AVAILABLE" />
+187-->/home/QR-zen/app/src/main/AndroidManifest.xml:178:17-96
+187-->/home/QR-zen/app/src/main/AndroidManifest.xml:178:25-93
+188                <action android:name="android.intent.action.SCREEN_ON" />
+188-->/home/QR-zen/app/src/main/AndroidManifest.xml:179:17-74
+188-->/home/QR-zen/app/src/main/AndroidManifest.xml:179:25-71
+189                <action android:name="android.intent.action.SCREEN_OFF" />
+189-->/home/QR-zen/app/src/main/AndroidManifest.xml:180:17-75
+189-->/home/QR-zen/app/src/main/AndroidManifest.xml:180:25-72
+190                <action android:name="android.intent.action.USER_PRESENT" />
+190-->/home/QR-zen/app/src/main/AndroidManifest.xml:181:17-77
+190-->/home/QR-zen/app/src/main/AndroidManifest.xml:181:25-74
+191                <action android:name="android.intent.action.TIME_TICK" />
+191-->/home/QR-zen/app/src/main/AndroidManifest.xml:182:17-74
+191-->/home/QR-zen/app/src/main/AndroidManifest.xml:182:25-71
+192                <action android:name="android.intent.action.TIME_SET" />
+192-->/home/QR-zen/app/src/main/AndroidManifest.xml:183:17-73
+192-->/home/QR-zen/app/src/main/AndroidManifest.xml:183:25-70
+193                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+193-->/home/QR-zen/app/src/main/AndroidManifest.xml:184:17-81
+193-->/home/QR-zen/app/src/main/AndroidManifest.xml:184:25-78
+194                <action android:name="android.intent.action.DATE_CHANGED" />
+194-->/home/QR-zen/app/src/main/AndroidManifest.xml:185:17-77
+194-->/home/QR-zen/app/src/main/AndroidManifest.xml:185:25-74
+195                <action android:name="android.intent.action.DREAMING_STARTED" />
+195-->/home/QR-zen/app/src/main/AndroidManifest.xml:186:17-81
+195-->/home/QR-zen/app/src/main/AndroidManifest.xml:186:25-78
+196                <action android:name="android.intent.action.DREAMING_STOPPED" />
+196-->/home/QR-zen/app/src/main/AndroidManifest.xml:187:17-81
+196-->/home/QR-zen/app/src/main/AndroidManifest.xml:187:25-78
+197                <action android:name="android.intent.action.DOCK_EVENT" />
+197-->/home/QR-zen/app/src/main/AndroidManifest.xml:188:17-75
+197-->/home/QR-zen/app/src/main/AndroidManifest.xml:188:25-72
+198                <action android:name="android.intent.action.BATTERY_OKAY" />
+198-->/home/QR-zen/app/src/main/AndroidManifest.xml:189:17-77
+198-->/home/QR-zen/app/src/main/AndroidManifest.xml:189:25-74
+199                <action android:name="android.intent.action.BATTERY_LOW" />
+199-->/home/QR-zen/app/src/main/AndroidManifest.xml:190:17-76
+199-->/home/QR-zen/app/src/main/AndroidManifest.xml:190:25-73
+200                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+200-->/home/QR-zen/app/src/main/AndroidManifest.xml:191:17-87
+200-->/home/QR-zen/app/src/main/AndroidManifest.xml:191:25-84
+201                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+201-->/home/QR-zen/app/src/main/AndroidManifest.xml:192:17-90
+201-->/home/QR-zen/app/src/main/AndroidManifest.xml:192:25-87
+202                <action android:name="android.intent.action.DEVICE_STORAGE_LOW" />
+202-->/home/QR-zen/app/src/main/AndroidManifest.xml:193:17-83
+202-->/home/QR-zen/app/src/main/AndroidManifest.xml:193:25-80
+203                <action android:name="android.intent.action.DEVICE_STORAGE_OK" />
+203-->/home/QR-zen/app/src/main/AndroidManifest.xml:194:17-82
+203-->/home/QR-zen/app/src/main/AndroidManifest.xml:194:25-79
+204                <action android:name="android.intent.action.INPUT_METHOD_CHANGED" />
+204-->/home/QR-zen/app/src/main/AndroidManifest.xml:195:17-85
+204-->/home/QR-zen/app/src/main/AndroidManifest.xml:195:25-82
+205                <action android:name="android.intent.action.LOCALE_CHANGED" />
+205-->/home/QR-zen/app/src/main/AndroidManifest.xml:196:17-79
+205-->/home/QR-zen/app/src/main/AndroidManifest.xml:196:25-76
+206                <action android:name="android.intent.action.CONFIGURATION_CHANGED" />
+206-->/home/QR-zen/app/src/main/AndroidManifest.xml:197:17-86
+206-->/home/QR-zen/app/src/main/AndroidManifest.xml:197:25-83
+207            </intent-filter>
+208        </receiver>
+209        <receiver
+209-->/home/QR-zen/app/src/main/AndroidManifest.xml:201:9-207:20
+210            android:name="com.qrzen.app.receiver.PowerSaveReceiver"
+210-->/home/QR-zen/app/src/main/AndroidManifest.xml:202:13-55
+211            android:exported="true" >
+211-->/home/QR-zen/app/src/main/AndroidManifest.xml:203:13-36
+212            <intent-filter>
+212-->/home/QR-zen/app/src/main/AndroidManifest.xml:204:13-206:29
+213                <action android:name="android.os.action.POWER_SAVE_MODE_CHANGED" />
+213-->/home/QR-zen/app/src/main/AndroidManifest.xml:205:17-84
+213-->/home/QR-zen/app/src/main/AndroidManifest.xml:205:25-81
+214            </intent-filter>
+215        </receiver>
+216        <receiver
+216-->/home/QR-zen/app/src/main/AndroidManifest.xml:209:9-211:40
+217            android:name="com.qrzen.app.receiver.AlarmKeepaliveReceiver"
+217-->/home/QR-zen/app/src/main/AndroidManifest.xml:210:13-60
+218            android:exported="false" />
+218-->/home/QR-zen/app/src/main/AndroidManifest.xml:211:13-37
+219        <receiver
+219-->/home/QR-zen/app/src/main/AndroidManifest.xml:213:9-224:20
+220            android:name="com.qrzen.app.admin.QrZenDeviceAdmin"
+220-->/home/QR-zen/app/src/main/AndroidManifest.xml:214:13-51
+221            android:enabled="true"
+221-->/home/QR-zen/app/src/main/AndroidManifest.xml:215:13-35
+222            android:exported="true"
+222-->/home/QR-zen/app/src/main/AndroidManifest.xml:216:13-36
+223            android:permission="android.permission.BIND_DEVICE_ADMIN" >
+223-->/home/QR-zen/app/src/main/AndroidManifest.xml:217:13-70
+224            <meta-data
+224-->/home/QR-zen/app/src/main/AndroidManifest.xml:218:13-220:56
+225                android:name="android.app.device_admin"
+225-->/home/QR-zen/app/src/main/AndroidManifest.xml:219:17-56
+226                android:resource="@xml/device_admin" />
+226-->/home/QR-zen/app/src/main/AndroidManifest.xml:220:17-53
+227
+228            <intent-filter>
+228-->/home/QR-zen/app/src/main/AndroidManifest.xml:221:13-223:29
+229                <action android:name="android.app.action.DEVICE_ADMIN_ENABLED" />
+229-->/home/QR-zen/app/src/main/AndroidManifest.xml:222:17-82
+229-->/home/QR-zen/app/src/main/AndroidManifest.xml:222:25-79
+230            </intent-filter>
+231        </receiver>
+232
+233        <!-- Widgets -->
+234        <receiver
+234-->/home/QR-zen/app/src/main/AndroidManifest.xml:227:9-236:20
+235            android:name="com.qrzen.app.widget.Widget1x1Provider"
+235-->/home/QR-zen/app/src/main/AndroidManifest.xml:228:13-53
+236            android:exported="true" >
+236-->/home/QR-zen/app/src/main/AndroidManifest.xml:229:13-36
+237            <intent-filter>
+237-->/home/QR-zen/app/src/main/AndroidManifest.xml:230:13-232:29
+238                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+238-->/home/QR-zen/app/src/main/AndroidManifest.xml:231:17-84
+238-->/home/QR-zen/app/src/main/AndroidManifest.xml:231:25-81
+239            </intent-filter>
+240
+241            <meta-data
+241-->/home/QR-zen/app/src/main/AndroidManifest.xml:233:13-235:57
+242                android:name="android.appwidget.provider"
+242-->/home/QR-zen/app/src/main/AndroidManifest.xml:234:17-58
+243                android:resource="@xml/appwidget_1x1" />
+243-->/home/QR-zen/app/src/main/AndroidManifest.xml:235:17-54
+244        </receiver>
+245        <receiver
+245-->/home/QR-zen/app/src/main/AndroidManifest.xml:238:9-247:20
+246            android:name="com.qrzen.app.widget.Widget2x1Provider"
+246-->/home/QR-zen/app/src/main/AndroidManifest.xml:239:13-53
+247            android:exported="true" >
+247-->/home/QR-zen/app/src/main/AndroidManifest.xml:240:13-36
+248            <intent-filter>
+248-->/home/QR-zen/app/src/main/AndroidManifest.xml:230:13-232:29
+249                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+249-->/home/QR-zen/app/src/main/AndroidManifest.xml:231:17-84
+249-->/home/QR-zen/app/src/main/AndroidManifest.xml:231:25-81
+250            </intent-filter>
+251
+252            <meta-data
+252-->/home/QR-zen/app/src/main/AndroidManifest.xml:233:13-235:57
+253                android:name="android.appwidget.provider"
+253-->/home/QR-zen/app/src/main/AndroidManifest.xml:234:17-58
+254                android:resource="@xml/appwidget_2x1" />
+254-->/home/QR-zen/app/src/main/AndroidManifest.xml:235:17-54
+255        </receiver>
+256        <receiver
+256-->/home/QR-zen/app/src/main/AndroidManifest.xml:249:9-258:20
+257            android:name="com.qrzen.app.widget.Widget4x1Provider"
+257-->/home/QR-zen/app/src/main/AndroidManifest.xml:250:13-53
+258            android:exported="true" >
+258-->/home/QR-zen/app/src/main/AndroidManifest.xml:251:13-36
+259            <intent-filter>
+259-->/home/QR-zen/app/src/main/AndroidManifest.xml:230:13-232:29
+260                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+260-->/home/QR-zen/app/src/main/AndroidManifest.xml:231:17-84
+260-->/home/QR-zen/app/src/main/AndroidManifest.xml:231:25-81
+261            </intent-filter>
+262
+263            <meta-data
+263-->/home/QR-zen/app/src/main/AndroidManifest.xml:233:13-235:57
+264                android:name="android.appwidget.provider"
+264-->/home/QR-zen/app/src/main/AndroidManifest.xml:234:17-58
+265                android:resource="@xml/appwidget_4x1" />
+265-->/home/QR-zen/app/src/main/AndroidManifest.xml:235:17-54
+266        </receiver>
+267        <receiver
+267-->/home/QR-zen/app/src/main/AndroidManifest.xml:260:9-269:20
+268            android:name="com.qrzen.app.widget.Widget4x2Provider"
+268-->/home/QR-zen/app/src/main/AndroidManifest.xml:261:13-53
+269            android:exported="true" >
+269-->/home/QR-zen/app/src/main/AndroidManifest.xml:262:13-36
+270            <intent-filter>
+270-->/home/QR-zen/app/src/main/AndroidManifest.xml:230:13-232:29
+271                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+271-->/home/QR-zen/app/src/main/AndroidManifest.xml:231:17-84
+271-->/home/QR-zen/app/src/main/AndroidManifest.xml:231:25-81
+272            </intent-filter>
+273
+274            <meta-data
+274-->/home/QR-zen/app/src/main/AndroidManifest.xml:233:13-235:57
+275                android:name="android.appwidget.provider"
+275-->/home/QR-zen/app/src/main/AndroidManifest.xml:234:17-58
+276                android:resource="@xml/appwidget_4x2" />
+276-->/home/QR-zen/app/src/main/AndroidManifest.xml:235:17-54
+277        </receiver>
+278
+279        <!-- FileProvider for sharing QR code images -->
+280        <provider
+281            android:name="androidx.core.content.FileProvider"
+281-->/home/QR-zen/app/src/main/AndroidManifest.xml:273:13-62
+282            android:authorities="com.qrzen.app.fileprovider"
+282-->/home/QR-zen/app/src/main/AndroidManifest.xml:274:13-64
+283            android:exported="false"
+283-->/home/QR-zen/app/src/main/AndroidManifest.xml:275:13-37
+284            android:grantUriPermissions="true" >
+284-->/home/QR-zen/app/src/main/AndroidManifest.xml:276:13-47
+285            <meta-data
+285-->/home/QR-zen/app/src/main/AndroidManifest.xml:277:13-279:54
+286                android:name="android.support.FILE_PROVIDER_PATHS"
+286-->/home/QR-zen/app/src/main/AndroidManifest.xml:278:17-67
+287                android:resource="@xml/file_paths" />
+287-->/home/QR-zen/app/src/main/AndroidManifest.xml:279:17-51
+288        </provider>
+289
+290        <!-- ─── Content Provider ────────────────────────────────────────── -->
+291        <!--
+292            initOrder=100 ensures this ContentProvider is initialized BEFORE
+293            Application.onCreate(). Combined with the RebootReceiver, this is
+294            the second key ultra-battery-saver survival mechanism.
+295        -->
+296        <provider
+297            android:name="com.qrzen.app.provider.StartupContentProvider"
+297-->/home/QR-zen/app/src/main/AndroidManifest.xml:289:13-60
+298            android:authorities="com.qrzen.app.startup"
+298-->/home/QR-zen/app/src/main/AndroidManifest.xml:290:13-59
+299            android:enabled="true"
+299-->/home/QR-zen/app/src/main/AndroidManifest.xml:291:13-35
+300            android:exported="false"
+300-->/home/QR-zen/app/src/main/AndroidManifest.xml:292:13-37
+301            android:initOrder="100" />
+301-->/home/QR-zen/app/src/main/AndroidManifest.xml:293:13-36
+302        <provider
+302-->[androidx.emoji2:emoji2:1.3.0] /root/.gradle/caches/8.9/transforms/8f1509a3a56c64459e25e01d7162d7ca/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+303            android:name="androidx.startup.InitializationProvider"
+303-->[androidx.emoji2:emoji2:1.3.0] /root/.gradle/caches/8.9/transforms/8f1509a3a56c64459e25e01d7162d7ca/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:25:13-67
+304            android:authorities="com.qrzen.app.androidx-startup"
+304-->[androidx.emoji2:emoji2:1.3.0] /root/.gradle/caches/8.9/transforms/8f1509a3a56c64459e25e01d7162d7ca/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:26:13-68
+305            android:exported="false" >
+305-->[androidx.emoji2:emoji2:1.3.0] /root/.gradle/caches/8.9/transforms/8f1509a3a56c64459e25e01d7162d7ca/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:27:13-37
+306            <meta-data
+306-->[androidx.emoji2:emoji2:1.3.0] /root/.gradle/caches/8.9/transforms/8f1509a3a56c64459e25e01d7162d7ca/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+307                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+307-->[androidx.emoji2:emoji2:1.3.0] /root/.gradle/caches/8.9/transforms/8f1509a3a56c64459e25e01d7162d7ca/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:30:17-75
+308                android:value="androidx.startup" />
+308-->[androidx.emoji2:emoji2:1.3.0] /root/.gradle/caches/8.9/transforms/8f1509a3a56c64459e25e01d7162d7ca/transformed/jetified-emoji2-1.3.0/AndroidManifest.xml:31:17-49
+309            <meta-data
+309-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:34:13-36:52
+310                android:name="androidx.work.WorkManagerInitializer"
+310-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:35:17-68
+311                android:value="androidx.startup" />
+311-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:36:17-49
+312            <meta-data
+312-->[androidx.lifecycle:lifecycle-process:2.8.7] /root/.gradle/caches/8.9/transforms/bc3ab7fce26ee872953caac45f51e144/transformed/jetified-lifecycle-process-2.8.7/AndroidManifest.xml:29:13-31:52
+313                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+313-->[androidx.lifecycle:lifecycle-process:2.8.7] /root/.gradle/caches/8.9/transforms/bc3ab7fce26ee872953caac45f51e144/transformed/jetified-lifecycle-process-2.8.7/AndroidManifest.xml:30:17-78
+314                android:value="androidx.startup" />
+314-->[androidx.lifecycle:lifecycle-process:2.8.7] /root/.gradle/caches/8.9/transforms/bc3ab7fce26ee872953caac45f51e144/transformed/jetified-lifecycle-process-2.8.7/AndroidManifest.xml:31:17-49
+315            <meta-data
+315-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:29:13-31:52
+316                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+316-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:30:17-85
+317                android:value="androidx.startup" />
+317-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:31:17-49
+318        </provider>
+319
+320        <service
+320-->[androidx.camera:camera-camera2:1.2.1] /root/.gradle/caches/8.9/transforms/89b7fff9ac7af4af24bc1b2ad9f86ff9/transformed/jetified-camera-camera2-1.2.1/AndroidManifest.xml:24:9-33:19
+321            android:name="androidx.camera.core.impl.MetadataHolderService"
+321-->[androidx.camera:camera-camera2:1.2.1] /root/.gradle/caches/8.9/transforms/89b7fff9ac7af4af24bc1b2ad9f86ff9/transformed/jetified-camera-camera2-1.2.1/AndroidManifest.xml:25:13-75
+322            android:enabled="false"
+322-->[androidx.camera:camera-camera2:1.2.1] /root/.gradle/caches/8.9/transforms/89b7fff9ac7af4af24bc1b2ad9f86ff9/transformed/jetified-camera-camera2-1.2.1/AndroidManifest.xml:26:13-36
+323            android:exported="false" >
+323-->[androidx.camera:camera-camera2:1.2.1] /root/.gradle/caches/8.9/transforms/89b7fff9ac7af4af24bc1b2ad9f86ff9/transformed/jetified-camera-camera2-1.2.1/AndroidManifest.xml:27:13-37
+324            <meta-data
+324-->[androidx.camera:camera-camera2:1.2.1] /root/.gradle/caches/8.9/transforms/89b7fff9ac7af4af24bc1b2ad9f86ff9/transformed/jetified-camera-camera2-1.2.1/AndroidManifest.xml:30:13-32:89
+325                android:name="androidx.camera.core.impl.MetadataHolderService.DEFAULT_CONFIG_PROVIDER"
+325-->[androidx.camera:camera-camera2:1.2.1] /root/.gradle/caches/8.9/transforms/89b7fff9ac7af4af24bc1b2ad9f86ff9/transformed/jetified-camera-camera2-1.2.1/AndroidManifest.xml:31:17-103
+326                android:value="androidx.camera.camera2.Camera2Config$DefaultProvider" />
+326-->[androidx.camera:camera-camera2:1.2.1] /root/.gradle/caches/8.9/transforms/89b7fff9ac7af4af24bc1b2ad9f86ff9/transformed/jetified-camera-camera2-1.2.1/AndroidManifest.xml:32:17-86
+327        </service>
+328        <service
+328-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:39:9-45:35
+329            android:name="androidx.work.impl.background.systemalarm.SystemAlarmService"
+329-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:40:13-88
+330            android:directBootAware="false"
+330-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:41:13-44
+331            android:enabled="@bool/enable_system_alarm_service_default"
+331-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:42:13-72
+332            android:exported="false" />
+332-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:43:13-37
+333        <service
+333-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:46:9-52:35
+334            android:name="androidx.work.impl.background.systemjob.SystemJobService"
+334-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:47:13-84
+335            android:directBootAware="false"
+335-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:48:13-44
+336            android:enabled="@bool/enable_system_job_service_default"
+336-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:49:13-70
+337            android:exported="true"
+337-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:50:13-36
+338            android:permission="android.permission.BIND_JOB_SERVICE" />
+338-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:51:13-69
+339        <service
+339-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:53:9-59:35
+340            android:name="androidx.work.impl.foreground.SystemForegroundService"
+340-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:54:13-81
+341            android:directBootAware="false"
+341-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:55:13-44
+342            android:enabled="@bool/enable_system_foreground_service_default"
+342-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:56:13-77
+343            android:exported="false" />
+343-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:57:13-37
+344
+345        <receiver
+345-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:61:9-66:35
+346            android:name="androidx.work.impl.utils.ForceStopRunnable$BroadcastReceiver"
+346-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:62:13-88
+347            android:directBootAware="false"
+347-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:63:13-44
+348            android:enabled="true"
+348-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:64:13-35
+349            android:exported="false" />
+349-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:65:13-37
+350        <receiver
+350-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:67:9-77:20
+351            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryChargingProxy"
+351-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:68:13-106
+352            android:directBootAware="false"
+352-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:69:13-44
+353            android:enabled="false"
+353-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:70:13-36
+354            android:exported="false" >
+354-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:71:13-37
+355            <intent-filter>
+355-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:73:13-76:29
+356                <action android:name="android.intent.action.ACTION_POWER_CONNECTED" />
+356-->/home/QR-zen/app/src/main/AndroidManifest.xml:191:17-87
+356-->/home/QR-zen/app/src/main/AndroidManifest.xml:191:25-84
+357                <action android:name="android.intent.action.ACTION_POWER_DISCONNECTED" />
+357-->/home/QR-zen/app/src/main/AndroidManifest.xml:192:17-90
+357-->/home/QR-zen/app/src/main/AndroidManifest.xml:192:25-87
+358            </intent-filter>
+359        </receiver>
+360        <receiver
+360-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:78:9-88:20
+361            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$BatteryNotLowProxy"
+361-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:79:13-104
+362            android:directBootAware="false"
+362-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:80:13-44
+363            android:enabled="false"
+363-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:81:13-36
+364            android:exported="false" >
+364-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:82:13-37
+365            <intent-filter>
+365-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:84:13-87:29
+366                <action android:name="android.intent.action.BATTERY_OKAY" />
+366-->/home/QR-zen/app/src/main/AndroidManifest.xml:189:17-77
+366-->/home/QR-zen/app/src/main/AndroidManifest.xml:189:25-74
+367                <action android:name="android.intent.action.BATTERY_LOW" />
+367-->/home/QR-zen/app/src/main/AndroidManifest.xml:190:17-76
+367-->/home/QR-zen/app/src/main/AndroidManifest.xml:190:25-73
+368            </intent-filter>
+369        </receiver>
+370        <receiver
+370-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:89:9-99:20
+371            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$StorageNotLowProxy"
+371-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:90:13-104
+372            android:directBootAware="false"
+372-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:91:13-44
+373            android:enabled="false"
+373-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:92:13-36
+374            android:exported="false" >
+374-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:93:13-37
+375            <intent-filter>
+375-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:95:13-98:29
+376                <action android:name="android.intent.action.DEVICE_STORAGE_LOW" />
+376-->/home/QR-zen/app/src/main/AndroidManifest.xml:193:17-83
+376-->/home/QR-zen/app/src/main/AndroidManifest.xml:193:25-80
+377                <action android:name="android.intent.action.DEVICE_STORAGE_OK" />
+377-->/home/QR-zen/app/src/main/AndroidManifest.xml:194:17-82
+377-->/home/QR-zen/app/src/main/AndroidManifest.xml:194:25-79
+378            </intent-filter>
+379        </receiver>
+380        <receiver
+380-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:100:9-109:20
+381            android:name="androidx.work.impl.background.systemalarm.ConstraintProxy$NetworkStateProxy"
+381-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:101:13-103
+382            android:directBootAware="false"
+382-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:102:13-44
+383            android:enabled="false"
+383-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:103:13-36
+384            android:exported="false" >
+384-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:104:13-37
+385            <intent-filter>
+385-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:106:13-108:29
+386                <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
+386-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:107:17-79
+386-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:107:25-76
+387            </intent-filter>
+388        </receiver>
+389        <receiver
+389-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:110:9-121:20
+390            android:name="androidx.work.impl.background.systemalarm.RescheduleReceiver"
+390-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:111:13-88
+391            android:directBootAware="false"
+391-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:112:13-44
+392            android:enabled="false"
+392-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:113:13-36
+393            android:exported="false" >
+393-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:114:13-37
+394            <intent-filter>
+394-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:116:13-120:29
+395                <action android:name="android.intent.action.BOOT_COMPLETED" />
+395-->/home/QR-zen/app/src/main/AndroidManifest.xml:173:17-79
+395-->/home/QR-zen/app/src/main/AndroidManifest.xml:173:25-76
+396                <action android:name="android.intent.action.TIME_SET" />
+396-->/home/QR-zen/app/src/main/AndroidManifest.xml:183:17-73
+396-->/home/QR-zen/app/src/main/AndroidManifest.xml:183:25-70
+397                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+397-->/home/QR-zen/app/src/main/AndroidManifest.xml:184:17-81
+397-->/home/QR-zen/app/src/main/AndroidManifest.xml:184:25-78
+398            </intent-filter>
+399        </receiver>
+400        <receiver
+400-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:122:9-131:20
+401            android:name="androidx.work.impl.background.systemalarm.ConstraintProxyUpdateReceiver"
+401-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:123:13-99
+402            android:directBootAware="false"
+402-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:124:13-44
+403            android:enabled="@bool/enable_system_alarm_service_default"
+403-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:125:13-72
+404            android:exported="false" >
+404-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:126:13-37
+405            <intent-filter>
+405-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:128:13-130:29
+406                <action android:name="androidx.work.impl.background.systemalarm.UpdateProxies" />
+406-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:129:17-98
+406-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:129:25-95
+407            </intent-filter>
+408        </receiver>
+409        <receiver
+409-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:132:9-142:20
+410            android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver"
+410-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:133:13-78
+411            android:directBootAware="false"
+411-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:134:13-44
+412            android:enabled="true"
+412-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:135:13-35
+413            android:exported="true"
+413-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:136:13-36
+414            android:permission="android.permission.DUMP" >
+414-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:137:13-57
+415            <intent-filter>
+415-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:139:13-141:29
+416                <action android:name="androidx.work.diagnostics.REQUEST_DIAGNOSTICS" />
+416-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:140:17-88
+416-->[androidx.work:work-runtime:2.10.0] /root/.gradle/caches/8.9/transforms/2c8e2bb7864ecd7acd04edd3a42a263a/transformed/work-runtime-2.10.0/AndroidManifest.xml:140:25-85
+417            </intent-filter>
+418        </receiver>
+419
+420        <uses-library
+420-->[androidx.window:window:1.0.0] /root/.gradle/caches/8.9/transforms/094b1cf6bd165a6f3886c782cf9c855a/transformed/jetified-window-1.0.0/AndroidManifest.xml:25:9-27:40
+421            android:name="androidx.window.extensions"
+421-->[androidx.window:window:1.0.0] /root/.gradle/caches/8.9/transforms/094b1cf6bd165a6f3886c782cf9c855a/transformed/jetified-window-1.0.0/AndroidManifest.xml:26:13-54
+422            android:required="false" />
+422-->[androidx.window:window:1.0.0] /root/.gradle/caches/8.9/transforms/094b1cf6bd165a6f3886c782cf9c855a/transformed/jetified-window-1.0.0/AndroidManifest.xml:27:13-37
+423        <uses-library
+423-->[androidx.window:window:1.0.0] /root/.gradle/caches/8.9/transforms/094b1cf6bd165a6f3886c782cf9c855a/transformed/jetified-window-1.0.0/AndroidManifest.xml:28:9-30:40
+424            android:name="androidx.window.sidecar"
+424-->[androidx.window:window:1.0.0] /root/.gradle/caches/8.9/transforms/094b1cf6bd165a6f3886c782cf9c855a/transformed/jetified-window-1.0.0/AndroidManifest.xml:29:13-51
+425            android:required="false" />
+425-->[androidx.window:window:1.0.0] /root/.gradle/caches/8.9/transforms/094b1cf6bd165a6f3886c782cf9c855a/transformed/jetified-window-1.0.0/AndroidManifest.xml:30:13-37
+426
+427        <service
+427-->[androidx.room:room-runtime:2.6.1] /root/.gradle/caches/8.9/transforms/6f542aa1e930c606590eefa290a85257/transformed/room-runtime-2.6.1/AndroidManifest.xml:24:9-28:63
+428            android:name="androidx.room.MultiInstanceInvalidationService"
+428-->[androidx.room:room-runtime:2.6.1] /root/.gradle/caches/8.9/transforms/6f542aa1e930c606590eefa290a85257/transformed/room-runtime-2.6.1/AndroidManifest.xml:25:13-74
+429            android:directBootAware="true"
+429-->[androidx.room:room-runtime:2.6.1] /root/.gradle/caches/8.9/transforms/6f542aa1e930c606590eefa290a85257/transformed/room-runtime-2.6.1/AndroidManifest.xml:26:13-43
+430            android:exported="false" />
+430-->[androidx.room:room-runtime:2.6.1] /root/.gradle/caches/8.9/transforms/6f542aa1e930c606590eefa290a85257/transformed/room-runtime-2.6.1/AndroidManifest.xml:27:13-37
+431
+432        <receiver
+432-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:34:9-52:20
+433            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+433-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:35:13-76
+434            android:directBootAware="false"
+434-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:36:13-44
+435            android:enabled="true"
+435-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:37:13-35
+436            android:exported="true"
+436-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:38:13-36
+437            android:permission="android.permission.DUMP" >
+437-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:39:13-57
+438            <intent-filter>
+438-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:40:13-42:29
+439                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+439-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:41:17-91
+439-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:41:25-88
+440            </intent-filter>
+441            <intent-filter>
+441-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:43:13-45:29
+442                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+442-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:44:17-85
+442-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:44:25-82
+443            </intent-filter>
+444            <intent-filter>
+444-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:46:13-48:29
+445                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+445-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:47:17-88
+445-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:47:25-85
+446            </intent-filter>
+447            <intent-filter>
+447-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:49:13-51:29
+448                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+448-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:50:17-95
+448-->[androidx.profileinstaller:profileinstaller:1.4.0] /root/.gradle/caches/8.9/transforms/bbdcaf3c2b44d7e15cae94758dd538fe/transformed/jetified-profileinstaller-1.4.0/AndroidManifest.xml:50:25-92
+449            </intent-filter>
+450        </receiver>
+451    </application>
+452
+453</manifest>
