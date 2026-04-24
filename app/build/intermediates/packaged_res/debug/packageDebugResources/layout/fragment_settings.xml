@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="vertical" android:padding="16dp">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Security" android:textSize="14sp" android:textStyle="bold" android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
+        <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swMasterPwd"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Enable master password fallback" android:layout_marginBottom="8dp" />
+        <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilOldPwd"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="@string/settings_old_password_hint" android:layout_marginBottom="8dp" android:visibility="gone">
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etOldPwd"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:inputType="textPassword" android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilMasterPwd"
+            style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:hint="Master password" android:layout_marginBottom="8dp" android:visibility="gone">
+            <com.google.android.material.textfield.TextInputEditText android:id="@+id/etMasterPwd"
+                android:layout_width="match_parent" android:layout_height="wrap_content"
+                android:inputType="textPassword" android:maxLines="1" />
+        </com.google.android.material.textfield.TextInputLayout>
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnSavePwd"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Save Password" android:layout_marginBottom="16dp" android:visibility="gone" />
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/settings_emergency_override" android:textSize="14sp" android:textStyle="bold"
+            android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
+        <TextView android:id="@+id/tvPauseAllDesc"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_pause_all_desc"
+            android:textSize="13sp" android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="8dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPauseAll"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_pause_all"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
+        <TextView android:id="@+id/tvPauseAllStatus"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textSize="13sp" android:textColor="#FFA726"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnResumeAll"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_resume_all"
+            android:layout_marginBottom="16dp"
+            android:visibility="gone" />
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Notifications" android:textSize="14sp" android:textStyle="bold" android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
+        <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swRemoveNotif"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Remove notifications from blocked apps" android:layout_marginBottom="16dp" />
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Blocking Behavior" android:textSize="14sp" android:textStyle="bold" android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
+        <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swSilentMode"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Silent mode during blocks" android:layout_marginBottom="24dp" />
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="QR Zen v1.0.0" android:textSize="13sp" android:textColor="?attr/colorOnSurfaceVariant" android:layout_gravity="center_horizontal" />
+    </LinearLayout>
+</ScrollView>

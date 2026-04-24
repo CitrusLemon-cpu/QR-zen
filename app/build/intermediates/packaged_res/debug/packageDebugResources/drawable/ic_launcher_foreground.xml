@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simple QR-like icon: white lines on transparent background -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer frame top-left -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M30,30 L30,50 L50,50 L50,30 Z M34,34 L46,34 L46,46 L34,46 Z" />
+    <!-- Outer frame top-right -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M58,30 L58,50 L78,50 L78,30 Z M62,34 L74,34 L74,46 L62,46 Z" />
+    <!-- Outer frame bottom-left -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M30,58 L30,78 L50,78 L50,58 Z M34,62 L46,62 L46,74 L34,74 Z" />
+    <!-- Center dots (converted from <rect>) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M37,37 L37,45 L45,45 L45,37 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M63,37 L63,45 L71,45 L71,37 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M37,63 L37,71 L45,71 L45,63 Z" />
+    <!-- Data pattern (converted from <rect>) -->
+    <path android:fillColor="#FFFFFF" android:pathData="M58,58 L58,62 L62,62 L62,58 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M64,58 L64,62 L68,62 L68,58 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M70,58 L70,62 L74,62 L74,58 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M58,64 L58,68 L62,68 L62,64 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M70,64 L70,68 L74,68 L74,64 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M64,70 L64,74 L68,74 L68,70 Z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M70,70 L70,74 L74,74 L74,70 Z" />
+</vector>

@@ -67,5 +67,11 @@ data class AppBlock(
     val pomodoroDurationMin: Int = 25,
     val pomodoroBreakMin: Int = 5,
     /** Whether this block is archived (hidden from main list) */
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val blockingStyle: String = "MANUAL",
+    val usageLimitMinutes: Int = 30,
+    val usageLimitPeriod: String = "DAILY",
+    val waitTimerWaitMinutes: Int = 30,
+    val waitTimerUseMinutes: Int = 5,
+    val timerBreakMinutes: Int = 0
 )

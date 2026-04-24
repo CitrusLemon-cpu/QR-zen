@@ -1,0 +1,254 @@
+[
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/menu_menu_block_overflow.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/menu/menu_block_overflow.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_appwidget_2x1.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/appwidget_2x1.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_pomodoro.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_pomodoro.xml"
+    },
+    {
+        "merged": "com.qrzen.app-debug-4:/layout_view_selected_time_block.xml.flat",
+        "source": "com.qrzen.app-main-6:/layout/view_selected_time_block.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_appwidget_4x1.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/appwidget_4x1.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_edit_block.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_edit_block.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/drawable_ic_launcher_foreground.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/drawable/ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_widget_4x2.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/widget_4x2.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_view_unlock_password.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/view_unlock_password.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_dialog_add_time_block.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/dialog_add_time_block.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_accessibility_service.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/accessibility_service.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_splash.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_splash.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_widget_4x1.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/widget_4x1.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/menu_bottom_nav_menu.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/menu/bottom_nav_menu.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_permission.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_permission.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_widget_2x1.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/widget_2x1.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_view_unlock_delay.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/view_unlock_delay.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/drawable_bg_day_toggle.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/drawable/bg_day_toggle.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_fragment_stats.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/fragment_stats.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_item_block.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/item_block.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_view_unlock_type_over.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/view_unlock_type_over.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_item_event.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/item_event.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_device_admin.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/device_admin.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_wallpaper.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/wallpaper.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-xxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_file_paths.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/file_paths.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-anydpi-v26/ic_launcher.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_appwidget_1x1.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/appwidget_1x1.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_fragment_home.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/fragment_home.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/drawable_ic_more_vert.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/drawable/ic_more_vert.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_unlock_challenge.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_unlock_challenge.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_view_selected_time_block.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/view_selected_time_block.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_item_app_picker.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/item_app_picker.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_item_edit_app_grid.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/item_edit_app_grid.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_allowlist_overlay.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_allowlist_overlay.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_app_picker.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_app_picker.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_item_selected_app_icon.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/item_selected_app_icon.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_main.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_view_unlock_info.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/view_unlock_info.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_activity_lock_screen.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/activity_lock_screen.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/drawable_ic_notification.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/drawable/ic_notification.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_view_unlock_qr.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/view_unlock_qr.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/color_day_toggle_text.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/color/day_toggle_text.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_item_allowed_app.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/item_allowed_app.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_widget_1x1.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/widget_1x1.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_bottom_sheet_pause_duration.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/bottom_sheet_pause_duration.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/navigation_nav_main.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/navigation/nav_main.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_appwidget_4x2.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/appwidget_4x2.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_dialog_qr_display.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/dialog_qr_display.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-anydpi-v26/ic_launcher_round.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/drawable_ic_launcher_background.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/drawable/ic_launcher_background.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-xhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_fragment_settings.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/fragment_settings.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/xml_notification_listener.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/xml/notification_listener.xml"
+    },
+    {
+        "merged": "/root/.gradle/daemon/8.9/com.qrzen.app-debug-4:/layout_dialog_app_timer.xml.flat",
+        "source": "/root/.gradle/daemon/8.9/com.qrzen.app-main-6:/layout/dialog_app_timer.xml"
+    }
+]
