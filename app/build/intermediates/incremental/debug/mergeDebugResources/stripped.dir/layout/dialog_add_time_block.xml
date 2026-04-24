@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/tvAddTimeBlockTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/add_time_block_title"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="20sp"
+        android:textStyle="bold" />
+
+    <TextView
+        android:id="@+id/tvAddTimeBlockDaysLabel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:layout_marginBottom="8dp"
+        android:text="@string/add_time_block_days_label"
+        android:textColor="?attr/colorPrimary"
+        android:textSize="14sp"
+        android:textStyle="bold" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <ToggleButton
+            android:id="@+id/toggleBlockMon"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_day_toggle"
+            android:minHeight="40dp"
+            android:minWidth="0dp"
+            android:textColor="@color/day_toggle_text"
+            android:textOff="M"
+            android:textOn="M" />
+
+        <ToggleButton
+            android:id="@+id/toggleBlockTue"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_day_toggle"
+            android:minHeight="40dp"
+            android:minWidth="0dp"
+            android:textColor="@color/day_toggle_text"
+            android:textOff="T"
+            android:textOn="T" />
+
+        <ToggleButton
+            android:id="@+id/toggleBlockWed"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_day_toggle"
+            android:minHeight="40dp"
+            android:minWidth="0dp"
+            android:textColor="@color/day_toggle_text"
+            android:textOff="W"
+            android:textOn="W" />
+
+        <ToggleButton
+            android:id="@+id/toggleBlockThu"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_day_toggle"
+            android:minHeight="40dp"
+            android:minWidth="0dp"
+            android:textColor="@color/day_toggle_text"
+            android:textOff="T"
+            android:textOn="T" />
+
+        <ToggleButton
+            android:id="@+id/toggleBlockFri"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_day_toggle"
+            android:minHeight="40dp"
+            android:minWidth="0dp"
+            android:textColor="@color/day_toggle_text"
+            android:textOff="F"
+            android:textOn="F" />
+
+        <ToggleButton
+            android:id="@+id/toggleBlockSat"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_day_toggle"
+            android:minHeight="40dp"
+            android:minWidth="0dp"
+            android:textColor="@color/day_toggle_text"
+            android:textOff="S"
+            android:textOn="S" />
+
+        <ToggleButton
+            android:id="@+id/toggleBlockSun"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_margin="2dp"
+            android:background="@drawable/bg_day_toggle"
+            android:minHeight="40dp"
+            android:minWidth="0dp"
+            android:textColor="@color/day_toggle_text"
+            android:textOff="S"
+            android:textOn="S" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/add_time_block_from"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAddTimeBlockStart"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="05:00"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+
+        <Space
+            android:layout_width="12dp"
+            android:layout_height="1dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="8dp"
+                android:text="@string/add_time_block_until"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnAddTimeBlockEnd"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="11:30"
+                app:cornerRadius="12dp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="end"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelAddTimeBlock"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@android:string/cancel" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfirmAddTimeBlock"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/add_time_block_add" />
+    </LinearLayout>
+</LinearLayout>

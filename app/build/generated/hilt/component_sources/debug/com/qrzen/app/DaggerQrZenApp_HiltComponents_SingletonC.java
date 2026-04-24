@@ -10,9 +10,11 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.qrzen.app.data.db.AppBlockDao;
 import com.qrzen.app.data.db.AppDatabase;
 import com.qrzen.app.data.db.BlockEventDao;
+import com.qrzen.app.data.db.TimeBlockDao;
 import com.qrzen.app.di.AppModule_ProvideAppBlockDaoFactory;
 import com.qrzen.app.di.AppModule_ProvideBlockEventDaoFactory;
 import com.qrzen.app.di.AppModule_ProvideDatabaseFactory;
+import com.qrzen.app.di.AppModule_ProvideTimeBlockDaoFactory;
 import com.qrzen.app.service.BackgroundService;
 import com.qrzen.app.service.BackgroundService_MembersInjector;
 import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity;
@@ -481,6 +483,7 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
     @CanIgnoreReturnValue
     private EditBlockActivity injectEditBlockActivity2(EditBlockActivity instance3) {
       EditBlockActivity_MembersInjector.injectDao(instance3, singletonCImpl.provideAppBlockDaoProvider.get());
+      EditBlockActivity_MembersInjector.injectTimeBlockDao(instance3, singletonCImpl.provideTimeBlockDaoProvider.get());
       return instance3;
     }
 
@@ -558,15 +561,15 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
 
     @IdentifierNameString
     private static final class LazyClassKeyProvider {
-      static String com_qrzen_app_ui_main_HomeViewModel = "com.qrzen.app.ui.main.HomeViewModel";
-
       static String com_qrzen_app_ui_main_StatsViewModel = "com.qrzen.app.ui.main.StatsViewModel";
 
-      @KeepFieldType
-      HomeViewModel com_qrzen_app_ui_main_HomeViewModel2;
+      static String com_qrzen_app_ui_main_HomeViewModel = "com.qrzen.app.ui.main.HomeViewModel";
 
       @KeepFieldType
       StatsViewModel com_qrzen_app_ui_main_StatsViewModel2;
+
+      @KeepFieldType
+      HomeViewModel com_qrzen_app_ui_main_HomeViewModel2;
     }
 
     private static final class SwitchingProvider<T> implements Provider<T> {
@@ -693,6 +696,8 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
 
     private Provider<BlockEventDao> provideBlockEventDaoProvider;
 
+    private Provider<TimeBlockDao> provideTimeBlockDaoProvider;
+
     private SingletonCImpl(ApplicationContextModule applicationContextModuleParam) {
       this.applicationContextModule = applicationContextModuleParam;
       initialize(applicationContextModuleParam);
@@ -704,6 +709,7 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
       this.provideDatabaseProvider = DoubleCheck.provider(new SwitchingProvider<AppDatabase>(singletonCImpl, 1));
       this.provideAppBlockDaoProvider = DoubleCheck.provider(new SwitchingProvider<AppBlockDao>(singletonCImpl, 0));
       this.provideBlockEventDaoProvider = DoubleCheck.provider(new SwitchingProvider<BlockEventDao>(singletonCImpl, 2));
+      this.provideTimeBlockDaoProvider = DoubleCheck.provider(new SwitchingProvider<TimeBlockDao>(singletonCImpl, 3));
     }
 
     @Override
@@ -757,6 +763,9 @@ public final class DaggerQrZenApp_HiltComponents_SingletonC {
 
           case 2: // com.qrzen.app.data.db.BlockEventDao 
           return (T) AppModule_ProvideBlockEventDaoFactory.provideBlockEventDao(singletonCImpl.provideDatabaseProvider.get());
+
+          case 3: // com.qrzen.app.data.db.TimeBlockDao 
+          return (T) AppModule_ProvideTimeBlockDaoFactory.provideTimeBlockDao(singletonCImpl.provideDatabaseProvider.get());
 
           default: throw new AssertionError(id);
         }

@@ -59,6 +59,13 @@ class UnlockChallengeRenderer(
                     showTimerInfo(block, showGoBackButton, onGoBack)
                 }
             }
+            UnlockMethodUtils.METHOD_WHILE_ACTIVE -> {
+                if (UnlockMethodUtils.isBlockCurrentlyActive(block, timeBlocks)) {
+                    showWhileActiveInfo(block, showGoBackButton, onGoBack)
+                } else {
+                    onUnlocked()
+                }
+            }
             else -> onUnlocked()
         }
     }
@@ -230,6 +237,16 @@ class UnlockChallengeRenderer(
                 )
             }
         }.start()
+    }
+
+    private fun showWhileActiveInfo(block: AppBlock, showGoBackButton: Boolean, onGoBack: (() -> Unit)?) {
+        val binding = ViewUnlockInfoBinding.inflate(LayoutInflater.from(activity), container, false)
+        container.addView(binding.root)
+        binding.tvChallengeTitle.text = activity.getString(R.string.unlock_method_while_active)
+        binding.tvChallengeBody.text = activity.getString(R.string.unlock_while_active_desc)
+        binding.tvChallengeSecondary.visibility = View.GONE
+        binding.btnGoBack.visibility = if (showGoBackButton) View.VISIBLE else View.GONE
+        binding.btnGoBack.setOnClickListener { onGoBack?.invoke() }
     }
 
     private fun updateTimerMessage(binding: ViewUnlockInfoBinding, millisUntilFinished: Long) {

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:gravity="center"
+    android:padding="32dp"
+    android:background="#1A1A2E">
+
+    <TextView
+        android:id="@+id/tvPhaseLabel"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="FOCUS"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:letterSpacing="0.15"
+        android:textColor="#69F0AE"
+        android:layout_marginBottom="8dp" />
+
+    <TextView
+        android:id="@+id/tvCountdown"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="25:00"
+        android:textSize="72sp"
+        android:textStyle="bold"
+        android:textColor="#FFFFFF"
+        android:fontFamily="monospace"
+        android:layout_marginBottom="16dp" />
+
+    <ProgressBar
+        android:id="@+id/progressBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="#69F0AE"
+        android:layout_marginBottom="24dp" />
+
+    <TextView
+        android:id="@+id/tvSessionCount"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Session 1"
+        android:textSize="14sp"
+        android:textColor="#AAAAAA"
+        android:layout_marginBottom="40dp" />
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnPauseResume"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Pause"
+            android:layout_marginEnd="16dp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnStop"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Stop" />
+
+    </LinearLayout>
+
+</LinearLayout>

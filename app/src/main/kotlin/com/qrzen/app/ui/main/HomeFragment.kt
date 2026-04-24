@@ -26,8 +26,6 @@ import com.qrzen.app.ui.unlock.UnlockChallengeActivity
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
 @AndroidEntryPoint
@@ -144,6 +142,21 @@ class HomeFragment : Fragment() {
             completePendingUnlockAction(pending)
             return true
         }
+        val method = UnlockMethodUtils.getNormalizedMethod(block)
+        if (method == UnlockMethodUtils.METHOD_WHILE_ACTIVE) {
+            viewLifecycleOwner.lifecycleScope.launch {
+                val isActive = viewModel.isBlockCurrentlyActive(block)
+                if (!isActive) {
+                    completePendingUnlockAction(pending)
+                } else {
+                    pendingUnlockAction = pending
+                    unlockChallengeLauncher.launch(
+                        UnlockChallengeActivity.createIntent(requireContext(), block.id, action)
+                    )
+                }
+            }
+            return false
+        }
         pendingUnlockAction = pending
         unlockChallengeLauncher.launch(UnlockChallengeActivity.createIntent(requireContext(), block.id, action))
         return false
@@ -151,7 +164,12 @@ class HomeFragment : Fragment() {
 
     private fun shouldSkipUnlock(block: AppBlock, action: String, toggleEnabledState: Boolean?): Boolean {
         if (action == UnlockChallengeActivity.ACTION_TOGGLE && toggleEnabledState == true) return true
-        return UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
+        if (!block.isEnabled && action == UnlockChallengeActivity.ACTION_EDIT) return true
+        if (!block.isEnabled && (action == UnlockChallengeActivity.ACTION_ARCHIVE || action == UnlockChallengeActivity.ACTION_DELETE)) return true
+        val method = UnlockMethodUtils.getNormalizedMethod(block)
+        if (method == UnlockMethodUtils.METHOD_WHILE_ACTIVE) return false
+        if (method == UnlockMethodUtils.METHOD_TIMER && UnlockMethodUtils.isTimerExpired(block)) return true
+        return method == UnlockMethodUtils.METHOD_NONE
     }
 
     private fun completePendingUnlockAction(pending: PendingUnlockAction) {
@@ -191,13 +209,16 @@ class HomeFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle("Pause '${block.title}'")
             .setItems(options) { _, which ->
+                if (which == 5) {
+                    viewModel.setEnabled(block, false)
+                    return@setItems
+                }
                 val durationMs = when (which) {
                     0 -> 15 * 60_000L
                     1 -> 30 * 60_000L
                     2 -> 60 * 60_000L
                     3 -> 2 * 60 * 60_000L
                     4 -> millisUntilMidnight()
-                    5 -> Long.MAX_VALUE
                     else -> 0L
                 }
                 if (durationMs > 0L) viewModel.pause(block, durationMs)
@@ -243,20 +264,15 @@ class HomeFragment : Fragment() {
     }
 
     private fun goToHomeIfBlockActive(block: AppBlock) {
-        val now = LocalTime.now()
-        val fmt = DateTimeFormatter.ofPattern("HH:mm")
-        val start = LocalTime.parse(block.startTime, fmt)
-        val end = LocalTime.parse(block.endTime, fmt)
-        val timeOk = if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
-        else !now.isBefore(start) || !now.isAfter(end)
-        if (!timeOk) return
-        val cal = Calendar.getInstance()
-        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
-        if (block.activeDays.getOrNull(dayIndex) != '1') return
-        startActivity(Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_HOME)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK
-        })
+        if (block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL) return
+        viewLifecycleOwner.lifecycleScope.launch {
+            if (viewModel.isBlockCurrentlyActive(block)) {
+                startActivity(Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_HOME)
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                })
+            }
+        }
     }
 
     private fun isAccessibilityServiceEnabled(): Boolean {

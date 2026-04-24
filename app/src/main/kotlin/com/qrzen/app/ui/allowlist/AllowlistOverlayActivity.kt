@@ -63,6 +63,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var timeBlockDao: TimeBlockDao
     @Inject lateinit var blockEventDao: BlockEventDao
+    @Inject lateinit var timeBlockDao: TimeBlockDao
 
     private lateinit var binding: ActivityAllowlistOverlayBinding
     private lateinit var unlockRenderer: UnlockChallengeRenderer
@@ -185,6 +186,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             onLongPress = { showRemoveAppDialog(it) },
             onTimerExpired = { refreshOverlay() }
         )
+
         SilentModeHelper.applySilentMode(this)
     }
 
@@ -404,7 +406,15 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         sb.btn1hr.setOnClickListener { applyPause(block, 60 * 60_000L); sheet.dismiss() }
         sb.btn2hr.setOnClickListener { applyPause(block, 2 * 60 * 60_000L); sheet.dismiss() }
         sb.btnRestOfDay.setOnClickListener { applyPause(block, millisUntilMidnight()); sheet.dismiss() }
-        sb.btnIndefinitely.setOnClickListener { applyPause(block, Long.MAX_VALUE); sheet.dismiss() }
+        sb.btnIndefinitely.setOnClickListener {
+            lifecycleScope.launch {
+                dao.update(block.copy(isEnabled = false, pausedUntil = 0L))
+                WidgetRefresh.refresh(applicationContext)
+                SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)
+                finish()
+            }
+            sheet.dismiss()
+        }
         sheet.show()
     }
 
