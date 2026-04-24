@@ -2,6 +2,7 @@ package com.qrzen.app.ui.lock;
 
 import com.qrzen.app.data.db.AppBlockDao;
 import com.qrzen.app.data.db.BlockEventDao;
+import com.qrzen.app.data.db.TimeBlockDao;
 import dagger.MembersInjector;
 import dagger.internal.DaggerGenerated;
 import dagger.internal.InjectedFieldSignature;
@@ -28,21 +29,25 @@ public final class LockScreenActivity_MembersInjector implements MembersInjector
 
   private final Provider<BlockEventDao> blockEventDaoProvider;
 
+  private final Provider<TimeBlockDao> timeBlockDaoProvider;
+
   public LockScreenActivity_MembersInjector(Provider<AppBlockDao> daoProvider,
-      Provider<BlockEventDao> blockEventDaoProvider) {
+      Provider<BlockEventDao> blockEventDaoProvider, Provider<TimeBlockDao> timeBlockDaoProvider) {
     this.daoProvider = daoProvider;
     this.blockEventDaoProvider = blockEventDaoProvider;
+    this.timeBlockDaoProvider = timeBlockDaoProvider;
   }
 
   public static MembersInjector<LockScreenActivity> create(Provider<AppBlockDao> daoProvider,
-      Provider<BlockEventDao> blockEventDaoProvider) {
-    return new LockScreenActivity_MembersInjector(daoProvider, blockEventDaoProvider);
+      Provider<BlockEventDao> blockEventDaoProvider, Provider<TimeBlockDao> timeBlockDaoProvider) {
+    return new LockScreenActivity_MembersInjector(daoProvider, blockEventDaoProvider, timeBlockDaoProvider);
   }
 
   @Override
   public void injectMembers(LockScreenActivity instance) {
     injectDao(instance, daoProvider.get());
     injectBlockEventDao(instance, blockEventDaoProvider.get());
+    injectTimeBlockDao(instance, timeBlockDaoProvider.get());
   }
 
   @InjectedFieldSignature("com.qrzen.app.ui.lock.LockScreenActivity.dao")
@@ -53,5 +58,10 @@ public final class LockScreenActivity_MembersInjector implements MembersInjector
   @InjectedFieldSignature("com.qrzen.app.ui.lock.LockScreenActivity.blockEventDao")
   public static void injectBlockEventDao(LockScreenActivity instance, BlockEventDao blockEventDao) {
     instance.blockEventDao = blockEventDao;
+  }
+
+  @InjectedFieldSignature("com.qrzen.app.ui.lock.LockScreenActivity.timeBlockDao")
+  public static void injectTimeBlockDao(LockScreenActivity instance, TimeBlockDao timeBlockDao) {
+    instance.timeBlockDao = timeBlockDao;
   }
 }

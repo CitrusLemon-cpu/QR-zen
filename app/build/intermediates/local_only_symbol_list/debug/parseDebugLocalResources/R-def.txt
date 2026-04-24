@@ -123,6 +123,7 @@ id rvEvents
 id rvSelectedApps
 id selectedBlockDetail
 id settingsFragment
+id spinnerBlockSelector
 id statsFragment
 id swMasterPwd
 id swRemoveNotif
@@ -256,8 +257,10 @@ string add_time_block_overlap_error
 string add_time_block_title
 string add_time_block_until
 string allowlist_allowed_apps
+string allowlist_multi_title
 string allowlist_remaining
 string allowlist_scan_qr_end_early
+string allowlist_tap_switch
 string allowlist_wrong_qr
 string app_name
 string app_picker_import_from_block

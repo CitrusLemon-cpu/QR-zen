@@ -3757,6 +3757,7 @@ id snapMargins
 id south
 id spacer
 id special_effects_controller_view_tag
+id spinnerBlockSelector
 id spline
 id split_action_bar
 id spread
@@ -4209,8 +4210,10 @@ string add_time_block_overlap_error
 string add_time_block_title
 string add_time_block_until
 string allowlist_allowed_apps
+string allowlist_multi_title
 string allowlist_remaining
 string allowlist_scan_qr_end_early
+string allowlist_tap_switch
 string allowlist_wrong_qr
 string androidx_startup
 string app_name

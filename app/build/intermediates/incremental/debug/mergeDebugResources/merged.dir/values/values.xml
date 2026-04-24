@@ -2029,8 +2029,10 @@
     <string name="add_time_block_title">Set time to block apps</string>
     <string name="add_time_block_until">Until</string>
     <string name="allowlist_allowed_apps">Allowed Apps</string>
+    <string name="allowlist_multi_title">%1$d Allowlist Blocks Active</string>
     <string name="allowlist_remaining">remaining</string>
     <string name="allowlist_scan_qr_end_early">Scan QR Code to End Early</string>
+    <string name="allowlist_tap_switch">%1$s (tap to switch)</string>
     <string name="allowlist_wrong_qr">Wrong QR code. Please scan the correct code for this block.</string>
     <string name="androidx_startup" translatable="false">androidx.startup</string>
     <string name="app_name">QR Zen</string>
