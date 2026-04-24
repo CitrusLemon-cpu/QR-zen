@@ -8,6 +8,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.king.zxing.CameraScan
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityUnlockChallengeBinding
 import com.qrzen.app.ui.lock.QrScanActivity
@@ -37,6 +38,7 @@ class UnlockChallengeActivity : AppCompatActivity() {
     }
 
     @Inject lateinit var dao: AppBlockDao
+    @Inject lateinit var timeBlockDao: TimeBlockDao
 
     private lateinit var binding: ActivityUnlockChallengeBinding
     private lateinit var renderer: UnlockChallengeRenderer
@@ -66,9 +68,11 @@ class UnlockChallengeActivity : AppCompatActivity() {
                 finish()
                 return@launch
             }
+            val timeBlocks = timeBlockDao.getByBlockId(block.id)
             binding.tvBlockTitle.text = block.title
             renderer.render(
                 block = block,
+                timeBlocks = timeBlocks,
                 showGoBackButton = true,
                 onRequestQrScan = {
                     qrScanLauncher.launch(Intent(this@UnlockChallengeActivity, QrScanActivity::class.java))

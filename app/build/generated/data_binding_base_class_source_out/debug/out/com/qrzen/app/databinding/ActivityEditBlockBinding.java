@@ -17,11 +17,14 @@ import androidx.viewbinding.ViewBindings;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.checkbox.MaterialCheckBox;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.materialswitch.MaterialSwitch;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 import com.qrzen.app.R;
+import com.qrzen.app.ui.block.WeeklyScheduleGridView;
 import java.lang.NullPointerException;
 import java.lang.Override;
 import java.lang.String;
@@ -31,16 +34,19 @@ public final class ActivityEditBlockBinding implements ViewBinding {
   private final CoordinatorLayout rootView;
 
   @NonNull
+  public final MaterialAutoCompleteTextView actBlockingStyle;
+
+  @NonNull
   public final MaterialAutoCompleteTextView actUnlockMethod;
+
+  @NonNull
+  public final MaterialButton btnAddTime;
 
   @NonNull
   public final MaterialButton btnEditWindowEnd;
 
   @NonNull
   public final MaterialButton btnEditWindowStart;
-
-  @NonNull
-  public final MaterialButton btnEndTime;
 
   @NonNull
   public final MaterialButton btnLockUntil;
@@ -58,10 +64,52 @@ public final class ActivityEditBlockBinding implements ViewBinding {
   public final MaterialButton btnShowQr;
 
   @NonNull
-  public final MaterialButton btnStartTime;
+  public final MaterialCheckBox cbPomodoro;
 
   @NonNull
-  public final MaterialCheckBox cbPomodoro;
+  public final ChipGroup cgTimerBreakPresets;
+
+  @NonNull
+  public final ChipGroup cgUsagePeriod;
+
+  @NonNull
+  public final Chip chipBreak10;
+
+  @NonNull
+  public final Chip chipBreak15;
+
+  @NonNull
+  public final Chip chipBreak1d;
+
+  @NonNull
+  public final Chip chipBreak1h;
+
+  @NonNull
+  public final Chip chipBreak1w;
+
+  @NonNull
+  public final Chip chipBreak2h;
+
+  @NonNull
+  public final Chip chipBreak30;
+
+  @NonNull
+  public final Chip chipBreak4h;
+
+  @NonNull
+  public final Chip chipBreak5;
+
+  @NonNull
+  public final Chip chipBreak8h;
+
+  @NonNull
+  public final Chip chipBreakCustom;
+
+  @NonNull
+  public final Chip chipDaily;
+
+  @NonNull
+  public final Chip chipHourly;
 
   @NonNull
   public final TextInputEditText etBlockPassword;
@@ -77,6 +125,9 @@ public final class ActivityEditBlockBinding implements ViewBinding {
 
   @NonNull
   public final LinearLayout llPomodoro;
+
+  @NonNull
+  public final LinearLayout llScheduleSection;
 
   @NonNull
   public final LinearLayout llUnlockDelay;
@@ -100,6 +151,15 @@ public final class ActivityEditBlockBinding implements ViewBinding {
   public final LinearLayout llUnlockTypeOver;
 
   @NonNull
+  public final LinearLayout llUnlockWhileActive;
+
+  @NonNull
+  public final LinearLayout llUsageLimitSection;
+
+  @NonNull
+  public final LinearLayout llWaitTimerSection;
+
+  @NonNull
   public final NumberPicker npDelayMinutes;
 
   @NonNull
@@ -109,13 +169,28 @@ public final class ActivityEditBlockBinding implements ViewBinding {
   public final NumberPicker npPomodoroDuration;
 
   @NonNull
+  public final NumberPicker npUsageLimitMinutes;
+
+  @NonNull
+  public final NumberPicker npWaitTimerUse;
+
+  @NonNull
+  public final NumberPicker npWaitTimerWait;
+
+  @NonNull
   public final RecyclerView rvSelectedApps;
+
+  @NonNull
+  public final ViewSelectedTimeBlockBinding selectedBlockDetail;
 
   @NonNull
   public final MaterialSwitch switchTypeOverRandom;
 
   @NonNull
   public final TextInputLayout tilBlockPassword;
+
+  @NonNull
+  public final TextInputLayout tilBlockingStyle;
 
   @NonNull
   public final TextInputLayout tilConfirmPassword;
@@ -151,28 +226,10 @@ public final class ActivityEditBlockBinding implements ViewBinding {
   public final ToggleButton toggleEditWed;
 
   @NonNull
-  public final ToggleButton toggleFri;
-
-  @NonNull
-  public final ToggleButton toggleMon;
-
-  @NonNull
-  public final ToggleButton toggleSat;
-
-  @NonNull
-  public final ToggleButton toggleSun;
-
-  @NonNull
-  public final ToggleButton toggleThu;
-
-  @NonNull
-  public final ToggleButton toggleTue;
-
-  @NonNull
-  public final ToggleButton toggleWed;
-
-  @NonNull
   public final MaterialToolbar toolbar;
+
+  @NonNull
+  public final TextView tvBlockingStyleDesc;
 
   @NonNull
   public final TextView tvLockUntilValue;
@@ -186,51 +243,78 @@ public final class ActivityEditBlockBinding implements ViewBinding {
   @NonNull
   public final TextView tvTypeOverRandomInfo;
 
+  @NonNull
+  public final WeeklyScheduleGridView weeklyGrid;
+
   private ActivityEditBlockBinding(@NonNull CoordinatorLayout rootView,
-      @NonNull MaterialAutoCompleteTextView actUnlockMethod,
+      @NonNull MaterialAutoCompleteTextView actBlockingStyle,
+      @NonNull MaterialAutoCompleteTextView actUnlockMethod, @NonNull MaterialButton btnAddTime,
       @NonNull MaterialButton btnEditWindowEnd, @NonNull MaterialButton btnEditWindowStart,
-      @NonNull MaterialButton btnEndTime, @NonNull MaterialButton btnLockUntil,
-      @NonNull MaterialButton btnSave, @NonNull MaterialButton btnScanQrToSet,
-      @NonNull MaterialButton btnSelectApps, @NonNull MaterialButton btnShowQr,
-      @NonNull MaterialButton btnStartTime, @NonNull MaterialCheckBox cbPomodoro,
-      @NonNull TextInputEditText etBlockPassword, @NonNull TextInputEditText etConfirmPassword,
-      @NonNull TextInputEditText etTitle, @NonNull TextInputEditText etTypeOverText,
-      @NonNull LinearLayout llPomodoro, @NonNull LinearLayout llUnlockDelay,
+      @NonNull MaterialButton btnLockUntil, @NonNull MaterialButton btnSave,
+      @NonNull MaterialButton btnScanQrToSet, @NonNull MaterialButton btnSelectApps,
+      @NonNull MaterialButton btnShowQr, @NonNull MaterialCheckBox cbPomodoro,
+      @NonNull ChipGroup cgTimerBreakPresets, @NonNull ChipGroup cgUsagePeriod,
+      @NonNull Chip chipBreak10, @NonNull Chip chipBreak15, @NonNull Chip chipBreak1d,
+      @NonNull Chip chipBreak1h, @NonNull Chip chipBreak1w, @NonNull Chip chipBreak2h,
+      @NonNull Chip chipBreak30, @NonNull Chip chipBreak4h, @NonNull Chip chipBreak5,
+      @NonNull Chip chipBreak8h, @NonNull Chip chipBreakCustom, @NonNull Chip chipDaily,
+      @NonNull Chip chipHourly, @NonNull TextInputEditText etBlockPassword,
+      @NonNull TextInputEditText etConfirmPassword, @NonNull TextInputEditText etTitle,
+      @NonNull TextInputEditText etTypeOverText, @NonNull LinearLayout llPomodoro,
+      @NonNull LinearLayout llScheduleSection, @NonNull LinearLayout llUnlockDelay,
       @NonNull LinearLayout llUnlockEditWindow, @NonNull LinearLayout llUnlockNone,
       @NonNull LinearLayout llUnlockPassword, @NonNull LinearLayout llUnlockQr,
       @NonNull LinearLayout llUnlockTimer, @NonNull LinearLayout llUnlockTypeOver,
-      @NonNull NumberPicker npDelayMinutes, @NonNull NumberPicker npPomodoroBreak,
-      @NonNull NumberPicker npPomodoroDuration, @NonNull RecyclerView rvSelectedApps,
+      @NonNull LinearLayout llUnlockWhileActive, @NonNull LinearLayout llUsageLimitSection,
+      @NonNull LinearLayout llWaitTimerSection, @NonNull NumberPicker npDelayMinutes,
+      @NonNull NumberPicker npPomodoroBreak, @NonNull NumberPicker npPomodoroDuration,
+      @NonNull NumberPicker npUsageLimitMinutes, @NonNull NumberPicker npWaitTimerUse,
+      @NonNull NumberPicker npWaitTimerWait, @NonNull RecyclerView rvSelectedApps,
+      @NonNull ViewSelectedTimeBlockBinding selectedBlockDetail,
       @NonNull MaterialSwitch switchTypeOverRandom, @NonNull TextInputLayout tilBlockPassword,
-      @NonNull TextInputLayout tilConfirmPassword, @NonNull TextInputLayout tilTitle,
-      @NonNull TextInputLayout tilTypeOverText, @NonNull TextInputLayout tilUnlockMethod,
-      @NonNull ToggleButton toggleEditFri, @NonNull ToggleButton toggleEditMon,
-      @NonNull ToggleButton toggleEditSat, @NonNull ToggleButton toggleEditSun,
-      @NonNull ToggleButton toggleEditThu, @NonNull ToggleButton toggleEditTue,
-      @NonNull ToggleButton toggleEditWed, @NonNull ToggleButton toggleFri,
-      @NonNull ToggleButton toggleMon, @NonNull ToggleButton toggleSat,
-      @NonNull ToggleButton toggleSun, @NonNull ToggleButton toggleThu,
-      @NonNull ToggleButton toggleTue, @NonNull ToggleButton toggleWed,
-      @NonNull MaterialToolbar toolbar, @NonNull TextView tvLockUntilValue,
-      @NonNull TextView tvQrSecret, @NonNull TextView tvSelectedApps,
-      @NonNull TextView tvTypeOverRandomInfo) {
+      @NonNull TextInputLayout tilBlockingStyle, @NonNull TextInputLayout tilConfirmPassword,
+      @NonNull TextInputLayout tilTitle, @NonNull TextInputLayout tilTypeOverText,
+      @NonNull TextInputLayout tilUnlockMethod, @NonNull ToggleButton toggleEditFri,
+      @NonNull ToggleButton toggleEditMon, @NonNull ToggleButton toggleEditSat,
+      @NonNull ToggleButton toggleEditSun, @NonNull ToggleButton toggleEditThu,
+      @NonNull ToggleButton toggleEditTue, @NonNull ToggleButton toggleEditWed,
+      @NonNull MaterialToolbar toolbar, @NonNull TextView tvBlockingStyleDesc,
+      @NonNull TextView tvLockUntilValue, @NonNull TextView tvQrSecret,
+      @NonNull TextView tvSelectedApps, @NonNull TextView tvTypeOverRandomInfo,
+      @NonNull WeeklyScheduleGridView weeklyGrid) {
     this.rootView = rootView;
+    this.actBlockingStyle = actBlockingStyle;
     this.actUnlockMethod = actUnlockMethod;
+    this.btnAddTime = btnAddTime;
     this.btnEditWindowEnd = btnEditWindowEnd;
     this.btnEditWindowStart = btnEditWindowStart;
-    this.btnEndTime = btnEndTime;
     this.btnLockUntil = btnLockUntil;
     this.btnSave = btnSave;
     this.btnScanQrToSet = btnScanQrToSet;
     this.btnSelectApps = btnSelectApps;
     this.btnShowQr = btnShowQr;
-    this.btnStartTime = btnStartTime;
     this.cbPomodoro = cbPomodoro;
+    this.cgTimerBreakPresets = cgTimerBreakPresets;
+    this.cgUsagePeriod = cgUsagePeriod;
+    this.chipBreak10 = chipBreak10;
+    this.chipBreak15 = chipBreak15;
+    this.chipBreak1d = chipBreak1d;
+    this.chipBreak1h = chipBreak1h;
+    this.chipBreak1w = chipBreak1w;
+    this.chipBreak2h = chipBreak2h;
+    this.chipBreak30 = chipBreak30;
+    this.chipBreak4h = chipBreak4h;
+    this.chipBreak5 = chipBreak5;
+    this.chipBreak8h = chipBreak8h;
+    this.chipBreakCustom = chipBreakCustom;
+    this.chipDaily = chipDaily;
+    this.chipHourly = chipHourly;
     this.etBlockPassword = etBlockPassword;
     this.etConfirmPassword = etConfirmPassword;
     this.etTitle = etTitle;
     this.etTypeOverText = etTypeOverText;
     this.llPomodoro = llPomodoro;
+    this.llScheduleSection = llScheduleSection;
     this.llUnlockDelay = llUnlockDelay;
     this.llUnlockEditWindow = llUnlockEditWindow;
     this.llUnlockNone = llUnlockNone;
@@ -238,12 +322,20 @@ public final class ActivityEditBlockBinding implements ViewBinding {
     this.llUnlockQr = llUnlockQr;
     this.llUnlockTimer = llUnlockTimer;
     this.llUnlockTypeOver = llUnlockTypeOver;
+    this.llUnlockWhileActive = llUnlockWhileActive;
+    this.llUsageLimitSection = llUsageLimitSection;
+    this.llWaitTimerSection = llWaitTimerSection;
     this.npDelayMinutes = npDelayMinutes;
     this.npPomodoroBreak = npPomodoroBreak;
     this.npPomodoroDuration = npPomodoroDuration;
+    this.npUsageLimitMinutes = npUsageLimitMinutes;
+    this.npWaitTimerUse = npWaitTimerUse;
+    this.npWaitTimerWait = npWaitTimerWait;
     this.rvSelectedApps = rvSelectedApps;
+    this.selectedBlockDetail = selectedBlockDetail;
     this.switchTypeOverRandom = switchTypeOverRandom;
     this.tilBlockPassword = tilBlockPassword;
+    this.tilBlockingStyle = tilBlockingStyle;
     this.tilConfirmPassword = tilConfirmPassword;
     this.tilTitle = tilTitle;
     this.tilTypeOverText = tilTypeOverText;
@@ -255,18 +347,13 @@ public final class ActivityEditBlockBinding implements ViewBinding {
     this.toggleEditThu = toggleEditThu;
     this.toggleEditTue = toggleEditTue;
     this.toggleEditWed = toggleEditWed;
-    this.toggleFri = toggleFri;
-    this.toggleMon = toggleMon;
-    this.toggleSat = toggleSat;
-    this.toggleSun = toggleSun;
-    this.toggleThu = toggleThu;
-    this.toggleTue = toggleTue;
-    this.toggleWed = toggleWed;
     this.toolbar = toolbar;
+    this.tvBlockingStyleDesc = tvBlockingStyleDesc;
     this.tvLockUntilValue = tvLockUntilValue;
     this.tvQrSecret = tvQrSecret;
     this.tvSelectedApps = tvSelectedApps;
     this.tvTypeOverRandomInfo = tvTypeOverRandomInfo;
+    this.weeklyGrid = weeklyGrid;
   }
 
   @Override
@@ -296,9 +383,21 @@ public final class ActivityEditBlockBinding implements ViewBinding {
     // This is done to optimize the compiled bytecode for size and performance.
     int id;
     missingId: {
+      id = R.id.actBlockingStyle;
+      MaterialAutoCompleteTextView actBlockingStyle = ViewBindings.findChildViewById(rootView, id);
+      if (actBlockingStyle == null) {
+        break missingId;
+      }
+
       id = R.id.actUnlockMethod;
       MaterialAutoCompleteTextView actUnlockMethod = ViewBindings.findChildViewById(rootView, id);
       if (actUnlockMethod == null) {
+        break missingId;
+      }
+
+      id = R.id.btnAddTime;
+      MaterialButton btnAddTime = ViewBindings.findChildViewById(rootView, id);
+      if (btnAddTime == null) {
         break missingId;
       }
 
@@ -311,12 +410,6 @@ public final class ActivityEditBlockBinding implements ViewBinding {
       id = R.id.btnEditWindowStart;
       MaterialButton btnEditWindowStart = ViewBindings.findChildViewById(rootView, id);
       if (btnEditWindowStart == null) {
-        break missingId;
-      }
-
-      id = R.id.btnEndTime;
-      MaterialButton btnEndTime = ViewBindings.findChildViewById(rootView, id);
-      if (btnEndTime == null) {
         break missingId;
       }
 
@@ -350,15 +443,99 @@ public final class ActivityEditBlockBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.btnStartTime;
-      MaterialButton btnStartTime = ViewBindings.findChildViewById(rootView, id);
-      if (btnStartTime == null) {
-        break missingId;
-      }
-
       id = R.id.cbPomodoro;
       MaterialCheckBox cbPomodoro = ViewBindings.findChildViewById(rootView, id);
       if (cbPomodoro == null) {
+        break missingId;
+      }
+
+      id = R.id.cgTimerBreakPresets;
+      ChipGroup cgTimerBreakPresets = ViewBindings.findChildViewById(rootView, id);
+      if (cgTimerBreakPresets == null) {
+        break missingId;
+      }
+
+      id = R.id.cgUsagePeriod;
+      ChipGroup cgUsagePeriod = ViewBindings.findChildViewById(rootView, id);
+      if (cgUsagePeriod == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak10;
+      Chip chipBreak10 = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak10 == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak15;
+      Chip chipBreak15 = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak15 == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak1d;
+      Chip chipBreak1d = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak1d == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak1h;
+      Chip chipBreak1h = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak1h == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak1w;
+      Chip chipBreak1w = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak1w == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak2h;
+      Chip chipBreak2h = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak2h == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak30;
+      Chip chipBreak30 = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak30 == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak4h;
+      Chip chipBreak4h = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak4h == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak5;
+      Chip chipBreak5 = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak5 == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreak8h;
+      Chip chipBreak8h = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreak8h == null) {
+        break missingId;
+      }
+
+      id = R.id.chipBreakCustom;
+      Chip chipBreakCustom = ViewBindings.findChildViewById(rootView, id);
+      if (chipBreakCustom == null) {
+        break missingId;
+      }
+
+      id = R.id.chipDaily;
+      Chip chipDaily = ViewBindings.findChildViewById(rootView, id);
+      if (chipDaily == null) {
+        break missingId;
+      }
+
+      id = R.id.chipHourly;
+      Chip chipHourly = ViewBindings.findChildViewById(rootView, id);
+      if (chipHourly == null) {
         break missingId;
       }
 
@@ -389,6 +566,12 @@ public final class ActivityEditBlockBinding implements ViewBinding {
       id = R.id.llPomodoro;
       LinearLayout llPomodoro = ViewBindings.findChildViewById(rootView, id);
       if (llPomodoro == null) {
+        break missingId;
+      }
+
+      id = R.id.llScheduleSection;
+      LinearLayout llScheduleSection = ViewBindings.findChildViewById(rootView, id);
+      if (llScheduleSection == null) {
         break missingId;
       }
 
@@ -434,6 +617,24 @@ public final class ActivityEditBlockBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.llUnlockWhileActive;
+      LinearLayout llUnlockWhileActive = ViewBindings.findChildViewById(rootView, id);
+      if (llUnlockWhileActive == null) {
+        break missingId;
+      }
+
+      id = R.id.llUsageLimitSection;
+      LinearLayout llUsageLimitSection = ViewBindings.findChildViewById(rootView, id);
+      if (llUsageLimitSection == null) {
+        break missingId;
+      }
+
+      id = R.id.llWaitTimerSection;
+      LinearLayout llWaitTimerSection = ViewBindings.findChildViewById(rootView, id);
+      if (llWaitTimerSection == null) {
+        break missingId;
+      }
+
       id = R.id.npDelayMinutes;
       NumberPicker npDelayMinutes = ViewBindings.findChildViewById(rootView, id);
       if (npDelayMinutes == null) {
@@ -452,11 +653,36 @@ public final class ActivityEditBlockBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.npUsageLimitMinutes;
+      NumberPicker npUsageLimitMinutes = ViewBindings.findChildViewById(rootView, id);
+      if (npUsageLimitMinutes == null) {
+        break missingId;
+      }
+
+      id = R.id.npWaitTimerUse;
+      NumberPicker npWaitTimerUse = ViewBindings.findChildViewById(rootView, id);
+      if (npWaitTimerUse == null) {
+        break missingId;
+      }
+
+      id = R.id.npWaitTimerWait;
+      NumberPicker npWaitTimerWait = ViewBindings.findChildViewById(rootView, id);
+      if (npWaitTimerWait == null) {
+        break missingId;
+      }
+
       id = R.id.rvSelectedApps;
       RecyclerView rvSelectedApps = ViewBindings.findChildViewById(rootView, id);
       if (rvSelectedApps == null) {
         break missingId;
       }
+
+      id = R.id.selectedBlockDetail;
+      View selectedBlockDetail = ViewBindings.findChildViewById(rootView, id);
+      if (selectedBlockDetail == null) {
+        break missingId;
+      }
+      ViewSelectedTimeBlockBinding binding_selectedBlockDetail = ViewSelectedTimeBlockBinding.bind(selectedBlockDetail);
 
       id = R.id.switchTypeOverRandom;
       MaterialSwitch switchTypeOverRandom = ViewBindings.findChildViewById(rootView, id);
@@ -467,6 +693,12 @@ public final class ActivityEditBlockBinding implements ViewBinding {
       id = R.id.tilBlockPassword;
       TextInputLayout tilBlockPassword = ViewBindings.findChildViewById(rootView, id);
       if (tilBlockPassword == null) {
+        break missingId;
+      }
+
+      id = R.id.tilBlockingStyle;
+      TextInputLayout tilBlockingStyle = ViewBindings.findChildViewById(rootView, id);
+      if (tilBlockingStyle == null) {
         break missingId;
       }
 
@@ -536,51 +768,15 @@ public final class ActivityEditBlockBinding implements ViewBinding {
         break missingId;
       }
 
-      id = R.id.toggleFri;
-      ToggleButton toggleFri = ViewBindings.findChildViewById(rootView, id);
-      if (toggleFri == null) {
-        break missingId;
-      }
-
-      id = R.id.toggleMon;
-      ToggleButton toggleMon = ViewBindings.findChildViewById(rootView, id);
-      if (toggleMon == null) {
-        break missingId;
-      }
-
-      id = R.id.toggleSat;
-      ToggleButton toggleSat = ViewBindings.findChildViewById(rootView, id);
-      if (toggleSat == null) {
-        break missingId;
-      }
-
-      id = R.id.toggleSun;
-      ToggleButton toggleSun = ViewBindings.findChildViewById(rootView, id);
-      if (toggleSun == null) {
-        break missingId;
-      }
-
-      id = R.id.toggleThu;
-      ToggleButton toggleThu = ViewBindings.findChildViewById(rootView, id);
-      if (toggleThu == null) {
-        break missingId;
-      }
-
-      id = R.id.toggleTue;
-      ToggleButton toggleTue = ViewBindings.findChildViewById(rootView, id);
-      if (toggleTue == null) {
-        break missingId;
-      }
-
-      id = R.id.toggleWed;
-      ToggleButton toggleWed = ViewBindings.findChildViewById(rootView, id);
-      if (toggleWed == null) {
-        break missingId;
-      }
-
       id = R.id.toolbar;
       MaterialToolbar toolbar = ViewBindings.findChildViewById(rootView, id);
       if (toolbar == null) {
+        break missingId;
+      }
+
+      id = R.id.tvBlockingStyleDesc;
+      TextView tvBlockingStyleDesc = ViewBindings.findChildViewById(rootView, id);
+      if (tvBlockingStyleDesc == null) {
         break missingId;
       }
 
@@ -608,16 +804,27 @@ public final class ActivityEditBlockBinding implements ViewBinding {
         break missingId;
       }
 
-      return new ActivityEditBlockBinding((CoordinatorLayout) rootView, actUnlockMethod,
-          btnEditWindowEnd, btnEditWindowStart, btnEndTime, btnLockUntil, btnSave, btnScanQrToSet,
-          btnSelectApps, btnShowQr, btnStartTime, cbPomodoro, etBlockPassword, etConfirmPassword,
-          etTitle, etTypeOverText, llPomodoro, llUnlockDelay, llUnlockEditWindow, llUnlockNone,
-          llUnlockPassword, llUnlockQr, llUnlockTimer, llUnlockTypeOver, npDelayMinutes,
-          npPomodoroBreak, npPomodoroDuration, rvSelectedApps, switchTypeOverRandom,
-          tilBlockPassword, tilConfirmPassword, tilTitle, tilTypeOverText, tilUnlockMethod,
-          toggleEditFri, toggleEditMon, toggleEditSat, toggleEditSun, toggleEditThu, toggleEditTue,
-          toggleEditWed, toggleFri, toggleMon, toggleSat, toggleSun, toggleThu, toggleTue,
-          toggleWed, toolbar, tvLockUntilValue, tvQrSecret, tvSelectedApps, tvTypeOverRandomInfo);
+      id = R.id.weeklyGrid;
+      WeeklyScheduleGridView weeklyGrid = ViewBindings.findChildViewById(rootView, id);
+      if (weeklyGrid == null) {
+        break missingId;
+      }
+
+      return new ActivityEditBlockBinding((CoordinatorLayout) rootView, actBlockingStyle,
+          actUnlockMethod, btnAddTime, btnEditWindowEnd, btnEditWindowStart, btnLockUntil, btnSave,
+          btnScanQrToSet, btnSelectApps, btnShowQr, cbPomodoro, cgTimerBreakPresets, cgUsagePeriod,
+          chipBreak10, chipBreak15, chipBreak1d, chipBreak1h, chipBreak1w, chipBreak2h, chipBreak30,
+          chipBreak4h, chipBreak5, chipBreak8h, chipBreakCustom, chipDaily, chipHourly,
+          etBlockPassword, etConfirmPassword, etTitle, etTypeOverText, llPomodoro,
+          llScheduleSection, llUnlockDelay, llUnlockEditWindow, llUnlockNone, llUnlockPassword,
+          llUnlockQr, llUnlockTimer, llUnlockTypeOver, llUnlockWhileActive, llUsageLimitSection,
+          llWaitTimerSection, npDelayMinutes, npPomodoroBreak, npPomodoroDuration,
+          npUsageLimitMinutes, npWaitTimerUse, npWaitTimerWait, rvSelectedApps,
+          binding_selectedBlockDetail, switchTypeOverRandom, tilBlockPassword, tilBlockingStyle,
+          tilConfirmPassword, tilTitle, tilTypeOverText, tilUnlockMethod, toggleEditFri,
+          toggleEditMon, toggleEditSat, toggleEditSun, toggleEditThu, toggleEditTue, toggleEditWed,
+          toolbar, tvBlockingStyleDesc, tvLockUntilValue, tvQrSecret, tvSelectedApps,
+          tvTypeOverRandomInfo, weeklyGrid);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

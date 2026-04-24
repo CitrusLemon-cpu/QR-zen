@@ -3,6 +3,7 @@ package com.qrzen.app.ui.unlock
 import android.content.Context
 import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.TimeBlock
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
 import java.time.LocalDateTime
@@ -10,6 +11,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
+import java.util.Calendar
 import kotlin.random.Random
 
 object UnlockMethodUtils {
@@ -107,6 +109,32 @@ object UnlockMethodUtils {
         return existingText ?: generateRandomTypeOverText()
     }
 
+    fun isBlockCurrentlyActive(block: AppBlock, timeBlocks: List<TimeBlock>): Boolean {
+        if (block.blockNowUntil > System.currentTimeMillis()) return true
+        if (block.blockingStyle == STYLE_MANUAL) return false
+        if (block.blockingStyle != STYLE_SCHEDULE) return true
+
+        val now = LocalTime.now()
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+
+        if (timeBlocks.isEmpty()) {
+            val start = parseTime(block.startTime, LocalTime.MIN)
+            val end = parseTime(block.endTime, LocalTime.MAX)
+            val timeOk = if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
+            else !now.isBefore(start) || !now.isAfter(end)
+            return timeOk && block.activeDays.getOrNull(dayIndex) == '1'
+        }
+
+        return timeBlocks.any { tb ->
+            if (tb.activeDays.getOrNull(dayIndex) != '1') return@any false
+            val start = parseTime(tb.startTime, LocalTime.MIN)
+            val end = parseTime(tb.endTime, LocalTime.MAX)
+            if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
+            else !now.isBefore(start) || !now.isAfter(end)
+        }
+    }
+
     fun getUnlockMethodSummary(context: Context, block: AppBlock, nowMillis: Long = System.currentTimeMillis()): String? {
         return when (getNormalizedMethod(block)) {
             METHOD_NONE -> null
@@ -118,11 +146,12 @@ object UnlockMethodUtils {
                 val schedule = formatWindowSchedule(block)
                 "${context.getString(R.string.unlock_method_edit_window)} ($schedule)"
             }
+            METHOD_WHILE_ACTIVE -> context.getString(R.string.unlock_method_while_active)
             METHOD_TIMER -> {
                 if (block.lockUntil > nowMillis) {
                     context.getString(R.string.challenge_timer_locked, formatDateTime(block.lockUntil))
                 } else {
-                    context.getString(R.string.unlock_method_timer)
+                    null
                 }
             }
             else -> block.unlockMethod

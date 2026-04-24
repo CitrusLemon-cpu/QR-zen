@@ -11,6 +11,8 @@ drawable ic_launcher_background
 drawable ic_launcher_foreground
 drawable ic_more_vert
 drawable ic_notification
+drawable ic_schedule
+id actBlockingStyle
 id actUnlockMethod
 id action_archive
 id action_block_now
@@ -22,6 +24,7 @@ id btn15min
 id btn1hr
 id btn2hr
 id btn30min
+id btnAddTime
 id btnAddTimeBlockEnd
 id btnAddTimeBlockStart
 id btnCancelAddTimeBlock
@@ -30,7 +33,6 @@ id btnDeleteSelectedTimeBlock
 id btnDone
 id btnEditWindowEnd
 id btnEditWindowStart
-id btnEndTime
 id btnGoBack
 id btnGoHome
 id btnGrant
@@ -54,13 +56,27 @@ id btnSelectedBlockStartTime
 id btnShare
 id btnShowQr
 id btnSkip
-id btnStartTime
 id btnStop
 id btnUnlock
 id cardServiceWarning
 id cbPomodoro
 id cbSelected
+id cgTimerBreakPresets
+id cgUsagePeriod
 id challengeContainer
+id chipBreak10
+id chipBreak15
+id chipBreak1d
+id chipBreak1h
+id chipBreak1w
+id chipBreak2h
+id chipBreak30
+id chipBreak4h
+id chipBreak5
+id chipBreak8h
+id chipBreakCustom
+id chipDaily
+id chipHourly
 id etBlockPassword
 id etConfirmPassword
 id etMasterPwd
@@ -76,6 +92,7 @@ id ivAppIcon
 id ivQrCode
 id ivSelectedAppIcon
 id llPomodoro
+id llScheduleSection
 id llUnlockDelay
 id llUnlockEditWindow
 id llUnlockNone
@@ -83,6 +100,9 @@ id llUnlockPassword
 id llUnlockQr
 id llUnlockTimer
 id llUnlockTypeOver
+id llUnlockWhileActive
+id llUsageLimitSection
+id llWaitTimerSection
 id nav_host_fragment
 id nav_main
 id npDelayMinutes
@@ -90,6 +110,9 @@ id npHours
 id npMinutes
 id npPomodoroBreak
 id npPomodoroDuration
+id npUsageLimitMinutes
+id npWaitTimerUse
+id npWaitTimerWait
 id progressBar
 id root
 id rvAllowedApps
@@ -98,6 +121,7 @@ id rvBlockApps
 id rvBlocks
 id rvEvents
 id rvSelectedApps
+id selectedBlockDetail
 id settingsFragment
 id statsFragment
 id swMasterPwd
@@ -106,6 +130,7 @@ id swSilentMode
 id switchEnabled
 id switchTypeOverRandom
 id tilBlockPassword
+id tilBlockingStyle
 id tilConfirmPassword
 id tilMasterPwd
 id tilOldPwd
@@ -127,13 +152,6 @@ id toggleEditSun
 id toggleEditThu
 id toggleEditTue
 id toggleEditWed
-id toggleFri
-id toggleMon
-id toggleSat
-id toggleSun
-id toggleThu
-id toggleTue
-id toggleWed
 id toolbar
 id tvAddTimeBlockDaysLabel
 id tvAddTimeBlockTitle
@@ -146,6 +164,7 @@ id tvBlockMessage
 id tvBlockNowTimer
 id tvBlockTitle
 id tvBlockedCount
+id tvBlockingStyleDesc
 id tvChallengeBody
 id tvChallengeSecondary
 id tvChallengeText
@@ -191,6 +210,7 @@ id tvTopApp
 id tvType
 id tvTypeOverRandomInfo
 id tvUnlockMethod
+id weeklyGrid
 layout activity_allowlist_overlay
 layout activity_app_picker
 layout activity_edit_block

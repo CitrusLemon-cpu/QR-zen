@@ -20,11 +20,13 @@ import android.view.inputmethod.InputMethodManager
 import androidx.core.app.NotificationCompat
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.receiver.AlarmKeepaliveReceiver
 import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
 import com.qrzen.app.ui.lock.LockScreenActivity
+import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +43,7 @@ import javax.inject.Inject
 class BackgroundService : Service() {
 
     @Inject lateinit var dao: AppBlockDao
+    @Inject lateinit var timeBlockDao: TimeBlockDao
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     private val handler = Handler(Looper.getMainLooper())
@@ -158,10 +161,12 @@ class BackgroundService : Service() {
                 dao.update(block.copy(blockNowUntil = 0L))
                 shouldRefresh = true
             }
-        val currentlyActiveIds = allBlocks
-            .filter { it.isEnabled && !it.isArchived && it.pausedUntil <= now && isBlockActive(it) }
-            .map { it.id }
-            .toSet()
+        val currentlyActiveIds = mutableSetOf<Int>()
+        allBlocks
+            .filter { it.isEnabled && !it.isArchived && it.pausedUntil <= now }
+            .forEach { block ->
+                if (isBlockActive(block)) currentlyActiveIds.add(block.id)
+            }
         val newlyActive = currentlyActiveIds - previouslyActiveBlockIds
         previouslyActiveBlockIds.clear()
         previouslyActiveBlockIds.addAll(currentlyActiveIds)
@@ -180,8 +185,38 @@ class BackgroundService : Service() {
         }
     }
 
-    private fun isBlockActive(block: AppBlock): Boolean {
+    private suspend fun isBlockActive(block: AppBlock): Boolean {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
+
+        return when (block.blockingStyle) {
+            UnlockMethodUtils.STYLE_MANUAL -> false
+            UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
+            UnlockMethodUtils.STYLE_USAGE_LIMIT -> isUsageLimitExceeded(block)
+            UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block)
+            else -> isScheduleActive(block)
+        }
+    }
+
+    private suspend fun isScheduleActive(block: AppBlock): Boolean {
+        val timeBlocks = timeBlockDao.getByBlockId(block.id)
+        if (timeBlocks.isEmpty()) {
+            return isLegacyScheduleActive(block)
+        }
+        val now = LocalTime.now()
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+
+        return timeBlocks.any { tb ->
+            if (tb.activeDays.getOrNull(dayIndex) != '1') return@any false
+            val fmt = DateTimeFormatter.ofPattern("HH:mm")
+            val start = LocalTime.parse(tb.startTime, fmt)
+            val end = LocalTime.parse(tb.endTime, fmt)
+            if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
+            else !now.isBefore(start) || !now.isAfter(end)
+        }
+    }
+
+    private fun isLegacyScheduleActive(block: AppBlock): Boolean {
         val now = LocalTime.now()
         val fmt = DateTimeFormatter.ofPattern("HH:mm")
         val start = LocalTime.parse(block.startTime, fmt)
@@ -192,6 +227,57 @@ class BackgroundService : Service() {
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
         return block.activeDays.getOrNull(dayIndex) == '1'
+    }
+
+    private fun isUsageLimitExceeded(block: AppBlock): Boolean {
+        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return false
+        val now = System.currentTimeMillis()
+        val startTime = when (block.usageLimitPeriod) {
+            "HOURLY" -> now - 3_600_000L
+            else -> {
+                Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+            }
+        }
+        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val usageStats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, now)
+        val totalUsageMs = usageStats
+            ?.filter { it.packageName in packages }
+            ?.sumOf { it.totalTimeInForeground } ?: 0L
+        val limitMs = block.usageLimitMinutes * 60_000L
+        return totalUsageMs >= limitMs
+    }
+
+    private fun isWaitTimerBlocking(block: AppBlock): Boolean {
+        val now = System.currentTimeMillis()
+        val blockingUntilKey = "wait_timer_blocking_${block.id}"
+        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
+        val blockingUntil = kv.decodeLong(blockingUntilKey, 0L)
+
+        if (blockingUntil > now) return true
+
+        val lastResetKey = "wait_timer_reset_${block.id}"
+        val lastReset = kv.decodeLong(lastResetKey, now)
+
+        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return false
+        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val usageStats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, lastReset, now)
+        val totalUsageMs = usageStats
+            ?.filter { it.packageName in packages }
+            ?.sumOf { it.totalTimeInForeground } ?: 0L
+        val thresholdMs = block.waitTimerUseMinutes * 60_000L
+
+        if (totalUsageMs >= thresholdMs) {
+            val waitUntil = now + block.waitTimerWaitMinutes * 60_000L
+            kv.encode(blockingUntilKey, waitUntil)
+            kv.encode(lastResetKey, waitUntil)
+            return true
+        }
+        return false
     }
 
     private fun buildNotification(): Notification {
@@ -258,8 +344,12 @@ class BackgroundService : Service() {
         if (isExemptPackage(pkg)) return
         if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) return
 
-        val activeBlocks = dao.getAll().filter {
-            it.isEnabled && !it.isArchived && now > it.pausedUntil && isBlockActive(it)
+        val allCandidates = dao.getAll().filter {
+            it.isEnabled && !it.isArchived && now > it.pausedUntil
+        }
+        val activeBlocks = mutableListOf<AppBlock>()
+        for (block in allCandidates) {
+            if (isBlockActive(block)) activeBlocks.add(block)
         }
 
         val blocklistBlock = activeBlocks
