@@ -1,10 +1,12 @@
 package com.qrzen.app.service;
 
 @dagger.hilt.android.AndroidEntryPoint()
-@kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000|\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0010\"\n\u0002\u0010\u000e\n\u0002\b\u0005\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0010\t\n\u0002\b\u0004\n\u0002\u0010#\n\u0002\u0010\b\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0004\n\u0002\u0010\u000b\n\u0000\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0006\n\u0002\u0018\u0002\n\u0002\b\u0007\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\t\b\u0007\u0018\u0000 F2\u00020\u0001:\u0001FB\u0005\u00a2\u0006\u0002\u0010\u0002J\b\u0010*\u001a\u00020+H\u0002J\b\u0010,\u001a\u00020-H\u0002J\u000e\u0010.\u001a\u00020+H\u0082@\u00a2\u0006\u0002\u0010/J\u000e\u00100\u001a\u00020+H\u0082@\u00a2\u0006\u0002\u0010/J\n\u00101\u001a\u0004\u0018\u00010\rH\u0002J\u0010\u00102\u001a\u00020&2\u0006\u00103\u001a\u000204H\u0002J\b\u00105\u001a\u00020&H\u0002J\u0010\u00106\u001a\u00020&2\u0006\u00107\u001a\u00020\rH\u0002J\u0018\u00108\u001a\u00020+2\u0006\u00109\u001a\u00020\r2\u0006\u00103\u001a\u000204H\u0002J\u0018\u0010:\u001a\u00020+2\u0006\u00109\u001a\u00020\r2\u0006\u00103\u001a\u000204H\u0002J\u0014\u0010;\u001a\u0004\u0018\u00010<2\b\u0010=\u001a\u0004\u0018\u00010>H\u0016J\b\u0010?\u001a\u00020+H\u0016J\"\u0010@\u001a\u00020\u001f2\b\u0010=\u001a\u0004\u0018\u00010>2\u0006\u0010A\u001a\u00020\u001f2\u0006\u0010B\u001a\u00020\u001fH\u0016J\b\u0010C\u001a\u00020+H\u0002J\b\u0010D\u001a\u00020+H\u0002J\b\u0010E\u001a\u00020+H\u0002R\u000e\u0010\u0003\u001a\u00020\u0004X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001e\u0010\u0005\u001a\u00020\u00068\u0006@\u0006X\u0087.\u00a2\u0006\u000e\n\u0000\u001a\u0004\b\u0007\u0010\b\"\u0004\b\t\u0010\nR!\u0010\u000b\u001a\b\u0012\u0004\u0012\u00020\r0\f8BX\u0082\u0084\u0002\u00a2\u0006\f\n\u0004\b\u0010\u0010\u0011\u001a\u0004\b\u000e\u0010\u000fR\u000e\u0010\u0012\u001a\u00020\u0013X\u0082\u0004\u00a2\u0006\u0002\n\u0000R!\u0010\u0014\u001a\b\u0012\u0004\u0012\u00020\r0\f8BX\u0082\u0084\u0002\u00a2\u0006\f\n\u0004\b\u0016\u0010\u0011\u001a\u0004\b\u0015\u0010\u000fR\u0010\u0010\u0017\u001a\u0004\u0018\u00010\rX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0018\u001a\u00020\u0019X\u0082\u000e\u00a2\u0006\u0002\n\u0000R!\u0010\u001a\u001a\b\u0012\u0004\u0012\u00020\r0\f8BX\u0082\u0084\u0002\u00a2\u0006\f\n\u0004\b\u001c\u0010\u0011\u001a\u0004\b\u001b\u0010\u000fR\u0014\u0010\u001d\u001a\b\u0012\u0004\u0012\u00020\u001f0\u001eX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010 \u001a\u00020!X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\"\u001a\b\u0012\u0004\u0012\u00020\r0\fX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010#\u001a\u00020\u0004X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010$\u001a\u00020\u0013X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010%\u001a\u00020&X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u0014\u0010\'\u001a\b\u0018\u00010(R\u00020)X\u0082\u000e\u00a2\u0006\u0002\n\u0000\u00a8\u0006G"}, d2 = {"Lcom/qrzen/app/service/BackgroundService;", "Landroid/app/Service;", "()V", "checkRunnable", "Ljava/lang/Runnable;", "dao", "Lcom/qrzen/app/data/db/AppBlockDao;", "getDao", "()Lcom/qrzen/app/data/db/AppBlockDao;", "setDao", "(Lcom/qrzen/app/data/db/AppBlockDao;)V", "dialerPackages", "", "", "getDialerPackages", "()Ljava/util/Set;", "dialerPackages$delegate", "Lkotlin/Lazy;", "handler", "Landroid/os/Handler;", "imePackages", "getImePackages", "imePackages$delegate", "lastBlockedPkg", "lastBlockedTime", "", "launcherPackages", "getLauncherPackages", "launcherPackages$delegate", "previouslyActiveBlockIds", "", "", "scope", "Lkotlinx/coroutines/CoroutineScope;", "systemExemptPackages", "usageCheckRunnable", "usageHandler", "usagePollingActive", "", "wakeLock", "Landroid/os/PowerManager$WakeLock;", "Landroid/os/PowerManager;", "acquireWakeLock", "", "buildNotification", "Landroid/app/Notification;", "checkExpiredPauses", "(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;", "checkForegroundApp", "getForegroundPackage", "isBlockActive", "block", "Lcom/qrzen/app/data/model/AppBlock;", "isDeviceLocked", "isExemptPackage", "pkg", "launchAllowlistOverlay", "blockedPkg", "launchLockScreen", "onBind", "Landroid/os/IBinder;", "intent", "Landroid/content/Intent;", "onDestroy", "onStartCommand", "flags", "startId", "sendToHome", "startUsagePolling", "stopUsagePolling", "Companion", "app_debug"})
+@kotlin.Metadata(mv = {1, 9, 0}, k = 1, xi = 48, d1 = {"\u0000\u008c\u0001\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0010\"\n\u0002\u0010\u000e\n\u0002\b\u0005\n\u0002\u0018\u0002\n\u0002\b\u0005\n\u0002\u0010\t\n\u0002\b\u0004\n\u0002\u0010#\n\u0002\u0010\b\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0002\b\u0007\n\u0002\u0010\u000b\n\u0000\n\u0002\u0018\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0010\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\u0006\n\u0002\u0018\u0002\n\u0002\b\u000b\n\u0002\u0010 \n\u0002\b\u0002\n\u0002\u0018\u0002\n\u0000\n\u0002\u0018\u0002\n\u0002\b\t\b\u0007\u0018\u0000 S2\u00020\u0001:\u0001SB\u0005\u00a2\u0006\u0002\u0010\u0002J\b\u00100\u001a\u000201H\u0002J\b\u00102\u001a\u000203H\u0002J\u000e\u00104\u001a\u000201H\u0082@\u00a2\u0006\u0002\u00105J\u000e\u00106\u001a\u000201H\u0082@\u00a2\u0006\u0002\u00105J\n\u00107\u001a\u0004\u0018\u00010\rH\u0002J\u0016\u00108\u001a\u00020,2\u0006\u00109\u001a\u00020:H\u0082@\u00a2\u0006\u0002\u0010;J\b\u0010<\u001a\u00020,H\u0002J\u0010\u0010=\u001a\u00020,2\u0006\u0010>\u001a\u00020\rH\u0002J\u0010\u0010?\u001a\u00020,2\u0006\u00109\u001a\u00020:H\u0002J\u0016\u0010@\u001a\u00020,2\u0006\u00109\u001a\u00020:H\u0082@\u00a2\u0006\u0002\u0010;J\u0010\u0010A\u001a\u00020,2\u0006\u00109\u001a\u00020:H\u0002J\u0010\u0010B\u001a\u00020,2\u0006\u00109\u001a\u00020:H\u0002J\u001e\u0010C\u001a\u0002012\u0006\u0010D\u001a\u00020\r2\f\u0010E\u001a\b\u0012\u0004\u0012\u00020:0FH\u0002J\u0018\u0010G\u001a\u0002012\u0006\u0010D\u001a\u00020\r2\u0006\u00109\u001a\u00020:H\u0002J\u0014\u0010H\u001a\u0004\u0018\u00010I2\b\u0010J\u001a\u0004\u0018\u00010KH\u0016J\b\u0010L\u001a\u000201H\u0016J\"\u0010M\u001a\u00020\u001f2\b\u0010J\u001a\u0004\u0018\u00010K2\u0006\u0010N\u001a\u00020\u001f2\u0006\u0010O\u001a\u00020\u001fH\u0016J\b\u0010P\u001a\u000201H\u0002J\b\u0010Q\u001a\u000201H\u0002J\b\u0010R\u001a\u000201H\u0002R\u000e\u0010\u0003\u001a\u00020\u0004X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001e\u0010\u0005\u001a\u00020\u00068\u0006@\u0006X\u0087.\u00a2\u0006\u000e\n\u0000\u001a\u0004\b\u0007\u0010\b\"\u0004\b\t\u0010\nR!\u0010\u000b\u001a\b\u0012\u0004\u0012\u00020\r0\f8BX\u0082\u0084\u0002\u00a2\u0006\f\n\u0004\b\u0010\u0010\u0011\u001a\u0004\b\u000e\u0010\u000fR\u000e\u0010\u0012\u001a\u00020\u0013X\u0082\u0004\u00a2\u0006\u0002\n\u0000R!\u0010\u0014\u001a\b\u0012\u0004\u0012\u00020\r0\f8BX\u0082\u0084\u0002\u00a2\u0006\f\n\u0004\b\u0016\u0010\u0011\u001a\u0004\b\u0015\u0010\u000fR\u0010\u0010\u0017\u001a\u0004\u0018\u00010\rX\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u000e\u0010\u0018\u001a\u00020\u0019X\u0082\u000e\u00a2\u0006\u0002\n\u0000R!\u0010\u001a\u001a\b\u0012\u0004\u0012\u00020\r0\f8BX\u0082\u0084\u0002\u00a2\u0006\f\n\u0004\b\u001c\u0010\u0011\u001a\u0004\b\u001b\u0010\u000fR\u0014\u0010\u001d\u001a\b\u0012\u0004\u0012\u00020\u001f0\u001eX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010 \u001a\u00020!X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u0014\u0010\"\u001a\b\u0012\u0004\u0012\u00020\r0\fX\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u001e\u0010#\u001a\u00020$8\u0006@\u0006X\u0087.\u00a2\u0006\u000e\n\u0000\u001a\u0004\b%\u0010&\"\u0004\b\'\u0010(R\u000e\u0010)\u001a\u00020\u0004X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010*\u001a\u00020\u0013X\u0082\u0004\u00a2\u0006\u0002\n\u0000R\u000e\u0010+\u001a\u00020,X\u0082\u000e\u00a2\u0006\u0002\n\u0000R\u0014\u0010-\u001a\b\u0018\u00010.R\u00020/X\u0082\u000e\u00a2\u0006\u0002\n\u0000\u00a8\u0006T"}, d2 = {"Lcom/qrzen/app/service/BackgroundService;", "Landroid/app/Service;", "()V", "checkRunnable", "Ljava/lang/Runnable;", "dao", "Lcom/qrzen/app/data/db/AppBlockDao;", "getDao", "()Lcom/qrzen/app/data/db/AppBlockDao;", "setDao", "(Lcom/qrzen/app/data/db/AppBlockDao;)V", "dialerPackages", "", "", "getDialerPackages", "()Ljava/util/Set;", "dialerPackages$delegate", "Lkotlin/Lazy;", "handler", "Landroid/os/Handler;", "imePackages", "getImePackages", "imePackages$delegate", "lastBlockedPkg", "lastBlockedTime", "", "launcherPackages", "getLauncherPackages", "launcherPackages$delegate", "previouslyActiveBlockIds", "", "", "scope", "Lkotlinx/coroutines/CoroutineScope;", "systemExemptPackages", "timeBlockDao", "Lcom/qrzen/app/data/db/TimeBlockDao;", "getTimeBlockDao", "()Lcom/qrzen/app/data/db/TimeBlockDao;", "setTimeBlockDao", "(Lcom/qrzen/app/data/db/TimeBlockDao;)V", "usageCheckRunnable", "usageHandler", "usagePollingActive", "", "wakeLock", "Landroid/os/PowerManager$WakeLock;", "Landroid/os/PowerManager;", "acquireWakeLock", "", "buildNotification", "Landroid/app/Notification;", "checkExpiredPauses", "(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;", "checkForegroundApp", "getForegroundPackage", "isBlockActive", "block", "Lcom/qrzen/app/data/model/AppBlock;", "(Lcom/qrzen/app/data/model/AppBlock;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;", "isDeviceLocked", "isExemptPackage", "pkg", "isLegacyScheduleActive", "isScheduleActive", "isUsageLimitExceeded", "isWaitTimerBlocking", "launchAllowlistOverlay", "blockedPkg", "blocks", "", "launchLockScreen", "onBind", "Landroid/os/IBinder;", "intent", "Landroid/content/Intent;", "onDestroy", "onStartCommand", "flags", "startId", "sendToHome", "startUsagePolling", "stopUsagePolling", "Companion", "app_debug"})
 public final class BackgroundService extends android.app.Service {
     @javax.inject.Inject()
     public com.qrzen.app.data.db.AppBlockDao dao;
+    @javax.inject.Inject()
+    public com.qrzen.app.data.db.TimeBlockDao timeBlockDao;
     @org.jetbrains.annotations.NotNull()
     private final kotlinx.coroutines.CoroutineScope scope = null;
     @org.jetbrains.annotations.NotNull()
@@ -53,6 +55,15 @@ public final class BackgroundService extends android.app.Service {
     com.qrzen.app.data.db.AppBlockDao p0) {
     }
     
+    @org.jetbrains.annotations.NotNull()
+    public final com.qrzen.app.data.db.TimeBlockDao getTimeBlockDao() {
+        return null;
+    }
+    
+    public final void setTimeBlockDao(@org.jetbrains.annotations.NotNull()
+    com.qrzen.app.data.db.TimeBlockDao p0) {
+    }
+    
     private final java.util.Set<java.lang.String> getLauncherPackages() {
         return null;
     }
@@ -75,7 +86,23 @@ public final class BackgroundService extends android.app.Service {
         return null;
     }
     
-    private final boolean isBlockActive(com.qrzen.app.data.model.AppBlock block) {
+    private final java.lang.Object isBlockActive(com.qrzen.app.data.model.AppBlock block, kotlin.coroutines.Continuation<? super java.lang.Boolean> $completion) {
+        return null;
+    }
+    
+    private final java.lang.Object isScheduleActive(com.qrzen.app.data.model.AppBlock block, kotlin.coroutines.Continuation<? super java.lang.Boolean> $completion) {
+        return null;
+    }
+    
+    private final boolean isLegacyScheduleActive(com.qrzen.app.data.model.AppBlock block) {
+        return false;
+    }
+    
+    private final boolean isUsageLimitExceeded(com.qrzen.app.data.model.AppBlock block) {
+        return false;
+    }
+    
+    private final boolean isWaitTimerBlocking(com.qrzen.app.data.model.AppBlock block) {
         return false;
     }
     
@@ -102,7 +129,7 @@ public final class BackgroundService extends android.app.Service {
     private final void launchLockScreen(java.lang.String blockedPkg, com.qrzen.app.data.model.AppBlock block) {
     }
     
-    private final void launchAllowlistOverlay(java.lang.String blockedPkg, com.qrzen.app.data.model.AppBlock block) {
+    private final void launchAllowlistOverlay(java.lang.String blockedPkg, java.util.List<com.qrzen.app.data.model.AppBlock> blocks) {
     }
     
     private final void sendToHome() {

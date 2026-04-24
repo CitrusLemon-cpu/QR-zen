@@ -88,11 +88,11 @@ class BlockAdapter(
                 UnlockMethodUtils.STYLE_USAGE_LIMIT -> {
                     val period = if (block.usageLimitPeriod == "HOURLY") "per hour" else "per day"
                     binding.tvTimeRange.text = "${block.usageLimitMinutes} min $period"
-                    binding.tvDays.text = "$modePrefix · Usage Limit"
+                    binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
                 }
                 UnlockMethodUtils.STYLE_WAIT_TIMER -> {
                     binding.tvTimeRange.text = "Wait ${block.waitTimerWaitMinutes}m after ${block.waitTimerUseMinutes}m use"
-                    binding.tvDays.text = "$modePrefix · Wait Timer"
+                    binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
                 }
                 else -> {
                     binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"

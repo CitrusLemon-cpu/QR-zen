@@ -230,6 +230,10 @@ class BackgroundService : Service() {
     }
 
     private fun isUsageLimitExceeded(block: AppBlock): Boolean {
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        if (block.activeDays.getOrNull(dayIndex) != '1') return false
+
         val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return false
         val now = System.currentTimeMillis()
         val startTime = when (block.usageLimitPeriod) {
@@ -253,6 +257,10 @@ class BackgroundService : Service() {
     }
 
     private fun isWaitTimerBlocking(block: AppBlock): Boolean {
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        if (block.activeDays.getOrNull(dayIndex) != '1') return false
+
         val now = System.currentTimeMillis()
         val blockingUntilKey = "wait_timer_blocking_${block.id}"
         val kv = com.tencent.mmkv.MMKV.defaultMMKV()
