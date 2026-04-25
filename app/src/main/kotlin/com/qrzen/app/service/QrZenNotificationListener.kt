@@ -6,71 +6,85 @@ import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.di.WidgetEntryPoint
 import dagger.hilt.android.EntryPointAccessors
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
 class QrZenNotificationListener : NotificationListenerService() {
-    private var cachedPackages: Set<String> = emptySet()
-    private var cachedAllowedPackages: Set<String> = emptySet()
-    private var cachedHasAllowlist: Boolean = false
-    private var lastFetchTime = 0L
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(Dispatchers.IO + job)
+    @Volatile private var cachedPackages: Set<String> = emptySet()
+    @Volatile private var cachedAllowedPackages: Set<String> = emptySet()
+    @Volatile private var cachedHasAllowlist: Boolean = false
+    @Volatile private var lastFetchTime = 0L
     private val fmt = DateTimeFormatter.ofPattern("HH:mm")
 
-    private val blockedPackages: Set<String>
-        get() {
-            val now = System.currentTimeMillis()
-            if (now - lastFetchTime > CACHE_TTL_MS) {
-                val dao = EntryPointAccessors.fromApplication(
-                    applicationContext,
-                    WidgetEntryPoint::class.java
-                ).appBlockDao()
-                runBlocking {
-                    val activeBlocks = dao.getAll().filter { it.isEnabled && it.pausedUntil < now && isBlockActive(it) }
-                    cachedPackages = activeBlocks
-                        .filter { !it.isAllowlistMode }
-                        .flatMap { it.appPackages.split(",").map(String::trim) }
+    private suspend fun refreshCacheIfNeeded() {
+        val now = System.currentTimeMillis()
+        if (now - lastFetchTime <= CACHE_TTL_MS) return
+
+        val dao = EntryPointAccessors.fromApplication(
+            applicationContext,
+            WidgetEntryPoint::class.java
+        ).appBlockDao()
+
+        val activeBlocks = dao.getAll().filter { it.isEnabled && it.pausedUntil < now && isBlockActive(it) }
+        cachedPackages = activeBlocks
+            .filter { !it.isAllowlistMode }
+            .flatMap { it.appPackages.split(",").map(String::trim) }
+            .filter(String::isNotEmpty)
+            .toSet()
+        val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
+        cachedHasAllowlist = allowlistBlocks.isNotEmpty()
+        cachedAllowedPackages = if (allowlistBlocks.isEmpty()) {
+            emptySet()
+        } else {
+            allowlistBlocks
+                .map { block ->
+                    block.appPackages
+                        .split(",")
+                        .map(String::trim)
                         .filter(String::isNotEmpty)
+                        .filterNot(Prefs::isAppTimerExpired)
                         .toSet()
-                    val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
-                    cachedHasAllowlist = allowlistBlocks.isNotEmpty()
-                    cachedAllowedPackages = if (allowlistBlocks.isEmpty()) {
-                        emptySet()
-                    } else {
-                        allowlistBlocks
-                            .map { block ->
-                                block.appPackages
-                                    .split(",")
-                                    .map(String::trim)
-                                    .filter(String::isNotEmpty)
-                                    .filterNot(Prefs::isAppTimerExpired)
-                                    .toSet()
-                            }
-                            .reduce { acc, allowed -> acc.intersect(allowed) }
-                    }
                 }
-                lastFetchTime = now
-            }
-            return cachedPackages
+                .reduce { acc, allowed -> acc.intersect(allowed) }
         }
+        lastFetchTime = now
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
         if (!Prefs.removeNotifications) return
         val notification = sbn ?: return
         val pkg = notification.packageName
         if (pkg == packageName) return
-        if (pkg in blockedPackages) {
-            cancelNotification(notification.key)
-            return
+        scope.launch {
+            refreshCacheIfNeeded()
+            val blocked = cachedPackages
+            val hasAllowlist = cachedHasAllowlist
+            val allowed = cachedAllowedPackages
+
+            if (pkg in blocked) {
+                cancelNotification(notification.key)
+                return@launch
+            }
+            if (hasAllowlist && pkg !in allowed && pkg !in SYSTEM_EXEMPT_PACKAGES) {
+                cancelNotification(notification.key)
+                return@launch
+            }
+            if (hasAllowlist && Prefs.isAppTimerExpired(pkg) && pkg !in SYSTEM_EXEMPT_PACKAGES) {
+                cancelNotification(notification.key)
+            }
         }
-        if (cachedHasAllowlist && pkg !in cachedAllowedPackages && pkg !in SYSTEM_EXEMPT_PACKAGES) {
-            cancelNotification(notification.key)
-            return
-        }
-        if (cachedHasAllowlist && Prefs.isAppTimerExpired(pkg) && pkg !in SYSTEM_EXEMPT_PACKAGES) {
-            cancelNotification(notification.key)
-        }
+    }
+
+    override fun onDestroy() {
+        job.cancel()
+        super.onDestroy()
     }
 
     private fun isBlockActive(block: AppBlock): Boolean {
