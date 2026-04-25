@@ -6,8 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.PopupMenu
-import androidx.lifecycle.findViewTreeLifecycleOwner
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
@@ -17,8 +15,10 @@ import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.ItemBlockBinding
 import com.qrzen.app.databinding.ItemSelectedAppIconBinding
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -62,6 +62,7 @@ class BlockAdapter(
     }
 
     inner class ViewHolder(val binding: ItemBlockBinding) : RecyclerView.ViewHolder(binding.root) {
+        private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         private var countDownTimer: CountDownTimer? = null
         private var blockNowTimer: CountDownTimer? = null
         private var usageStatusTimer: CountDownTimer? = null
@@ -97,14 +98,11 @@ class BlockAdapter(
                     binding.tvTimeRange.text = "${block.usageLimitMinutes} min $period"
                     binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
 
-                    val lifecycleOwner = binding.root.findViewTreeLifecycleOwner()
-                    if (lifecycleOwner != null) {
-                        usageQueryJob = lifecycleOwner.lifecycleScope.launch {
-                            val remainingText = withContext(Dispatchers.IO) {
-                                computeUsageLimitRemaining(binding.root.context, block)
-                            }
-                            binding.tvTimeRange.text = remainingText
+                    usageQueryJob = scope.launch {
+                        val remainingText = withContext(Dispatchers.IO) {
+                            computeUsageLimitRemaining(binding.root.context, block)
                         }
+                        binding.tvTimeRange.text = remainingText
                     }
                 }
                 UnlockMethodUtils.STYLE_WAIT_TIMER -> {
@@ -112,9 +110,7 @@ class BlockAdapter(
                     binding.tvTimeRange.text = "${block.waitTimerUseMinutes}m use / ${block.waitTimerWaitMinutes}m block ($modeLabel)"
                     binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
 
-                    val lifecycleOwner = binding.root.findViewTreeLifecycleOwner()
-                    if (lifecycleOwner != null) {
-                        usageQueryJob = lifecycleOwner.lifecycleScope.launch {
+                    usageQueryJob = scope.launch {
                             val status = withContext(Dispatchers.IO) {
                                 computeWaitTimerStatus(binding.root.context, block)
                             }
@@ -135,7 +131,6 @@ class BlockAdapter(
                                 }.start()
                             }
                         }
-                    }
                 }
                 else -> {
                     binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
@@ -172,15 +167,8 @@ class BlockAdapter(
                 binding.rvBlockApps.layoutManager = LinearLayoutManager(binding.root.context, LinearLayoutManager.HORIZONTAL, false)
             }
 
-            val lifecycleOwner = binding.root.findViewTreeLifecycleOwner()
-            if (lifecycleOwner == null) {
-                binding.rvBlockApps.visibility = View.GONE
-                binding.rvBlockApps.adapter = null
-                return
-            }
-
             val pm = binding.root.context.packageManager
-            iconLoadJob = lifecycleOwner.lifecycleScope.launch {
+            iconLoadJob = scope.launch {
                 val icons = withContext(Dispatchers.IO) {
                     packages.mapNotNull { pkg ->
                         try {
