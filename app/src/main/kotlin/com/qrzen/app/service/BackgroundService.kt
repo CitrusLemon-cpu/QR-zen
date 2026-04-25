@@ -438,6 +438,7 @@ class BackgroundService : Service() {
     }
 
     override fun onDestroy() {
+        scope.cancel()
         stopUsagePolling()
         wakeLock?.let {
             if (it.isHeld) it.release()
@@ -445,7 +446,6 @@ class BackgroundService : Service() {
         }
         handler.removeCallbacks(checkRunnable)
         super.onDestroy()
-        scope.cancel()
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
