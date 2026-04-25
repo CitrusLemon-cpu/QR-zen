@@ -2,6 +2,8 @@ package com.qrzen.app.service
 
 import android.accessibilityservice.AccessibilityService
 import android.app.KeyguardManager
+import android.app.usage.UsageStatsManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.content.pm.PackageManager
@@ -14,6 +16,7 @@ import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.di.WidgetEntryPoint
 import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
 import com.qrzen.app.ui.lock.LockScreenActivity
+import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +34,6 @@ class BlockAccessibilityService : AccessibilityService() {
         private const val TAG = "QrZenAccessibility"
         @Volatile var isRunning: Boolean = false
 
-        /** System packages that must never be blocked by allowlist mode. */
         private val SYSTEM_EXEMPT_PACKAGES = setOf(
             "com.android.systemui",
             "com.android.settings",
@@ -64,7 +66,6 @@ class BlockAccessibilityService : AccessibilityService() {
         )
     }
 
-    /** All packages that declare themselves as launchers (ACTION_MAIN + CATEGORY_HOME). */
     private val launcherPackages: Set<String> by lazy {
         val homeIntent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
@@ -111,7 +112,12 @@ class BlockAccessibilityService : AccessibilityService() {
             val dao = entryPoint.appBlockDao()
             val now = System.currentTimeMillis()
             if (Prefs.pauseAllUntil > now) return@launch
-            val activeBlocks = dao.getAll().filter { it.isEnabled && now > it.pausedUntil && isBlockActive(it) }
+
+            val allBlocks = dao.getAll().filter { it.isEnabled && !it.isArchived && now > it.pausedUntil }
+            val activeBlocks = mutableListOf<AppBlock>()
+            for (block in allBlocks) {
+                if (isBlockActive(block)) activeBlocks.add(block)
+            }
 
             val blocklistMatch = activeBlocks
                 .filter { !it.isAllowlistMode }
@@ -123,23 +129,59 @@ class BlockAccessibilityService : AccessibilityService() {
                 return@launch
             }
 
-            // Skip allowlist blocking for exempt packages and locked device
             if (isExemptFromAllowlist(pkg) || isDeviceLocked()) return@launch
 
-            val allowlistMatch = activeBlocks
-                .filter { it.isAllowlistMode }
-                .firstOrNull { block ->
-                    val allowed = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                    !allowed.contains(pkg) || Prefs.isAppTimerExpired(pkg)
+            val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
+            if (allowlistBlocks.isNotEmpty()) {
+                val allowedSets = allowlistBlocks.map { block ->
+                    block.appPackages.split(",")
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .filterNot { Prefs.isAppTimerExpired(it) }
+                        .toSet()
                 }
-            if (allowlistMatch != null) {
-                launchAllowlistOverlay(pkg, allowlistMatch)
+                val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }
+                if (!intersection.contains(pkg)) {
+                    launchAllowlistOverlay(pkg, allowlistBlocks)
+                }
             }
         }
     }
 
-    private fun isBlockActive(block: AppBlock): Boolean {
+    /**
+     * Style-aware block activation check.
+     * - MANUAL: only active via blockNowUntil
+     * - SCHEDULE: checks TimeBlock entries (falls back to legacy fields)
+     * - WAIT_TIMER: checks MMKV for active blocking period
+     * - USAGE_LIMIT: checks UsageStatsManager for exceeded limit
+     */
+    private suspend fun isBlockActive(block: AppBlock): Boolean {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
+        return when (block.blockingStyle) {
+            UnlockMethodUtils.STYLE_MANUAL -> false
+            UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
+            UnlockMethodUtils.STYLE_USAGE_LIMIT -> isUsageLimitExceeded(block)
+            UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block)
+            else -> isScheduleActive(block)
+        }
+    }
+
+    private suspend fun isScheduleActive(block: AppBlock): Boolean {
+        val timeBlocks = entryPoint.timeBlockDao().getByBlockId(block.id)
+        if (timeBlocks.isEmpty()) return isLegacyScheduleActive(block)
+        val now = LocalTime.now()
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        return timeBlocks.any { tb ->
+            if (tb.activeDays.getOrNull(dayIndex) != '1') return@any false
+            val start = LocalTime.parse(tb.startTime, fmt)
+            val end = LocalTime.parse(tb.endTime, fmt)
+            if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
+            else !now.isBefore(start) || !now.isAfter(end)
+        }
+    }
+
+    private fun isLegacyScheduleActive(block: AppBlock): Boolean {
         val now = LocalTime.now()
         val start = LocalTime.parse(block.startTime, fmt)
         val end = LocalTime.parse(block.endTime, fmt)
@@ -151,6 +193,53 @@ class BlockAccessibilityService : AccessibilityService() {
         return block.activeDays.getOrNull(dayIndex) == '1'
     }
 
+    /**
+     * Check if wait timer is currently in a blocking period by reading MMKV state.
+     * This is a fast check — the BackgroundService writes the blocking deadline to MMKV
+     * when usage threshold is exceeded.
+     */
+    private fun isWaitTimerBlocking(block: AppBlock): Boolean {
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        if (block.activeDays.getOrNull(dayIndex) != '1') return false
+
+        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
+        val blockingUntil = kv.decodeLong("wait_timer_blocking_${block.id}", 0L)
+        return blockingUntil > System.currentTimeMillis()
+    }
+
+    /**
+     * Check if usage limit is exceeded by querying UsageStatsManager.
+     * Mirrors the logic in BackgroundService.isUsageLimitExceeded().
+     */
+    private fun isUsageLimitExceeded(block: AppBlock): Boolean {
+        val cal = Calendar.getInstance()
+        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        if (block.activeDays.getOrNull(dayIndex) != '1') return false
+
+        val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
+            ?: return false
+        val now = System.currentTimeMillis()
+        val startTime = when (block.usageLimitPeriod) {
+            "HOURLY" -> now - 3_600_000L
+            else -> {
+                Calendar.getInstance().apply {
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }.timeInMillis
+            }
+        }
+        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val usageStats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, now)
+        val totalUsageMs = usageStats
+            ?.filter { it.packageName in packages }
+            ?.sumOf { it.totalTimeInForeground } ?: 0L
+        val limitMs = block.usageLimitMinutes * 60_000L
+        return totalUsageMs >= limitMs
+    }
+
     private fun launchLockScreen(blockedPkg: String, block: AppBlock) {
         startActivity(Intent(this, LockScreenActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -160,13 +249,15 @@ class BlockAccessibilityService : AccessibilityService() {
         logBlockEvent(block, blockedPkg)
     }
 
-    private fun launchAllowlistOverlay(blockedPkg: String, block: AppBlock) {
+    private fun launchAllowlistOverlay(blockedPkg: String, blocks: List<AppBlock>) {
         startActivity(Intent(this, AllowlistOverlayActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
-            putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_ID, block.id)
+            putExtra(AllowlistOverlayActivity.EXTRA_BLOCK_IDS, blocks.map { it.id }.toIntArray())
             putExtra(AllowlistOverlayActivity.EXTRA_BLOCKED_PKG, blockedPkg)
         })
-        logBlockEvent(block, blockedPkg)
+        for (block in blocks) {
+            logBlockEvent(block, blockedPkg)
+        }
     }
 
     private fun logBlockEvent(block: AppBlock, blockedPkg: String) {
