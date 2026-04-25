@@ -1,6 +1,7 @@
 package com.qrzen.app
 
 import android.app.Application
+import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.receiver.ServiceRestartWorker
 import com.qrzen.app.service.BackgroundService
 import com.tencent.mmkv.MMKV
@@ -11,6 +12,7 @@ class QrZenApp : Application() {
     override fun onCreate() {
         super.onCreate()
         MMKV.initialize(this)
+        Prefs.migrateMasterPasswordIfNeeded()
         BackgroundService.start(this)
         ServiceRestartWorker.ensureScheduled(this)
     }

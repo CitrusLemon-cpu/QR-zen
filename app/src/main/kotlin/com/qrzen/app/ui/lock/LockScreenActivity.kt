@@ -26,6 +26,8 @@ import com.qrzen.app.databinding.ActivityLockScreenBinding
 import com.qrzen.app.databinding.BottomSheetPauseDurationBinding
 import com.qrzen.app.ui.unlock.UnlockChallengeRenderer
 import com.qrzen.app.util.SilentModeHelper
+import com.qrzen.app.util.BruteForceGuard
+import com.qrzen.app.util.PasswordHasher
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -49,6 +51,8 @@ class LockScreenActivity : AppCompatActivity() {
     private var currentBlock: AppBlock? = null
     private var pauseSheetShown = false
     private var waitTimerCountdown: CountDownTimer? = null
+    private val masterPasswordGuard = BruteForceGuard()
+    private var masterPasswordLockoutRunnable: Runnable? = null
 
     private val qrScanLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         unlockRenderer.handleQrScanResult(result.data?.getStringExtra(CameraScan.SCAN_RESULT))
@@ -177,24 +181,77 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     private fun showMasterPasswordDialog(block: AppBlock) {
+        val initialLockout = masterPasswordGuard.checkAllowed()
+        if (initialLockout != null) {
+            showMasterPasswordLockout(initialLockout)
+            return
+        }
         val et = EditText(this).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             hint = getString(R.string.block_master_password)
         }
-        AlertDialog.Builder(this)
+        val dialog = AlertDialog.Builder(this)
             .setTitle(R.string.block_master_password)
             .setView(et)
-            .setPositiveButton(android.R.string.ok) { _, _ ->
-                if (et.text.toString() == Prefs.masterPassword) {
-                    binding.tvError.visibility = View.GONE
+            .setPositiveButton(android.R.string.ok, null)
+            .setNegativeButton(android.R.string.cancel, null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val lockoutRemaining = masterPasswordGuard.checkAllowed()
+                if (lockoutRemaining != null) {
+                    dialog.dismiss()
+                    showMasterPasswordLockout(lockoutRemaining)
+                    return@setOnClickListener
+                }
+                if (PasswordHasher.verify(et.text.toString(), Prefs.masterPassword)) {
+                    masterPasswordGuard.reset()
+                    clearMasterPasswordError()
+                    dialog.dismiss()
                     showPauseDurationSheet(block)
                 } else {
-                    binding.tvError.visibility = View.VISIBLE
-                    binding.tvError.text = getString(R.string.challenge_password_wrong)
+                    masterPasswordGuard.recordFailure()
+                    val updatedLockout = masterPasswordGuard.checkAllowed()
+                    if (updatedLockout != null) {
+                        et.error = formatLockoutMessage(updatedLockout)
+                        dialog.dismiss()
+                        showMasterPasswordLockout(updatedLockout)
+                    } else {
+                        et.error = getString(R.string.challenge_password_wrong)
+                        binding.tvError.visibility = View.VISIBLE
+                        binding.tvError.text = getString(R.string.challenge_password_wrong)
+                    }
                 }
             }
-            .setNegativeButton(android.R.string.cancel, null)
-            .show()
+        }
+        dialog.show()
+    }
+
+    private fun showMasterPasswordLockout(remainingMillis: Long) {
+        binding.tvError.visibility = View.VISIBLE
+        binding.tvError.text = formatLockoutMessage(remainingMillis)
+        binding.btnMasterPassword.isEnabled = false
+        masterPasswordLockoutRunnable?.let(binding.btnMasterPassword::removeCallbacks)
+        masterPasswordLockoutRunnable = Runnable {
+            val remaining = masterPasswordGuard.checkAllowed()
+            if (remaining != null) {
+                showMasterPasswordLockout(remaining)
+            } else {
+                binding.btnMasterPassword.isEnabled = true
+            }
+        }.also { binding.btnMasterPassword.postDelayed(it, remainingMillis) }
+    }
+
+    private fun clearMasterPasswordError() {
+        binding.tvError.visibility = View.GONE
+        binding.tvError.text = ""
+        binding.btnMasterPassword.isEnabled = true
+        masterPasswordLockoutRunnable?.let(binding.btnMasterPassword::removeCallbacks)
+        masterPasswordLockoutRunnable = null
+    }
+
+    private fun formatLockoutMessage(remainingMillis: Long): String {
+        return "Too many attempts. Try again in ${com.qrzen.app.ui.unlock.UnlockMethodUtils.formatCountdown(remainingMillis)}"
     }
 
     private fun setupWaitTimerCountdown(block: AppBlock) {
@@ -240,6 +297,7 @@ class LockScreenActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         waitTimerCountdown?.cancel()
+        masterPasswordLockoutRunnable?.let(binding.btnMasterPassword::removeCallbacks)
         unlockRenderer.clear()
         super.onDestroy()
     }

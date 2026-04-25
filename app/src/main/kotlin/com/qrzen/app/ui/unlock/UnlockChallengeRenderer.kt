@@ -17,6 +17,7 @@ import com.qrzen.app.databinding.ViewUnlockInfoBinding
 import com.qrzen.app.databinding.ViewUnlockPasswordBinding
 import com.qrzen.app.databinding.ViewUnlockQrBinding
 import com.qrzen.app.databinding.ViewUnlockTypeOverBinding
+import com.qrzen.app.util.BruteForceGuard
 
 class UnlockChallengeRenderer(
     private val activity: FragmentActivity,
@@ -27,6 +28,7 @@ class UnlockChallengeRenderer(
     private var currentQrBlock: AppBlock? = null
     private var onQrSuccess: (() -> Unit)? = null
     private var typeOverSessionText: String? = null
+    private val passwordGuard = BruteForceGuard()
 
     fun render(
         block: AppBlock,
@@ -97,6 +99,7 @@ class UnlockChallengeRenderer(
         currentQrBlock = null
         onQrSuccess = null
         typeOverSessionText = null
+        passwordGuard.reset()
         container.removeAllViews()
     }
 
@@ -143,11 +146,21 @@ class UnlockChallengeRenderer(
         binding.etPassword.inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         setupErrorClearing(binding.etPassword)
         binding.btnUnlock.setOnClickListener {
+            val lockoutRemaining = passwordGuard.checkAllowed()
+            if (lockoutRemaining != null) {
+                showError(formatLockoutMessage(lockoutRemaining))
+                return@setOnClickListener
+            }
             hideError()
             if (binding.etPassword.text?.toString() == block.blockPassword) {
+                passwordGuard.reset()
                 onUnlocked()
             } else {
-                showError(activity.getString(R.string.challenge_password_wrong))
+                passwordGuard.recordFailure()
+                showError(
+                    passwordGuard.checkAllowed()?.let(::formatLockoutMessage)
+                        ?: activity.getString(R.string.challenge_password_wrong)
+                )
             }
         }
     }
@@ -269,5 +282,9 @@ class UnlockChallengeRenderer(
     private fun hideError() {
         errorView.visibility = View.GONE
         errorView.text = ""
+    }
+
+    private fun formatLockoutMessage(remainingMillis: Long): String {
+        return "Too many attempts. Try again in ${UnlockMethodUtils.formatCountdown(remainingMillis)}"
     }
 }
