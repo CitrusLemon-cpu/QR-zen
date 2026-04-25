@@ -364,6 +364,23 @@
                         android:textSize="14sp" />
                 </LinearLayout>
 
+                <CheckBox
+                    android:id="@+id/cbWaitTimerAdaptive"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="4dp"
+                    android:text="Adaptive mode"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="When enabled, your remaining time gradually refills while you're away from the app. The refill speed depends on your block duration."
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textSize="12sp" />
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"

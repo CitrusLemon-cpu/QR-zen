@@ -91,6 +91,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var usageLimitPeriod: String = "DAILY"
     private var waitTimerWaitMinutes: Int = 30
     private var waitTimerUseMinutes: Int = 5
+    private var waitTimerAdaptive: Boolean = false
     private var timerBreakMinutes: Int = 0
     private var lockUntil: Long = 0L
     private var currentTimeBlocks: MutableList<TimeBlock> = mutableListOf()
@@ -213,6 +214,9 @@ class EditBlockActivity : AppCompatActivity() {
         binding.npWaitTimerUse.value = waitTimerUseMinutes
         binding.npWaitTimerUse.setOnValueChangedListener { _, _, newVal ->
             waitTimerUseMinutes = newVal
+        }
+        binding.cbWaitTimerAdaptive.setOnCheckedChangeListener { _, isChecked ->
+            waitTimerAdaptive = isChecked
         }
 
         binding.npPomodoroDuration.minValue = 1
@@ -354,6 +358,7 @@ class EditBlockActivity : AppCompatActivity() {
         usageLimitPeriod = block.usageLimitPeriod.ifBlank { "DAILY" }
         waitTimerWaitMinutes = block.waitTimerWaitMinutes.coerceIn(1, 120)
         waitTimerUseMinutes = block.waitTimerUseMinutes.coerceIn(1, 120)
+        waitTimerAdaptive = block.waitTimerAdaptive
         timerBreakMinutes = block.timerBreakMinutes
         lockUntil = block.lockUntil
 
@@ -400,6 +405,7 @@ class EditBlockActivity : AppCompatActivity() {
         binding.npUsageLimitMinutes.value = usageLimitMinutes.coerceIn(1, 480)
         binding.npWaitTimerWait.value = waitTimerWaitMinutes.coerceIn(1, 120)
         binding.npWaitTimerUse.value = waitTimerUseMinutes.coerceIn(1, 120)
+        binding.cbWaitTimerAdaptive.isChecked = waitTimerAdaptive
         binding.etTypeOverText.setText(typeOverText)
         binding.switchTypeOverRandom.isChecked = typeOverIsRandom
         binding.cgUsagePeriod.check(if (usageLimitPeriod == "HOURLY") R.id.chipHourly else R.id.chipDaily)
@@ -869,6 +875,7 @@ class EditBlockActivity : AppCompatActivity() {
         usageLimitPeriod = if (binding.cgUsagePeriod.checkedChipId == R.id.chipHourly) "HOURLY" else "DAILY"
         waitTimerWaitMinutes = binding.npWaitTimerWait.value
         waitTimerUseMinutes = binding.npWaitTimerUse.value
+        waitTimerAdaptive = binding.cbWaitTimerAdaptive.isChecked
         blockPassword = binding.etBlockPassword.text?.toString() ?: ""
         val confirmPassword = binding.etConfirmPassword.text?.toString() ?: ""
         typeOverIsRandom = binding.switchTypeOverRandom.isChecked
@@ -942,6 +949,7 @@ class EditBlockActivity : AppCompatActivity() {
             usageLimitPeriod = usageLimitPeriod,
             waitTimerWaitMinutes = waitTimerWaitMinutes,
             waitTimerUseMinutes = waitTimerUseMinutes,
+            waitTimerAdaptive = waitTimerAdaptive,
             timerBreakMinutes = timerBreakMinutes
         )
 

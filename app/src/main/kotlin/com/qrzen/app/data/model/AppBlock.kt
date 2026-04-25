@@ -73,5 +73,6 @@ data class AppBlock(
     val usageLimitPeriod: String = "DAILY",
     val waitTimerWaitMinutes: Int = 30,
     val waitTimerUseMinutes: Int = 5,
+    val waitTimerAdaptive: Boolean = false,
     val timerBreakMinutes: Int = 0
 )

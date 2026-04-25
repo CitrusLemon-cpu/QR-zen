@@ -108,7 +108,8 @@ class BlockAdapter(
                     }
                 }
                 UnlockMethodUtils.STYLE_WAIT_TIMER -> {
-                    binding.tvTimeRange.text = "Wait ${block.waitTimerWaitMinutes}m after ${block.waitTimerUseMinutes}m use"
+                    val modeLabel = if (block.waitTimerAdaptive) "Adaptive" else "Normal"
+                    binding.tvTimeRange.text = "${block.waitTimerUseMinutes}m use / ${block.waitTimerWaitMinutes}m block ($modeLabel)"
                     binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
 
                     val lifecycleOwner = binding.root.findViewTreeLifecycleOwner()
@@ -129,7 +130,7 @@ class BlockAdapter(
                                     }
 
                                     override fun onFinish() {
-                                        binding.tvTimeRange.text = "${block.waitTimerUseMinutes}m of use left"
+                                        binding.tvTimeRange.text = computeWaitTimerStatus(binding.root.context, block).text
                                     }
                                 }.start()
                             }
@@ -332,14 +333,30 @@ class BlockAdapter(
             }
         }
         val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        val usageStats = usageStatsManager.queryUsageStats(
-            android.app.usage.UsageStatsManager.INTERVAL_BEST,
-            startTime,
-            now
-        )
-        val totalUsageMs = usageStats
-            ?.filter { it.packageName in packages }
-            ?.sumOf { it.totalTimeInForeground } ?: 0L
+        val events = usageStatsManager.queryEvents(startTime, now)
+        val event = android.app.usage.UsageEvents.Event()
+        val foregroundStartTimes = mutableMapOf<String, Long>()
+        var totalUsageMs = 0L
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val pkg = event.packageName ?: continue
+            if (pkg !in packages) continue
+            when (event.eventType) {
+                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+                    foregroundStartTimes[pkg] = event.timeStamp
+                }
+                android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val start = foregroundStartTimes.remove(pkg)
+                    if (start != null) {
+                        totalUsageMs += (event.timeStamp - start).coerceAtLeast(0L)
+                    }
+                }
+            }
+        }
+        for ((_, start) in foregroundStartTimes) {
+            totalUsageMs += (now - start).coerceAtLeast(0L)
+        }
 
         val limitMs = block.usageLimitMinutes * 60_000L
         val remainingMs = (limitMs - totalUsageMs).coerceAtLeast(0L)
@@ -353,10 +370,11 @@ class BlockAdapter(
         }
     }
 
-    private fun computeWaitTimerStatus(context: Context, block: AppBlock): WaitTimerStatus {
+    private fun computeWaitTimerStatus(@Suppress("UNUSED_PARAMETER") context: Context, block: AppBlock): WaitTimerStatus {
         val now = System.currentTimeMillis()
         val kv = com.tencent.mmkv.MMKV.defaultMMKV()
         val blockingUntilKey = "wait_timer_blocking_${block.id}"
+        val remainingKey = "wait_timer_remaining_${block.id}"
         val blockingUntil = kv.decodeLong(blockingUntilKey, 0L)
 
         if (blockingUntil > now) {
@@ -365,30 +383,17 @@ class BlockAdapter(
             return WaitTimerStatus("Blocked for ${remainingMin}m", remainingMs)
         }
 
-        val lastResetKey = "wait_timer_reset_${block.id}"
-        val lastReset = kv.decodeLong(lastResetKey, now)
+        val remaining = kv.decodeLong(remainingKey, -1L)
+        val maxMs = block.waitTimerUseMinutes * 60_000L
+        val actualRemaining = if (remaining < 0L) maxMs else remaining
+        val remainingMin = actualRemaining / 60_000L
+        val remainingSec = (actualRemaining % 60_000L) / 1000L
 
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
-            ?: return WaitTimerStatus("${block.waitTimerUseMinutes}m of use left", 0L)
-
-        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        val usageStats = usageStatsManager.queryUsageStats(
-            android.app.usage.UsageStatsManager.INTERVAL_BEST,
-            lastReset,
-            now
-        )
-        val totalUsageMs = usageStats
-            ?.filter { it.packageName in packages }
-            ?.sumOf { it.totalTimeInForeground } ?: 0L
-
-        val thresholdMs = block.waitTimerUseMinutes * 60_000L
-        val remainingUseMs = (thresholdMs - totalUsageMs).coerceAtLeast(0L)
-        val remainingUseMin = remainingUseMs / 60_000L
-
-        return if (remainingUseMs <= 0L) {
+        return if (actualRemaining <= 0L) {
             WaitTimerStatus("Block pending", 0L)
         } else {
-            WaitTimerStatus("${remainingUseMin}m of use left", 0L)
+            val modeLabel = if (block.waitTimerAdaptive) "Adaptive" else "Normal"
+            WaitTimerStatus("${remainingMin}m ${remainingSec}s left ($modeLabel)", 0L)
         }
     }
 

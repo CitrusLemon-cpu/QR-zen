@@ -8,7 +8,7 @@ import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.data.model.TimeBlock
 
-@Database(entities = [AppBlock::class, BlockEvent::class, TimeBlock::class], version = 8, exportSchema = false)
+@Database(entities = [AppBlock::class, BlockEvent::class, TimeBlock::class], version = 9, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appBlockDao(): AppBlockDao
     abstract fun blockEventDao(): BlockEventDao
@@ -69,6 +69,12 @@ abstract class AppDatabase : RoomDatabase() {
                     WHERE isArchived = 0
                     """.trimIndent()
                 )
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE app_blocks ADD COLUMN waitTimerAdaptive INTEGER NOT NULL DEFAULT 0")
             }
         }
     }
