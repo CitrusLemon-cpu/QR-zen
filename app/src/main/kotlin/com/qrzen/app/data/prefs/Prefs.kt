@@ -1,5 +1,6 @@
 package com.qrzen.app.data.prefs
 
+import com.qrzen.app.util.PasswordHasher
 import com.tencent.mmkv.MMKV
 
 object Prefs {
@@ -29,6 +30,13 @@ object Prefs {
     var silentMode: Boolean
         get() = kv.decodeBool(KEY_SILENT, false)
         set(v) { kv.encode(KEY_SILENT, v) }
+
+    fun migrateMasterPasswordIfNeeded() {
+        val current = masterPassword
+        if (current.isNotEmpty() && !PasswordHasher.isHashed(current)) {
+            masterPassword = PasswordHasher.hash(current)
+        }
+    }
 
     fun getAppTimerExpiry(packageName: String): Long {
         return kv.decodeLong("${KEY_APP_TIMER_PREFIX}$packageName", 0L)

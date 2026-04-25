@@ -16,6 +16,8 @@ import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.FragmentSettingsBinding
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
+import com.qrzen.app.util.BruteForceGuard
+import com.qrzen.app.util.PasswordHasher
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
@@ -28,6 +30,7 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
     private var isUpdatingMasterPasswordSwitch = false
+    private val masterPasswordGuard = BruteForceGuard()
     private val pauseAllOptions = listOf(
         PauseAllOption("30 minutes", 30 * 60_000L),
         PauseAllOption("1 hour", 60 * 60_000L),
@@ -46,7 +49,7 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         binding.swMasterPwd.isChecked = Prefs.masterPasswordEnabled
-        binding.etMasterPwd.setText(Prefs.masterPassword)
+        binding.etMasterPwd.setText("")
         binding.swRemoveNotif.isChecked = Prefs.removeNotifications
         binding.swSilentMode.isChecked = Prefs.silentMode
         updateMasterPasswordViews()
@@ -75,16 +78,17 @@ class SettingsFragment : Fragment() {
                 binding.tilMasterPwd.error = "Password cannot be empty"
                 return@setOnClickListener
             }
-            if (existingPassword.isNotEmpty() && currentPassword != existingPassword) {
+            if (existingPassword.isNotEmpty() && !PasswordHasher.verify(currentPassword, existingPassword)) {
                 binding.tilOldPwd.error = getString(R.string.settings_old_password_wrong)
                 return@setOnClickListener
             }
             binding.tilOldPwd.error = null
             binding.tilMasterPwd.error = null
-            Prefs.masterPassword = newPassword
+            Prefs.masterPassword = PasswordHasher.hash(newPassword)
             Prefs.masterPasswordEnabled = true
             Snackbar.make(binding.root, "Master password saved", Snackbar.LENGTH_SHORT).show()
             binding.etOldPwd.text?.clear()
+            binding.etMasterPwd.text?.clear()
             updateMasterPasswordViews()
             updatePauseAllViews()
         }
@@ -183,6 +187,15 @@ class SettingsFragment : Fragment() {
     }
 
     private fun promptForMasterPassword(titleRes: Int, onVerified: () -> Unit) {
+        val initialLockout = masterPasswordGuard.checkAllowed()
+        if (initialLockout != null) {
+            Snackbar.make(
+                binding.root,
+                formatLockoutMessage(initialLockout),
+                Snackbar.LENGTH_SHORT
+            ).show()
+            return
+        }
         val passwordInput = EditText(requireContext()).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
             hint = getString(R.string.settings_old_password_hint)
@@ -197,10 +210,17 @@ class SettingsFragment : Fragment() {
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val enteredPassword = passwordInput.text?.toString().orEmpty()
+                val lockoutRemaining = masterPasswordGuard.checkAllowed()
                 when {
+                    lockoutRemaining != null -> passwordInput.error = formatLockoutMessage(lockoutRemaining)
                     enteredPassword.isBlank() -> passwordInput.error = getString(R.string.settings_master_pwd_required)
-                    enteredPassword != Prefs.masterPassword -> passwordInput.error = getString(R.string.settings_old_password_wrong)
+                    !PasswordHasher.verify(enteredPassword, Prefs.masterPassword) -> {
+                        masterPasswordGuard.recordFailure()
+                        passwordInput.error = masterPasswordGuard.checkAllowed()?.let(::formatLockoutMessage)
+                            ?: getString(R.string.settings_old_password_wrong)
+                    }
                     else -> {
+                        masterPasswordGuard.reset()
                         passwordInput.error = null
                         dialog.dismiss()
                         onVerified()
@@ -209,6 +229,10 @@ class SettingsFragment : Fragment() {
             }
         }
         dialog.show()
+    }
+
+    private fun formatLockoutMessage(remainingMillis: Long): String {
+        return "Too many attempts. Try again in ${UnlockMethodUtils.formatCountdown(remainingMillis)}"
     }
 
     private fun showPauseAllDurationDialog() {
