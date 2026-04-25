@@ -185,14 +185,14 @@ class BackgroundService : Service() {
         }
     }
 
-    private suspend fun isBlockActive(block: AppBlock): Boolean {
+    private suspend fun isBlockActive(block: AppBlock, foregroundPkg: String? = null): Boolean {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
 
         return when (block.blockingStyle) {
             UnlockMethodUtils.STYLE_MANUAL -> false
             UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
             UnlockMethodUtils.STYLE_USAGE_LIMIT -> isUsageLimitExceeded(block)
-            UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block)
+            UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block, foregroundPkg)
             else -> isScheduleActive(block)
         }
     }
@@ -248,43 +248,98 @@ class BackgroundService : Service() {
             }
         }
         val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        val usageStats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, now)
-        val totalUsageMs = usageStats
-            ?.filter { it.packageName in packages }
-            ?.sumOf { it.totalTimeInForeground } ?: 0L
+        val events = usageStatsManager.queryEvents(startTime, now)
+        val event = UsageEvents.Event()
+        val foregroundStartTimes = mutableMapOf<String, Long>()
+        var totalUsageMs = 0L
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val pkg = event.packageName ?: continue
+            if (pkg !in packages) continue
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> foregroundStartTimes[pkg] = event.timeStamp
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val start = foregroundStartTimes.remove(pkg)
+                    if (start != null) {
+                        totalUsageMs += (event.timeStamp - start).coerceAtLeast(0L)
+                    }
+                }
+            }
+        }
+        for ((_, start) in foregroundStartTimes) {
+            totalUsageMs += (now - start).coerceAtLeast(0L)
+        }
+
         val limitMs = block.usageLimitMinutes * 60_000L
         return totalUsageMs >= limitMs
     }
 
-    private fun isWaitTimerBlocking(block: AppBlock): Boolean {
+    private fun isWaitTimerBlocking(block: AppBlock, foregroundPkg: String? = null): Boolean {
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
         if (block.activeDays.getOrNull(dayIndex) != '1') return false
 
+        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
         val now = System.currentTimeMillis()
         val blockingUntilKey = "wait_timer_blocking_${block.id}"
-        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
-        val blockingUntil = kv.decodeLong(blockingUntilKey, 0L)
+        val remainingKey = "wait_timer_remaining_${block.id}"
+        val lastUpdateKey = "wait_timer_last_update_${block.id}"
+        val inAppKey = "wait_timer_in_app_${block.id}"
+        val maxRemainingMs = block.waitTimerUseMinutes * 60_000L
 
+        val blockingUntil = kv.decodeLong(blockingUntilKey, 0L)
         if (blockingUntil > now) return true
 
-        val lastResetKey = "wait_timer_reset_${block.id}"
-        val lastReset = kv.decodeLong(lastResetKey, now)
+        if (blockingUntil > 0L) {
+            kv.encode(remainingKey, maxRemainingMs)
+            kv.encode(blockingUntilKey, 0L)
+            kv.encode(lastUpdateKey, now)
+            kv.encode(inAppKey, false)
+            return false
+        }
 
-        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return false
+        if (foregroundPkg == null) return false
+
+        var remaining = kv.decodeLong(remainingKey, -1L)
+        if (remaining < 0L) {
+            remaining = maxRemainingMs
+            kv.encode(remainingKey, remaining)
+            kv.encode(lastUpdateKey, now)
+            kv.encode(inAppKey, false)
+            return false
+        }
+
+        val lastUpdate = kv.decodeLong(lastUpdateKey, now)
+        val elapsed = (now - lastUpdate).coerceAtLeast(0L)
+        val wasInApp = kv.decodeBool(inAppKey, false)
         val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        val usageStats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, lastReset, now)
-        val totalUsageMs = usageStats
-            ?.filter { it.packageName in packages }
-            ?.sumOf { it.totalTimeInForeground } ?: 0L
-        val thresholdMs = block.waitTimerUseMinutes * 60_000L
+        val isInApp = foregroundPkg in packages
 
-        if (totalUsageMs >= thresholdMs) {
+        if (isInApp) {
+            if (wasInApp) {
+                val decrement = elapsed.coerceAtMost(5_000L)
+                remaining = (remaining - decrement).coerceAtLeast(0L)
+            }
+            kv.encode(inAppKey, true)
+        } else {
+            if (block.waitTimerAdaptive && !wasInApp && elapsed > 0L) {
+                val refillRate = block.waitTimerUseMinutes.toDouble() / block.waitTimerWaitMinutes.toDouble()
+                val refillMs = (elapsed * refillRate).toLong()
+                remaining = (remaining + refillMs).coerceAtMost(maxRemainingMs)
+            }
+            kv.encode(inAppKey, false)
+        }
+
+        kv.encode(remainingKey, remaining)
+        kv.encode(lastUpdateKey, now)
+
+        if (remaining <= 0L) {
             val waitUntil = now + block.waitTimerWaitMinutes * 60_000L
             kv.encode(blockingUntilKey, waitUntil)
-            kv.encode(lastResetKey, waitUntil)
             return true
         }
+
         return false
     }
 
@@ -357,7 +412,7 @@ class BackgroundService : Service() {
         }
         val activeBlocks = mutableListOf<AppBlock>()
         for (block in allCandidates) {
-            if (isBlockActive(block)) activeBlocks.add(block)
+            if (isBlockActive(block, pkg)) activeBlocks.add(block)
         }
 
         val blocklistBlock = activeBlocks

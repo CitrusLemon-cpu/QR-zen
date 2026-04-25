@@ -2,6 +2,7 @@ package com.qrzen.app.service
 
 import android.accessibilityservice.AccessibilityService
 import android.app.KeyguardManager
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
@@ -232,10 +233,29 @@ class BlockAccessibilityService : AccessibilityService() {
             }
         }
         val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        val usageStats = usageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, startTime, now)
-        val totalUsageMs = usageStats
-            ?.filter { it.packageName in packages }
-            ?.sumOf { it.totalTimeInForeground } ?: 0L
+        val events = usageStatsManager.queryEvents(startTime, now)
+        val event = UsageEvents.Event()
+        val foregroundStartTimes = mutableMapOf<String, Long>()
+        var totalUsageMs = 0L
+
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val pkg = event.packageName ?: continue
+            if (pkg !in packages) continue
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> foregroundStartTimes[pkg] = event.timeStamp
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    val start = foregroundStartTimes.remove(pkg)
+                    if (start != null) {
+                        totalUsageMs += (event.timeStamp - start).coerceAtLeast(0L)
+                    }
+                }
+            }
+        }
+        for ((_, start) in foregroundStartTimes) {
+            totalUsageMs += (now - start).coerceAtLeast(0L)
+        }
+
         val limitMs = block.usageLimitMinutes * 60_000L
         return totalUsageMs >= limitMs
     }
