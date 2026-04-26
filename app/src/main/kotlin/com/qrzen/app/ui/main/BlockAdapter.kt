@@ -12,6 +12,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ItemBlockBinding
 import com.qrzen.app.databinding.ItemSelectedAppIconBinding
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
@@ -300,6 +301,13 @@ class BlockAdapter(
 
         private fun setupActiveTimer(block: AppBlock) {
             val now = System.currentTimeMillis()
+            val usageRemaining = Prefs.getAllowlistUsageRemaining(block.id)
+            if (usageRemaining > 0L) {
+                binding.tvActiveTimer.visibility = View.VISIBLE
+                binding.tvActiveTimer.text = "⏱ ${formatDuration(usageRemaining)} usage left"
+                activeTimer = null
+                return
+            }
             if (block.activeUntil > now) {
                 binding.tvActiveTimer.visibility = View.VISIBLE
                 val remaining = block.activeUntil - now

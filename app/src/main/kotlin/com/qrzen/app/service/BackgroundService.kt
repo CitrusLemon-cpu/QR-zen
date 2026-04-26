@@ -55,9 +55,11 @@ class BackgroundService : Service() {
     private var lastBlockedTime = 0L
     private var wakeLock: PowerManager.WakeLock? = null
     private var waitTimerOverlay: WaitTimerOverlay? = null
+    private var appTimerOverlay: AppTimerOverlay? = null
     private var overlayHideCounter = 0
     private val pomodoroNotifIds = mutableMapOf<Int, Int>()
     private var nextPomodoroNotifId = 3000
+    private val iconCache = mutableMapOf<String, android.graphics.drawable.Drawable>()
 
     private val systemExemptPackages = setOf(
         "com.android.systemui",
@@ -135,6 +137,9 @@ class BackgroundService : Service() {
         if (waitTimerOverlay == null) {
             waitTimerOverlay = WaitTimerOverlay(this)
         }
+        if (appTimerOverlay == null) {
+            appTimerOverlay = AppTimerOverlay(this)
+        }
         acquireWakeLock()
         AlarmKeepaliveReceiver.schedule(applicationContext)
         handler.removeCallbacks(checkRunnable)
@@ -178,6 +183,7 @@ class BackgroundService : Service() {
             }
             .forEach { block ->
                 if (block.autoDisableOnToggleLockExpiry || block.isAllowlistMode) {
+                    Prefs.clearAllowlistUsageTimer(block.id)
                     dao.update(
                         block.copy(
                             isEnabled = false,
@@ -203,6 +209,7 @@ class BackgroundService : Service() {
                     now > block.activeUntil
             }
             .forEach { block ->
+                Prefs.clearAllowlistUsageTimer(block.id)
                 dao.update(
                     block.copy(
                         isEnabled = false,
@@ -265,7 +272,11 @@ class BackgroundService : Service() {
                 it.blockingStyle == UnlockMethodUtils.STYLE_POMODORO &&
                 it.pomodoroRoundsTotal > 0
         }
-        val needsPolling = hasActiveBlocks || hasWaitTimerBlocks || hasPomodoroBlocks
+        val hasUsageTimers = allBlocks.any {
+            it.isEnabled && !it.isArchived && it.isAllowlistMode &&
+                Prefs.hasAllowlistUsageTimer(it.id)
+        }
+        val needsPolling = hasActiveBlocks || hasWaitTimerBlocks || hasPomodoroBlocks || hasUsageTimers
         if (needsPolling) {
             startUsagePolling()
         } else {
@@ -524,15 +535,22 @@ class BackgroundService : Service() {
     }
 
     private suspend fun checkForegroundApp() {
+        val now = System.currentTimeMillis()
+        val allCandidates = dao.getAll().filter {
+            it.isEnabled && !it.isArchived && now > it.pausedUntil
+        }
         if (isDeviceLocked()) {
             overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
+            pauseUsageTimers(allCandidates)
+            appTimerOverlay?.hide()
             return
         }
-        val now = System.currentTimeMillis()
         if (Prefs.pauseAllUntil > now) {
             overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
+            pauseUsageTimers(allCandidates)
+            appTimerOverlay?.hide()
             return
         }
 
@@ -540,18 +558,21 @@ class BackgroundService : Service() {
         if (pkg == null) {
             overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
+            pauseUsageTimers(allCandidates)
+            appTimerOverlay?.hide()
             return
-        }
-        val allCandidates = dao.getAll().filter {
-            it.isEnabled && !it.isArchived && now > it.pausedUntil
         }
         if (isExemptPackage(pkg)) {
             updateTimerOverlays(allCandidates, null)
+            pauseUsageTimers(allCandidates)
+            appTimerOverlay?.hide()
             return
         }
         if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
             overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
+            pauseUsageTimers(allCandidates)
+            appTimerOverlay?.hide()
             return
         }
         val activeBlocks = mutableListOf<AppBlock>()
@@ -569,11 +590,14 @@ class BackgroundService : Service() {
             lastBlockedTime = now
             overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
+            pauseUsageTimers(allCandidates)
+            appTimerOverlay?.hide()
             launchLockScreen(pkg, blocklistBlock)
             return
         }
 
         val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
+        var allowedForegroundPkg: String? = pkg
         if (allowlistBlocks.isNotEmpty()) {
             val allowedSets = allowlistBlocks.map { block ->
                 block.appPackages.split(",")
@@ -588,11 +612,139 @@ class BackgroundService : Service() {
                 lastBlockedTime = now
                 overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
                 waitTimerOverlay?.hide()
+                allowedForegroundPkg = null
                 launchAllowlistOverlay(pkg, allowlistBlocks)
             }
         }
 
         updateTimerOverlays(allCandidates, pkg)
+        trackAllowlistUsageTimers(activeBlocks, allowedForegroundPkg ?: "")
+        trackPerAppTimers(activeBlocks, allowedForegroundPkg ?: "")
+        updateAppTimerOverlay(activeBlocks, allowedForegroundPkg)
+    }
+
+    private fun pauseUsageTimers(blocks: List<AppBlock>) {
+        trackAllowlistUsageTimers(blocks, "")
+        trackPerAppTimers(blocks, "")
+    }
+
+    private fun trackAllowlistUsageTimers(blocks: List<AppBlock>, foregroundPkg: String) {
+        val now = System.currentTimeMillis()
+        for (block in blocks) {
+            if (!block.isAllowlistMode) continue
+            if (!block.isEnabled || block.isArchived) continue
+            val remaining = Prefs.getAllowlistUsageRemaining(block.id)
+            if (remaining <= 0L) continue
+
+            val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+            val isInAllowedApp = foregroundPkg in packages && !Prefs.isAppTimerExpired(foregroundPkg)
+
+            if (isInAllowedApp) {
+                val lastFg = Prefs.getAllowlistUsageLastFg(block.id)
+                if (lastFg > 0L) {
+                    val elapsed = (now - lastFg).coerceAtLeast(0L).coerceAtMost(5_000L)
+                    val newRemaining = (remaining - elapsed).coerceAtLeast(0L)
+                    Prefs.setAllowlistUsageRemaining(block.id, newRemaining)
+                    if (newRemaining <= 0L) {
+                        Prefs.clearAllowlistUsageTimer(block.id)
+                        scope.launch {
+                            dao.update(
+                                block.copy(
+                                    isEnabled = false,
+                                    activeUntil = 0L,
+                                    toggleLockUntil = 0L,
+                                    autoDisableOnToggleLockExpiry = false
+                                )
+                            )
+                            WidgetRefresh.refresh(applicationContext)
+                        }
+                        continue
+                    }
+                }
+                Prefs.setAllowlistUsageLastFg(block.id, now)
+            } else {
+                Prefs.setAllowlistUsageLastFg(block.id, 0L)
+            }
+        }
+    }
+
+    private fun trackPerAppTimers(blocks: List<AppBlock>, foregroundPkg: String) {
+        val allAllowlistPkgs = mutableSetOf<String>()
+        for (block in blocks) {
+            if (!block.isAllowlistMode || !block.isEnabled || block.isArchived) continue
+            block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
+                allAllowlistPkgs.add(it)
+            }
+        }
+
+        val now = System.currentTimeMillis()
+        for (pkg in allAllowlistPkgs) {
+            val remaining = Prefs.getAppTimerRemaining(pkg)
+            if (remaining <= 0L) continue
+
+            if (pkg == foregroundPkg) {
+                val lastFg = Prefs.getAppTimerLastFg(pkg)
+                if (lastFg > 0L) {
+                    val elapsed = (now - lastFg).coerceAtLeast(0L).coerceAtMost(5_000L)
+                    val newRemaining = (remaining - elapsed).coerceAtLeast(0L)
+                    Prefs.setAppTimerRemaining(pkg, newRemaining)
+                    if (newRemaining <= 0L) {
+                        Prefs.setAppTimerLastFg(pkg, 0L)
+                        continue
+                    }
+                }
+                Prefs.setAppTimerLastFg(pkg, now)
+            } else {
+                Prefs.setAppTimerLastFg(pkg, 0L)
+            }
+        }
+    }
+
+    private fun updateAppTimerOverlay(blocks: List<AppBlock>, foregroundPkg: String?) {
+        if (foregroundPkg == null || isExemptPackage(foregroundPkg)) {
+            appTimerOverlay?.hide()
+            return
+        }
+
+        val entries = mutableListOf<AppTimerOverlay.TimerEntry>()
+        val perAppRemaining = Prefs.getAppTimerRemaining(foregroundPkg)
+        if (perAppRemaining > 0L) {
+            val icon = getOrLoadIcon(foregroundPkg)
+            if (icon != null) {
+                entries.add(AppTimerOverlay.TimerEntry(foregroundPkg, icon, perAppRemaining))
+            }
+        }
+
+        if (entries.isEmpty()) {
+            for (block in blocks) {
+                if (!block.isAllowlistMode || !block.isEnabled || block.isArchived) continue
+                val remaining = Prefs.getAllowlistUsageRemaining(block.id)
+                if (remaining <= 0L) continue
+                val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                if (foregroundPkg in packages) {
+                    val icon = getOrLoadIcon(foregroundPkg)
+                    if (icon != null) {
+                        entries.add(AppTimerOverlay.TimerEntry(foregroundPkg, icon, remaining))
+                    }
+                    break
+                }
+            }
+        }
+
+        if (entries.isNotEmpty()) {
+            appTimerOverlay?.update(entries)
+        } else {
+            appTimerOverlay?.hide()
+        }
+    }
+
+    private fun getOrLoadIcon(pkg: String): android.graphics.drawable.Drawable? {
+        iconCache[pkg]?.let { return it }
+        return try {
+            packageManager.getApplicationIcon(pkg).also { iconCache[pkg] = it }
+        } catch (_: Exception) {
+            null
+        }
     }
 
     private fun updateTimerOverlays(blocks: List<AppBlock>, foregroundPkg: String?) {
@@ -674,6 +826,7 @@ class BackgroundService : Service() {
         lastBlockedPkg = null
         overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
         waitTimerOverlay?.hide()
+        appTimerOverlay?.hide()
     }
 
     private fun acquireWakeLock() {
@@ -693,6 +846,9 @@ class BackgroundService : Service() {
         pomodoroNotifIds.clear()
         waitTimerOverlay?.destroy()
         waitTimerOverlay = null
+        appTimerOverlay?.destroy()
+        appTimerOverlay = null
+        iconCache.clear()
         scope.cancel()
         stopUsagePolling()
         wakeLock?.let {
