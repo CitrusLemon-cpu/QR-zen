@@ -244,8 +244,11 @@ class BackgroundService : Service() {
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
         if (block.activeDays.getOrNull(dayIndex) != '1') return false
+        return computeUsageLimitRemainingMs(block) <= 0L
+    }
 
-        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return false
+    private fun computeUsageLimitRemainingMs(block: AppBlock): Long {
+        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return block.usageLimitMinutes * 60_000L
         val now = System.currentTimeMillis()
         val startTime = when (block.usageLimitPeriod) {
             "HOURLY" -> now - 3_600_000L
@@ -272,18 +275,15 @@ class BackgroundService : Service() {
                 UsageEvents.Event.MOVE_TO_FOREGROUND -> foregroundStartTimes[pkg] = event.timeStamp
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     val start = foregroundStartTimes.remove(pkg)
-                    if (start != null) {
-                        totalUsageMs += (event.timeStamp - start).coerceAtLeast(0L)
-                    }
+                    if (start != null) totalUsageMs += (event.timeStamp - start).coerceAtLeast(0L)
                 }
             }
         }
         for ((_, start) in foregroundStartTimes) {
             totalUsageMs += (now - start).coerceAtLeast(0L)
         }
-
         val limitMs = block.usageLimitMinutes * 60_000L
-        return totalUsageMs >= limitMs
+        return (limitMs - totalUsageMs).coerceAtLeast(0L)
     }
 
     private fun isWaitTimerBlocking(block: AppBlock, foregroundPkg: String? = null): Boolean {
@@ -427,7 +427,7 @@ class BackgroundService : Service() {
             it.isEnabled && !it.isArchived && now > it.pausedUntil
         }
         if (isExemptPackage(pkg)) {
-            updateWaitTimerOverlay(allCandidates)
+            updateTimerOverlays(allCandidates, null)
             return
         }
         if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
@@ -473,26 +473,44 @@ class BackgroundService : Service() {
             }
         }
 
-        updateWaitTimerOverlay(allCandidates)
+        updateTimerOverlays(allCandidates, pkg)
     }
 
-    private fun updateWaitTimerOverlay(blocks: List<AppBlock>) {
+    private fun updateTimerOverlays(blocks: List<AppBlock>, foregroundPkg: String?) {
         val kv = MMKV.defaultMMKV()
-        var showRemaining: Long? = null
+        val entries = mutableListOf<WaitTimerOverlay.TimerEntry>()
 
         for (block in blocks) {
             if (block.blockingStyle != UnlockMethodUtils.STYLE_WAIT_TIMER) continue
+            if (!block.showTimer) continue
             if (kv.decodeBool("wait_timer_in_app_${block.id}", false)) {
                 val remaining = kv.decodeLong("wait_timer_remaining_${block.id}", -1L)
                 if (remaining > 0L) {
-                    showRemaining = if (showRemaining == null) remaining else minOf(showRemaining, remaining)
+                    entries.add(WaitTimerOverlay.TimerEntry(block.id, block.title, remaining))
                 }
             }
         }
 
-        if (showRemaining != null) {
+        if (foregroundPkg != null) {
+            for (block in blocks) {
+                if (block.blockingStyle != UnlockMethodUtils.STYLE_USAGE_LIMIT) continue
+                if (!block.showTimer) continue
+                val cal = Calendar.getInstance()
+                val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+                if (block.activeDays.getOrNull(dayIndex) != '1') continue
+                val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                if (foregroundPkg in packages) {
+                    val remaining = computeUsageLimitRemainingMs(block)
+                    if (remaining > 0L) {
+                        entries.add(WaitTimerOverlay.TimerEntry(block.id, block.title, remaining))
+                    }
+                }
+            }
+        }
+
+        if (entries.isNotEmpty()) {
             overlayHideCounter = 0
-            waitTimerOverlay?.show(showRemaining)
+            waitTimerOverlay?.update(entries)
         } else {
             overlayHideCounter++
             if (overlayHideCounter >= OVERLAY_HIDE_DEBOUNCE) {
