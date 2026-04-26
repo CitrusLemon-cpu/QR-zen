@@ -60,6 +60,7 @@ class BlockAccessibilityService : AccessibilityService() {
     }
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
     private val fmt = DateTimeFormatter.ofPattern("HH:mm")
+    private var accessibilitySettingsObserver: android.database.ContentObserver? = null
 
     private val entryPoint by lazy {
         EntryPointAccessors.fromApplication(
@@ -103,6 +104,35 @@ class BlockAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         isRunning = true
+        accessibilitySettingsObserver?.let { contentResolver.unregisterContentObserver(it) }
+        val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+            override fun onChange(selfChange: Boolean) {
+                val enabled = android.provider.Settings.Secure.getString(
+                    contentResolver,
+                    android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+                ) ?: ""
+                val target = android.content.ComponentName(
+                    this@BlockAccessibilityService,
+                    BlockAccessibilityService::class.java
+                )
+                val stillEnabled = enabled.split(":").any { entry ->
+                    entry.equals(target.flattenToString(), ignoreCase = true) ||
+                        entry.equals(target.flattenToShortString(), ignoreCase = true)
+                }
+                if (!stillEnabled) {
+                    isRunning = false
+                    BackgroundService.start(this@BlockAccessibilityService)
+                }
+            }
+        }
+        accessibilitySettingsObserver = observer
+        contentResolver.registerContentObserver(
+            android.provider.Settings.Secure.getUriFor(
+                android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+            ),
+            false,
+            observer
+        )
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
@@ -309,7 +339,12 @@ class BlockAccessibilityService : AccessibilityService() {
     override fun onDestroy() {
         isRunning = false
         currentForegroundPackage = null
-        super.onDestroy()
+        accessibilitySettingsObserver?.let {
+            contentResolver.unregisterContentObserver(it)
+        }
+        accessibilitySettingsObserver = null
+        BackgroundService.start(this)
         scope.cancel()
+        super.onDestroy()
     }
 }

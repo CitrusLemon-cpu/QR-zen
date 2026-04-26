@@ -56,6 +56,9 @@ class BackgroundService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var waitTimerOverlay: WaitTimerOverlay? = null
     private var appTimerOverlay: AppTimerOverlay? = null
+    private var accessibilityObserver: android.database.ContentObserver? = null
+    @Volatile private var isAccessibilityEnabled = false
+    private var accessibilityBlockOverlay: AccessibilityBlockOverlay? = null
     private var overlayHideCounter = 0
     private val pomodoroNotifIds = mutableMapOf<Int, Int>()
     private var nextPomodoroNotifId = 3000
@@ -140,11 +143,50 @@ class BackgroundService : Service() {
         if (appTimerOverlay == null) {
             appTimerOverlay = AppTimerOverlay(this)
         }
+        if (accessibilityBlockOverlay == null) {
+            accessibilityBlockOverlay = AccessibilityBlockOverlay(this)
+        }
+        if (accessibilityObserver == null) {
+            isAccessibilityEnabled = checkAccessibilityEnabled()
+            val observer = object : android.database.ContentObserver(handler) {
+                override fun onChange(selfChange: Boolean) {
+                    val wasEnabled = isAccessibilityEnabled
+                    isAccessibilityEnabled = checkAccessibilityEnabled()
+                    if (wasEnabled && !isAccessibilityEnabled) {
+                        scope.launch { checkForegroundApp() }
+                    } else if (!wasEnabled && isAccessibilityEnabled) {
+                        accessibilityBlockOverlay?.hide()
+                    }
+                }
+            }
+            accessibilityObserver = observer
+            contentResolver.registerContentObserver(
+                android.provider.Settings.Secure.getUriFor(
+                    android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+                ),
+                false,
+                observer
+            )
+        }
         acquireWakeLock()
         AlarmKeepaliveReceiver.schedule(applicationContext)
         handler.removeCallbacks(checkRunnable)
         handler.post(checkRunnable)
         return START_STICKY
+    }
+
+    private fun checkAccessibilityEnabled(): Boolean {
+        val enabled = android.provider.Settings.Secure.getString(
+            contentResolver,
+            android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES
+        ) ?: return false
+        val target = android.content.ComponentName(this, BlockAccessibilityService::class.java)
+        val flatFull = target.flattenToString()
+        val flatShort = target.flattenToShortString()
+        return enabled.split(":").any { entry ->
+            entry.equals(flatFull, ignoreCase = true) ||
+                entry.equals(flatShort, ignoreCase = true)
+        }
     }
 
     private suspend fun checkExpiredPauses() {
@@ -535,6 +577,7 @@ class BackgroundService : Service() {
     }
 
     private suspend fun checkForegroundApp() {
+        isAccessibilityEnabled = checkAccessibilityEnabled()
         val now = System.currentTimeMillis()
         val allCandidates = dao.getAll().filter {
             it.isEnabled && !it.isArchived && now > it.pausedUntil
@@ -544,6 +587,7 @@ class BackgroundService : Service() {
             waitTimerOverlay?.hide()
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
+            accessibilityBlockOverlay?.hide()
             return
         }
         if (Prefs.pauseAllUntil > now) {
@@ -551,6 +595,7 @@ class BackgroundService : Service() {
             waitTimerOverlay?.hide()
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
+            accessibilityBlockOverlay?.hide()
             return
         }
 
@@ -560,12 +605,14 @@ class BackgroundService : Service() {
             waitTimerOverlay?.hide()
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
+            accessibilityBlockOverlay?.hide()
             return
         }
         if (isExemptPackage(pkg)) {
             updateTimerOverlays(allCandidates, null)
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
+            accessibilityBlockOverlay?.hide()
             return
         }
         if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
@@ -573,6 +620,7 @@ class BackgroundService : Service() {
             waitTimerOverlay?.hide()
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
+            accessibilityBlockOverlay?.hide()
             return
         }
         val activeBlocks = mutableListOf<AppBlock>()
@@ -592,6 +640,7 @@ class BackgroundService : Service() {
             waitTimerOverlay?.hide()
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
+            accessibilityBlockOverlay?.hide()
             launchLockScreen(pkg, blocklistBlock)
             return
         }
@@ -613,11 +662,51 @@ class BackgroundService : Service() {
                 overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
                 waitTimerOverlay?.hide()
                 allowedForegroundPkg = null
+                accessibilityBlockOverlay?.hide()
                 launchAllowlistOverlay(pkg, allowlistBlocks)
             }
         }
 
         updateTimerOverlays(allCandidates, pkg)
+        if (!isAccessibilityEnabled) {
+            val hasWaitTimerBlock = allCandidates.any { block ->
+                block.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER &&
+                    block.isEnabled && !block.isArchived
+            }
+            if (hasWaitTimerBlock) {
+                val waitTimerBlocked = allCandidates
+                    .filter {
+                        it.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER &&
+                            it.isEnabled && !it.isArchived && !it.isAllowlistMode
+                    }
+                    .any { block ->
+                        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                        pkg in packages
+                    }
+                if (waitTimerBlocked) {
+                    accessibilityBlockOverlay?.show()
+                    sendToHome()
+                    return
+                }
+                val waitTimerAllowlistBlocked = allCandidates
+                    .filter {
+                        it.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER &&
+                            it.isEnabled && !it.isArchived && it.isAllowlistMode
+                    }
+                    .any { block ->
+                        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+                        pkg in packages
+                    }
+                if (waitTimerAllowlistBlocked) {
+                    accessibilityBlockOverlay?.show()
+                    sendToHome()
+                    return
+                }
+            }
+        } else {
+            accessibilityBlockOverlay?.hide()
+        }
+        accessibilityBlockOverlay?.hide()
         trackAllowlistUsageTimers(activeBlocks, allowedForegroundPkg ?: "")
         trackPerAppTimers(activeBlocks, allowedForegroundPkg ?: "")
         updateAppTimerOverlay(activeBlocks, allowedForegroundPkg)
@@ -827,6 +916,7 @@ class BackgroundService : Service() {
         overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
         waitTimerOverlay?.hide()
         appTimerOverlay?.hide()
+        accessibilityBlockOverlay?.hide()
     }
 
     private fun acquireWakeLock() {
@@ -844,10 +934,14 @@ class BackgroundService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         pomodoroNotifIds.values.forEach { nm.cancel(it) }
         pomodoroNotifIds.clear()
+        accessibilityObserver?.let { contentResolver.unregisterContentObserver(it) }
+        accessibilityObserver = null
         waitTimerOverlay?.destroy()
         waitTimerOverlay = null
         appTimerOverlay?.destroy()
         appTimerOverlay = null
+        accessibilityBlockOverlay?.destroy()
+        accessibilityBlockOverlay = null
         iconCache.clear()
         scope.cancel()
         stopUsagePolling()
