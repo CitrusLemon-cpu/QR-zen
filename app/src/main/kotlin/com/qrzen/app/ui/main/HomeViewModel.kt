@@ -43,7 +43,11 @@ class HomeViewModel @Inject constructor(
     fun enableWithActiveUntil(block: AppBlock, durationMs: Long) = viewModelScope.launch {
         Prefs.setAllowlistUsageRemaining(block.id, durationMs)
         Prefs.setAllowlistUsageLastFg(block.id, 0L)
-        dao.update(block.copy(isEnabled = true, pausedUntil = 0L, activeUntil = 0L))
+        // Set activeUntil as a wall-clock safety net in case MMKV state is lost
+        // (e.g. after ultra battery saver kills the process).
+        // The block expires on whichever comes first: usage time or wall-clock.
+        val wallClockFallback = System.currentTimeMillis() + durationMs
+        dao.update(block.copy(isEnabled = true, pausedUntil = 0L, activeUntil = wallClockFallback))
         WidgetRefresh.refresh(ctx)
     }
 

@@ -306,6 +306,15 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         } else {
             block.title
         }
+        val isUsageBased = Prefs.getAllowlistUsageRemaining(block.id) > 0L
+        if (isUsageBased) {
+            binding.tvRemainingLabel.text = getString(R.string.allowlist_usage_remaining)
+            binding.tvUsageHint.visibility = View.VISIBLE
+            binding.tvUsageHint.text = getString(R.string.allowlist_usage_hint)
+        } else {
+            binding.tvRemainingLabel.text = getString(R.string.allowlist_remaining)
+            binding.tvUsageHint.visibility = View.GONE
+        }
         val millis = calculateMillisUntilBlockEnd(block)
         if (millis <= 0L) {
             binding.tvCountdown.text = formatCountdown(0L)
@@ -322,14 +331,20 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     private fun calculateMillisUntilBlockEnd(block: AppBlock): Long {
         val now = System.currentTimeMillis()
         val usageRemaining = Prefs.getAllowlistUsageRemaining(block.id)
+        val wallClockRemaining = if (block.activeUntil > now && block.activeUntil != Long.MAX_VALUE) {
+            block.activeUntil - now
+        } else {
+            Long.MAX_VALUE
+        }
         if (usageRemaining > 0L) {
-            return usageRemaining
+            // Use the smaller of usage remaining and wall-clock remaining
+            return minOf(usageRemaining, wallClockRemaining)
         }
         if (usageRemaining == 0L && Prefs.hasAllowlistUsageTimer(block.id)) {
             return 0L
         }
-        if (block.activeUntil > now && block.activeUntil != Long.MAX_VALUE) {
-            return block.activeUntil - now
+        if (wallClockRemaining < Long.MAX_VALUE) {
+            return wallClockRemaining
         }
         if (block.blockNowUntil > now && block.blockNowUntil != Long.MAX_VALUE) {
             return block.blockNowUntil - now
