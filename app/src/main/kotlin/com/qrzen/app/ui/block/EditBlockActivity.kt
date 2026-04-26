@@ -817,13 +817,7 @@ class EditBlockActivity : AppCompatActivity() {
 
     private fun updateScheduleBreakUi() {
         refreshScheduleBreakDropdown()
-        binding.tvScheduleBreakDesc.text = when (scheduleBreakType) {
-            UnlockMethodUtils.BREAK_POMODORO -> getString(R.string.schedule_break_pomodoro_desc)
-            UnlockMethodUtils.BREAK_WAIT_TIMER -> getString(R.string.schedule_break_wait_timer_desc)
-            UnlockMethodUtils.BREAK_USAGE_LIMIT -> getString(R.string.schedule_break_usage_limit_desc)
-            UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE -> getString(R.string.schedule_break_allowance_desc)
-            else -> getString(R.string.schedule_break_none_desc)
-        }
+        binding.tvScheduleBreakDesc.visibility = View.GONE
         binding.llScheduleBreakPomodoroSection.visibility =
             if (scheduleBreakType == UnlockMethodUtils.BREAK_POMODORO) View.VISIBLE else View.GONE
         binding.llScheduleBreakWaitTimerSection.visibility =
