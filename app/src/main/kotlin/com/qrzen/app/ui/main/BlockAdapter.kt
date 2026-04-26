@@ -12,7 +12,6 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
-import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ItemBlockBinding
 import com.qrzen.app.databinding.ItemSelectedAppIconBinding
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
@@ -315,26 +314,15 @@ class BlockAdapter(
 
         private fun setupActiveTimer(block: AppBlock) {
             val now = System.currentTimeMillis()
-            val usageRemaining = Prefs.getAllowlistUsageRemaining(block.id)
-            val wallClockRemaining = if (block.activeUntil > now) block.activeUntil - now else Long.MAX_VALUE
-            if (usageRemaining > 0L) {
-                val displayRemaining = if (wallClockRemaining < Long.MAX_VALUE) {
-                    minOf(usageRemaining, wallClockRemaining)
-                } else {
-                    usageRemaining
-                }
-                binding.tvActiveTimer.visibility = View.VISIBLE
-                binding.tvActiveTimer.text = "⏱ ${formatDuration(displayRemaining)} usage left"
-                activeTimer = null
-                return
-            }
             if (block.activeUntil > now) {
                 binding.tvActiveTimer.visibility = View.VISIBLE
                 val remaining = block.activeUntil - now
-                binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(remaining)}"
+                val sdf = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+                val endsAt = sdf.format(java.util.Date(block.activeUntil))
+                binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(remaining)} (until $endsAt)"
                 activeTimer = object : CountDownTimer(remaining, 1000L) {
                     override fun onTick(ms: Long) {
-                        binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(ms)}"
+                        binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(ms)} (until $endsAt)"
                     }
 
                     override fun onFinish() {
