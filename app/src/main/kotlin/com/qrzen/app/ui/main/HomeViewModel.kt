@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,18 +28,21 @@ class HomeViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun delete(block: AppBlock) = viewModelScope.launch {
+        Prefs.clearAllowlistUsageTimer(block.id)
         dao.delete(block)
         WidgetRefresh.refresh(ctx)
     }
 
     fun setEnabled(block: AppBlock, enabled: Boolean) = viewModelScope.launch {
+        if (!enabled) Prefs.clearAllowlistUsageTimer(block.id)
         dao.update(block.copy(isEnabled = enabled))
         WidgetRefresh.refresh(ctx)
     }
 
     fun enableWithActiveUntil(block: AppBlock, durationMs: Long) = viewModelScope.launch {
-        val until = System.currentTimeMillis() + durationMs
-        dao.update(block.copy(isEnabled = true, pausedUntil = 0L, activeUntil = until))
+        Prefs.setAllowlistUsageRemaining(block.id, durationMs)
+        Prefs.setAllowlistUsageLastFg(block.id, 0L)
+        dao.update(block.copy(isEnabled = true, pausedUntil = 0L, activeUntil = 0L))
         WidgetRefresh.refresh(ctx)
     }
 
@@ -54,6 +58,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun disableAndClearTimers(block: AppBlock) = viewModelScope.launch {
+        Prefs.clearAllowlistUsageTimer(block.id)
         dao.update(
             block.copy(
                 isEnabled = false,

@@ -182,7 +182,6 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         setupHeader()
         setupCountdowns()
         setupBlockSelector(timeBlocksMap)
-        (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
         binding.rvAllowedApps.adapter = AllowedAppAdapter(
             allowedApps,
             onClick = { launchAllowedApp(it) },
@@ -211,6 +210,9 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             val millis = calculateMillisUntilBlockEnd(block)
             if (millis <= 0L) {
                 expiredBlockIds += block.id
+                continue
+            }
+            if (Prefs.getAllowlistUsageRemaining(block.id) > 0L) {
                 continue
             }
             if (millis > 86_400_000L * 30) {
@@ -288,6 +290,13 @@ class AllowlistOverlayActivity : AppCompatActivity() {
 
     private fun calculateMillisUntilBlockEnd(block: AppBlock): Long {
         val now = System.currentTimeMillis()
+        val usageRemaining = Prefs.getAllowlistUsageRemaining(block.id)
+        if (usageRemaining > 0L) {
+            return usageRemaining
+        }
+        if (usageRemaining == 0L && Prefs.hasAllowlistUsageTimer(block.id)) {
+            return 0L
+        }
         if (block.activeUntil > now && block.activeUntil != Long.MAX_VALUE) {
             return block.activeUntil - now
         }
@@ -454,6 +463,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             sb.btnRestOfDay.text = getString(R.string.pomodoro_end_early)
             sb.btnRestOfDay.setOnClickListener {
                 lifecycleScope.launch {
+                    Prefs.clearAllowlistUsageTimer(block.id)
                     dao.update(
                         block.copy(
                             isEnabled = false,
@@ -475,6 +485,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             sb.btnRestOfDay.setOnClickListener { applyPause(block, millisUntilMidnight()); sheet.dismiss() }
             sb.btnIndefinitely.setOnClickListener {
                 lifecycleScope.launch {
+                    Prefs.clearAllowlistUsageTimer(block.id)
                     dao.update(block.copy(isEnabled = false, pausedUntil = 0L))
                     WidgetRefresh.refresh(applicationContext)
                     SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)
@@ -539,7 +550,6 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             val intersectedApps = withContext(Dispatchers.IO) { buildIntersectedAllowedApps() }
             val timeBlocksMap = withContext(Dispatchers.IO) { loadTimeBlocksMap(activeBlocks) }
             pauseSheetShown = false
-            (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
             setupUi(intersectedApps, timeBlocksMap)
         }
     }
@@ -644,7 +654,6 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     override fun onDestroy() {
         masterPasswordLockoutRunnable?.let(binding.btnMasterPassword::removeCallbacks)
         cancelAllCountdowns()
-        (binding.rvAllowedApps.adapter as? AllowedAppAdapter)?.cancelAllTimers()
         unlockRenderer.clear()
         super.onDestroy()
     }
@@ -667,16 +676,10 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         private val onLongPress: (AllowedAppItem) -> Unit,
         private val onTimerExpired: () -> Unit
     ) : RecyclerView.Adapter<AllowedAppAdapter.ViewHolder>() {
-
-        private val timerHandlers = mutableMapOf<String, CountDownTimer>()
-
         inner class ViewHolder(private val binding: ItemAllowedAppBinding) : RecyclerView.ViewHolder(binding.root) {
             var boundPackageName: String? = null
 
             fun bind(item: AllowedAppItem) {
-                boundPackageName?.let { pkg ->
-                    timerHandlers.remove(pkg)?.cancel()
-                }
                 boundPackageName = item.packageName
 
                 binding.ivAppIcon.setImageDrawable(item.icon)
@@ -687,26 +690,23 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                     true
                 }
 
-                val now = System.currentTimeMillis()
-                if (item.timerExpiry > now) {
+                val remaining = Prefs.getAppTimerRemaining(item.packageName)
+                if (remaining > 0L) {
                     binding.tvTimerOverlay.visibility = View.VISIBLE
-                    val remaining = item.timerExpiry - now
                     binding.tvTimerOverlay.text = formatTimerOverlay(remaining)
-                    timerHandlers[item.packageName] = object : CountDownTimer(remaining, 1_000L) {
-                        override fun onTick(millisUntilFinished: Long) {
-                            binding.tvTimerOverlay.text = formatTimerOverlay(millisUntilFinished)
-                        }
-
-                        override fun onFinish() {
-                            binding.tvTimerOverlay.text = formatTimerOverlay(0L)
-                            binding.tvTimerOverlay.visibility = View.GONE
-                            timerHandlers.remove(item.packageName)
-                            onTimerExpired()
-                        }
-                    }.start()
-                } else {
+                } else if (remaining == 0L) {
                     binding.tvTimerOverlay.visibility = View.GONE
                     binding.tvTimerOverlay.text = ""
+                    onTimerExpired()
+                } else {
+                    val now = System.currentTimeMillis()
+                    if (item.timerExpiry > now) {
+                        binding.tvTimerOverlay.visibility = View.VISIBLE
+                        binding.tvTimerOverlay.text = formatTimerOverlay(item.timerExpiry - now)
+                    } else {
+                        binding.tvTimerOverlay.visibility = View.GONE
+                        binding.tvTimerOverlay.text = ""
+                    }
                 }
             }
         }
@@ -723,11 +723,6 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             }
         }
 
-        fun cancelAllTimers() {
-            timerHandlers.values.forEach { it.cancel() }
-            timerHandlers.clear()
-        }
-
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
             return ViewHolder(ItemAllowedAppBinding.inflate(LayoutInflater.from(parent.context), parent, false))
         }
@@ -740,9 +735,6 @@ class AllowlistOverlayActivity : AppCompatActivity() {
 
         override fun onViewRecycled(holder: ViewHolder) {
             super.onViewRecycled(holder)
-            holder.boundPackageName?.let { pkg ->
-                timerHandlers.remove(pkg)?.cancel()
-            }
             holder.boundPackageName = null
         }
     }
