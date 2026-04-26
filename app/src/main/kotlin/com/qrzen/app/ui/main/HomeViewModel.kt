@@ -36,6 +36,35 @@ class HomeViewModel @Inject constructor(
         WidgetRefresh.refresh(ctx)
     }
 
+    fun enableWithActiveUntil(block: AppBlock, durationMs: Long) = viewModelScope.launch {
+        val until = System.currentTimeMillis() + durationMs
+        dao.update(block.copy(isEnabled = true, pausedUntil = 0L, activeUntil = until))
+        WidgetRefresh.refresh(ctx)
+    }
+
+    fun lockWithTimer(block: AppBlock, durationMs: Long, autoDisable: Boolean) = viewModelScope.launch {
+        val until = System.currentTimeMillis() + durationMs
+        dao.update(
+            block.copy(
+                toggleLockUntil = until,
+                autoDisableOnToggleLockExpiry = autoDisable
+            )
+        )
+        WidgetRefresh.refresh(ctx)
+    }
+
+    fun disableAndClearTimers(block: AppBlock) = viewModelScope.launch {
+        dao.update(
+            block.copy(
+                isEnabled = false,
+                activeUntil = 0L,
+                toggleLockUntil = 0L,
+                autoDisableOnToggleLockExpiry = false
+            )
+        )
+        WidgetRefresh.refresh(ctx)
+    }
+
     fun pause(block: AppBlock, durationMs: Long) = viewModelScope.launch {
         val until = if (durationMs == Long.MAX_VALUE) Long.MAX_VALUE
         else System.currentTimeMillis() + durationMs

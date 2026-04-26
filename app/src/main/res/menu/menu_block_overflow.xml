@@ -7,6 +7,9 @@
         android:id="@+id/action_block_now"
         android:title="Block now" />
     <item
+        android:id="@+id/action_lock_with_timer"
+        android:title="Lock with Timer" />
+    <item
         android:id="@+id/action_edit"
         android:title="Edit" />
     <item

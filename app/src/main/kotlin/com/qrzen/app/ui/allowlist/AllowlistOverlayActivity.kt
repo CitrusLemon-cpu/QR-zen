@@ -288,10 +288,16 @@ class AllowlistOverlayActivity : AppCompatActivity() {
 
     private fun calculateMillisUntilBlockEnd(block: AppBlock): Long {
         val now = System.currentTimeMillis()
+        if (block.activeUntil > now && block.activeUntil != Long.MAX_VALUE) {
+            return block.activeUntil - now
+        }
         if (block.blockNowUntil > now && block.blockNowUntil != Long.MAX_VALUE) {
             return block.blockNowUntil - now
         }
         if (block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL) {
+            if (block.toggleLockUntil > now && block.toggleLockUntil != Long.MAX_VALUE) {
+                return block.toggleLockUntil - now
+            }
             return Long.MAX_VALUE / 2
         }
         if (block.blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE) {
