@@ -95,6 +95,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var timerBreakMinutes: Int = 0
     private var showTimer: Boolean = false
     private var lockUntil: Long = 0L
+    private var pomodoroLockEditing: Boolean = false
     private var currentTimeBlocks: MutableList<TimeBlock> = mutableListOf()
     private var nextTempId: Int = -1
     private var selectedAppsLoadJob: Job? = null
@@ -114,7 +115,8 @@ class EditBlockActivity : AppCompatActivity() {
         get() {
             val base = listOf(
                 UnlockMethodUtils.STYLE_MANUAL to getString(R.string.blocking_style_manual),
-                UnlockMethodUtils.STYLE_SCHEDULE to getString(R.string.blocking_style_schedule)
+                UnlockMethodUtils.STYLE_SCHEDULE to getString(R.string.blocking_style_schedule),
+                UnlockMethodUtils.STYLE_POMODORO to getString(R.string.blocking_style_pomodoro)
             )
             return if (isAllowlistMode) {
                 base
@@ -126,18 +128,24 @@ class EditBlockActivity : AppCompatActivity() {
             }
         }
 
-    private val unlockMethods by lazy {
-        listOf(
-            UNLOCK_NONE to getString(R.string.unlock_method_none),
-            UNLOCK_DELAY to getString(R.string.unlock_method_delay),
-            UNLOCK_PASSWORD to getString(R.string.unlock_method_password),
-            UNLOCK_TYPE_OVER_TEXT to getString(R.string.unlock_method_type_over),
-            UNLOCK_QR_CODE to getString(R.string.unlock_method_qr_code),
-            UNLOCK_EDIT_WINDOW to getString(R.string.unlock_method_edit_window),
-            UNLOCK_TIMER to getString(R.string.unlock_method_timer),
-            UNLOCK_WHILE_ACTIVE to getString(R.string.unlock_method_while_active)
-        )
-    }
+    private val unlockMethods: List<Pair<String, String>>
+        get() {
+            val all = listOf(
+                UNLOCK_NONE to getString(R.string.unlock_method_none),
+                UNLOCK_DELAY to getString(R.string.unlock_method_delay),
+                UNLOCK_PASSWORD to getString(R.string.unlock_method_password),
+                UNLOCK_TYPE_OVER_TEXT to getString(R.string.unlock_method_type_over),
+                UNLOCK_QR_CODE to getString(R.string.unlock_method_qr_code),
+                UNLOCK_EDIT_WINDOW to getString(R.string.unlock_method_edit_window),
+                UNLOCK_TIMER to getString(R.string.unlock_method_timer),
+                UNLOCK_WHILE_ACTIVE to getString(R.string.unlock_method_while_active)
+            )
+            return if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) {
+                all.filter { it.first != UNLOCK_TIMER }
+            } else {
+                all
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -231,12 +239,12 @@ class EditBlockActivity : AppCompatActivity() {
         binding.npPomodoroBreak.maxValue = 60
         binding.npPomodoroBreak.value = 5
 
+        binding.cbPomodoroLockEditing.setOnCheckedChangeListener { _, isChecked ->
+            pomodoroLockEditing = isChecked
+        }
+
         setupBlockingStyleDropdown()
         setupUnlockMethodDropdown()
-
-        binding.cbPomodoro.setOnCheckedChangeListener { _, checked ->
-            binding.llPomodoro.visibility = if (checked) View.VISIBLE else View.GONE
-        }
 
         binding.switchTypeOverRandom.setOnCheckedChangeListener { _, isChecked ->
             typeOverIsRandom = isChecked
@@ -321,7 +329,19 @@ class EditBlockActivity : AppCompatActivity() {
     private fun setupBlockingStyleDropdown() {
         refreshBlockingStyleDropdown()
         binding.actBlockingStyle.setOnItemClickListener { _, _, position, _ ->
-            blockingStyle = blockingStyles[position].first
+            val newStyle = blockingStyles[position].first
+            if (newStyle == UnlockMethodUtils.STYLE_POMODORO && unlockMethod == UNLOCK_TIMER) {
+                unlockMethod = UNLOCK_NONE
+                refreshUnlockMethodDropdown()
+                updateUnlockMethodUi()
+                com.google.android.material.snackbar.Snackbar.make(
+                    binding.root,
+                    getString(R.string.pomodoro_timer_incompatible),
+                    com.google.android.material.snackbar.Snackbar.LENGTH_LONG
+                ).show()
+            }
+            blockingStyle = newStyle
+            refreshUnlockMethodDropdown()
             updateBlockingStyleUi()
         }
     }
@@ -334,13 +354,21 @@ class EditBlockActivity : AppCompatActivity() {
     }
 
     private fun setupUnlockMethodDropdown() {
-        binding.actUnlockMethod.setAdapter(
-            ArrayAdapter(this, android.R.layout.simple_list_item_1, unlockMethods.map { it.second })
-        )
+        refreshUnlockMethodDropdown()
         binding.actUnlockMethod.setOnItemClickListener { _, _, position, _ ->
             unlockMethod = unlockMethods[position].first
             updateUnlockMethodUi()
         }
+    }
+
+    private fun refreshUnlockMethodDropdown() {
+        if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO && unlockMethod == UNLOCK_TIMER) {
+            unlockMethod = UNLOCK_NONE
+        }
+        binding.actUnlockMethod.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_list_item_1, unlockMethods.map { it.second })
+        )
+        binding.actUnlockMethod.setText(getUnlockMethodLabel(unlockMethod), false)
     }
 
     private fun populateForm(block: AppBlock) {
@@ -366,6 +394,7 @@ class EditBlockActivity : AppCompatActivity() {
         showTimer = block.showTimer
         timerBreakMinutes = block.timerBreakMinutes
         lockUntil = block.lockUntil
+        pomodoroLockEditing = block.pomodoroLockEditing
 
         binding.etTitle.setText(block.title)
         binding.npDelayMinutes.value = delayMinutes
@@ -381,10 +410,10 @@ class EditBlockActivity : AppCompatActivity() {
         setToggleStates(usageLimitDayToggles(), activeDays)
         setToggleStates(waitTimerDayToggles(), activeDays)
 
-        binding.cbPomodoro.isChecked = block.isPomodoroBlock
-        if (block.isPomodoroBlock) {
+        if (block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO) {
             binding.npPomodoroDuration.value = block.pomodoroDurationMin.coerceIn(1, 120)
             binding.npPomodoroBreak.value = block.pomodoroBreakMin.coerceIn(1, 60)
+            binding.cbPomodoroLockEditing.isChecked = pomodoroLockEditing
         }
 
         applyCurrentStateToUi()
@@ -405,13 +434,14 @@ class EditBlockActivity : AppCompatActivity() {
         }
         binding.tvQrSecret.text = currentQrSecret
         binding.actBlockingStyle.setText(getBlockingStyleLabel(blockingStyle), false)
-        binding.actUnlockMethod.setText(getUnlockMethodLabel(unlockMethod), false)
+        refreshUnlockMethodDropdown()
         binding.npDelayMinutes.value = delayMinutes.coerceIn(1, 60)
         binding.npUsageLimitMinutes.value = usageLimitMinutes.coerceIn(1, 480)
         binding.npWaitTimerWait.value = waitTimerWaitMinutes.coerceIn(1, 120)
         binding.npWaitTimerUse.value = waitTimerUseMinutes.coerceIn(1, 120)
         binding.cbWaitTimerAdaptive.isChecked = waitTimerAdaptive
         binding.cbShowTimer.isChecked = showTimer
+        binding.cbPomodoroLockEditing.isChecked = pomodoroLockEditing
         binding.etTypeOverText.setText(typeOverText)
         binding.switchTypeOverRandom.isChecked = typeOverIsRandom
         binding.cgUsagePeriod.check(if (usageLimitPeriod == "HOURLY") R.id.chipHourly else R.id.chipDaily)
@@ -424,7 +454,6 @@ class EditBlockActivity : AppCompatActivity() {
         updateBlockingStyleUi()
         updateUnlockMethodUi()
         syncTimerBreakPresetSelection()
-        binding.llPomodoro.visibility = if (binding.cbPomodoro.isChecked) View.VISIBLE else View.GONE
     }
 
     @Deprecated("Deprecated in Java")
@@ -590,11 +619,13 @@ class EditBlockActivity : AppCompatActivity() {
             UnlockMethodUtils.STYLE_SCHEDULE -> getString(R.string.blocking_style_schedule_desc)
             UnlockMethodUtils.STYLE_USAGE_LIMIT -> getString(R.string.blocking_style_usage_limit_desc)
             UnlockMethodUtils.STYLE_WAIT_TIMER -> getString(R.string.blocking_style_wait_timer_desc)
+            UnlockMethodUtils.STYLE_POMODORO -> getString(R.string.blocking_style_pomodoro_desc)
             else -> getString(R.string.blocking_style_manual_desc)
         }
         binding.llScheduleSection.visibility = if (blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE) View.VISIBLE else View.GONE
         binding.llUsageLimitSection.visibility = if (blockingStyle == UnlockMethodUtils.STYLE_USAGE_LIMIT) View.VISIBLE else View.GONE
         binding.llWaitTimerSection.visibility = if (blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER) View.VISIBLE else View.GONE
+        binding.llPomodoroSection.visibility = if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) View.VISIBLE else View.GONE
         binding.cbShowTimer.visibility = if (
             blockingStyle == UnlockMethodUtils.STYLE_USAGE_LIMIT ||
             blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER
@@ -928,7 +959,6 @@ class EditBlockActivity : AppCompatActivity() {
             return
         }
 
-        val isPomodoroBlock = binding.cbPomodoro.isChecked
         val block = AppBlock(
             id = existingBlock?.id ?: 0,
             title = title,
@@ -951,9 +981,9 @@ class EditBlockActivity : AppCompatActivity() {
             pausedUntil = existingBlock?.pausedUntil ?: 0L,
             blockNowUntil = existingBlock?.blockNowUntil ?: 0L,
             isEnabled = existingBlock?.isEnabled ?: true,
-            isPomodoroBlock = isPomodoroBlock,
-            pomodoroDurationMin = if (isPomodoroBlock) binding.npPomodoroDuration.value else 25,
-            pomodoroBreakMin = if (isPomodoroBlock) binding.npPomodoroBreak.value else 5,
+            isPomodoroBlock = blockingStyle == UnlockMethodUtils.STYLE_POMODORO,
+            pomodoroDurationMin = if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) binding.npPomodoroDuration.value else existingBlock?.pomodoroDurationMin ?: 25,
+            pomodoroBreakMin = if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) binding.npPomodoroBreak.value else existingBlock?.pomodoroBreakMin ?: 5,
             isArchived = existingBlock?.isArchived ?: false,
             blockingStyle = blockingStyle,
             usageLimitMinutes = usageLimitMinutes,
@@ -962,7 +992,13 @@ class EditBlockActivity : AppCompatActivity() {
             waitTimerUseMinutes = waitTimerUseMinutes,
             waitTimerAdaptive = waitTimerAdaptive,
             timerBreakMinutes = timerBreakMinutes,
-            showTimer = showTimer
+            showTimer = showTimer,
+            toggleLockUntil = existingBlock?.toggleLockUntil ?: 0L,
+            autoDisableOnToggleLockExpiry = existingBlock?.autoDisableOnToggleLockExpiry ?: false,
+            activeUntil = existingBlock?.activeUntil ?: 0L,
+            pomodoroRoundsTotal = existingBlock?.pomodoroRoundsTotal ?: 0,
+            pomodoroSessionStartMillis = existingBlock?.pomodoroSessionStartMillis ?: 0L,
+            pomodoroLockEditing = pomodoroLockEditing
         )
 
         lifecycleScope.launch {
