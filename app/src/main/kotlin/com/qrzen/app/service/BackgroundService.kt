@@ -55,6 +55,7 @@ class BackgroundService : Service() {
     private var lastBlockedTime = 0L
     private var wakeLock: PowerManager.WakeLock? = null
     private var waitTimerOverlay: WaitTimerOverlay? = null
+    private var overlayHideCounter = 0
 
     private val systemExemptPackages = setOf(
         "com.android.systemui",
@@ -115,6 +116,7 @@ class BackgroundService : Service() {
         private const val CHECK_INTERVAL_MS = 60_000L
         private const val USAGE_POLL_INTERVAL_MS = 2_000L
         private const val BLOCK_COOLDOWN_MS = 3_000L
+        private const val OVERLAY_HIDE_DEBOUNCE = 2
 
         fun start(context: Context) {
             val intent = Intent(context, BackgroundService::class.java)
@@ -404,28 +406,34 @@ class BackgroundService : Service() {
 
     private suspend fun checkForegroundApp() {
         if (isDeviceLocked()) {
+            overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
             return
         }
         val now = System.currentTimeMillis()
         if (Prefs.pauseAllUntil > now) {
+            overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
             return
         }
 
         val pkg = getForegroundPackage()
         if (pkg == null) {
+            overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
             return
         }
-        if (isExemptPackage(pkg)) return
-        if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
-            waitTimerOverlay?.hide()
-            return
-        }
-
         val allCandidates = dao.getAll().filter {
             it.isEnabled && !it.isArchived && now > it.pausedUntil
+        }
+        if (isExemptPackage(pkg)) {
+            updateWaitTimerOverlay(allCandidates)
+            return
+        }
+        if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
+            overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
+            waitTimerOverlay?.hide()
+            return
         }
         val activeBlocks = mutableListOf<AppBlock>()
         for (block in allCandidates) {
@@ -440,6 +448,7 @@ class BackgroundService : Service() {
         if (blocklistBlock != null) {
             lastBlockedPkg = pkg
             lastBlockedTime = now
+            overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
             launchLockScreen(pkg, blocklistBlock)
             return
@@ -458,6 +467,7 @@ class BackgroundService : Service() {
             if (!intersection.contains(pkg)) {
                 lastBlockedPkg = pkg
                 lastBlockedTime = now
+                overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
                 waitTimerOverlay?.hide()
                 launchAllowlistOverlay(pkg, allowlistBlocks)
             }
@@ -481,9 +491,13 @@ class BackgroundService : Service() {
         }
 
         if (showRemaining != null) {
+            overlayHideCounter = 0
             waitTimerOverlay?.show(showRemaining)
         } else {
-            waitTimerOverlay?.hide()
+            overlayHideCounter++
+            if (overlayHideCounter >= OVERLAY_HIDE_DEBOUNCE) {
+                waitTimerOverlay?.hide()
+            }
         }
     }
 
@@ -521,6 +535,7 @@ class BackgroundService : Service() {
         usagePollingActive = false
         usageHandler.removeCallbacks(usageCheckRunnable)
         lastBlockedPkg = null
+        overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
         waitTimerOverlay?.hide()
     }
 
