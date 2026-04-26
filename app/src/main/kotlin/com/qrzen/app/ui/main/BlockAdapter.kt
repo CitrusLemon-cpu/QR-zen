@@ -101,7 +101,21 @@ class BlockAdapter(
                     binding.tvDays.text = modePrefix
                 }
                 UnlockMethodUtils.STYLE_SCHEDULE -> {
-                    binding.tvTimeRange.text = "Scheduled"
+                    binding.tvTimeRange.text = when (block.scheduleBreakType) {
+                        UnlockMethodUtils.BREAK_POMODORO ->
+                            "Scheduled · Pomodoro (${block.pomodoroDurationMin}m/${block.pomodoroBreakMin}m)"
+                        UnlockMethodUtils.BREAK_WAIT_TIMER -> {
+                            val adaptiveSuffix = if (block.waitTimerAdaptive) " · adaptive" else ""
+                            "Scheduled · Wait Timer (${block.waitTimerUseMinutes}m use / ${block.waitTimerWaitMinutes}m block$adaptiveSuffix)"
+                        }
+                        UnlockMethodUtils.BREAK_USAGE_LIMIT -> {
+                            val period = if (block.usageLimitPeriod == "HOURLY") "hour" else "day"
+                            "Scheduled · Usage Limit (${block.usageLimitMinutes} min/$period)"
+                        }
+                        UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE ->
+                            "Scheduled · Allowance (${block.scheduledAllowanceMinutes} min/window)"
+                        else -> "Scheduled"
+                    }
                     binding.tvDays.text = modePrefix
                 }
                 UnlockMethodUtils.STYLE_USAGE_LIMIT -> {

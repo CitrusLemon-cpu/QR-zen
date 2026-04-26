@@ -23,8 +23,11 @@ class AccessibilityBlockOverlay(private val context: Context) {
     private val mainHandler = Handler(Looper.getMainLooper())
     @Volatile private var overlayView: View? = null
     @Volatile private var isShowing = false
+    @Volatile private var messageText: String? = null
+    private var messageView: TextView? = null
 
-    fun show() {
+    fun show(message: String? = null) {
+        messageText = message
         mainHandler.post { showInternal() }
     }
 
@@ -37,10 +40,14 @@ class AccessibilityBlockOverlay(private val context: Context) {
     }
 
     private fun showInternal() {
-        if (isShowing) return
+        val resolvedMessage = messageText ?: context.getString(R.string.accessibility_block_message)
+        if (isShowing) {
+            messageView?.text = resolvedMessage
+            return
+        }
         if (!Settings.canDrawOverlays(context)) return
 
-        val view = buildOverlayView()
+        val view = buildOverlayView(resolvedMessage)
 
         val params = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
@@ -70,10 +77,11 @@ class AccessibilityBlockOverlay(private val context: Context) {
             }
         }
         overlayView = null
+        messageView = null
         isShowing = false
     }
 
-    private fun buildOverlayView(): LinearLayout {
+    private fun buildOverlayView(message: String): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
@@ -101,7 +109,7 @@ class AccessibilityBlockOverlay(private val context: Context) {
             })
 
             addView(TextView(context).apply {
-                text = context.getString(R.string.accessibility_block_message)
+                text = message
                 setTextColor(Color.parseColor("#AAFFFFFF"))
                 setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f)
                 gravity = Gravity.CENTER
@@ -110,7 +118,7 @@ class AccessibilityBlockOverlay(private val context: Context) {
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 ).apply { setMargins(0, topMargin, 0, 0) }
-            })
+            }.also { messageView = it })
 
             addView(Button(context).apply {
                 text = context.getString(R.string.accessibility_block_button)
