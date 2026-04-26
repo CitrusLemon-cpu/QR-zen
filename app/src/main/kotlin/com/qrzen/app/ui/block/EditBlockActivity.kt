@@ -93,6 +93,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var waitTimerUseMinutes: Int = 5
     private var waitTimerAdaptive: Boolean = false
     private var timerBreakMinutes: Int = 0
+    private var showTimer: Boolean = false
     private var lockUntil: Long = 0L
     private var currentTimeBlocks: MutableList<TimeBlock> = mutableListOf()
     private var nextTempId: Int = -1
@@ -217,6 +218,9 @@ class EditBlockActivity : AppCompatActivity() {
         }
         binding.cbWaitTimerAdaptive.setOnCheckedChangeListener { _, isChecked ->
             waitTimerAdaptive = isChecked
+        }
+        binding.cbShowTimer.setOnCheckedChangeListener { _, isChecked ->
+            showTimer = isChecked
         }
 
         binding.npPomodoroDuration.minValue = 1
@@ -359,6 +363,7 @@ class EditBlockActivity : AppCompatActivity() {
         waitTimerWaitMinutes = block.waitTimerWaitMinutes.coerceIn(1, 120)
         waitTimerUseMinutes = block.waitTimerUseMinutes.coerceIn(1, 120)
         waitTimerAdaptive = block.waitTimerAdaptive
+        showTimer = block.showTimer
         timerBreakMinutes = block.timerBreakMinutes
         lockUntil = block.lockUntil
 
@@ -406,6 +411,7 @@ class EditBlockActivity : AppCompatActivity() {
         binding.npWaitTimerWait.value = waitTimerWaitMinutes.coerceIn(1, 120)
         binding.npWaitTimerUse.value = waitTimerUseMinutes.coerceIn(1, 120)
         binding.cbWaitTimerAdaptive.isChecked = waitTimerAdaptive
+        binding.cbShowTimer.isChecked = showTimer
         binding.etTypeOverText.setText(typeOverText)
         binding.switchTypeOverRandom.isChecked = typeOverIsRandom
         binding.cgUsagePeriod.check(if (usageLimitPeriod == "HOURLY") R.id.chipHourly else R.id.chipDaily)
@@ -589,6 +595,10 @@ class EditBlockActivity : AppCompatActivity() {
         binding.llScheduleSection.visibility = if (blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE) View.VISIBLE else View.GONE
         binding.llUsageLimitSection.visibility = if (blockingStyle == UnlockMethodUtils.STYLE_USAGE_LIMIT) View.VISIBLE else View.GONE
         binding.llWaitTimerSection.visibility = if (blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER) View.VISIBLE else View.GONE
+        binding.cbShowTimer.visibility = if (
+            blockingStyle == UnlockMethodUtils.STYLE_USAGE_LIMIT ||
+            blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER
+        ) View.VISIBLE else View.GONE
     }
 
     private fun updateUnlockMethodUi() {
@@ -876,6 +886,7 @@ class EditBlockActivity : AppCompatActivity() {
         waitTimerWaitMinutes = binding.npWaitTimerWait.value
         waitTimerUseMinutes = binding.npWaitTimerUse.value
         waitTimerAdaptive = binding.cbWaitTimerAdaptive.isChecked
+        showTimer = binding.cbShowTimer.isChecked
         blockPassword = binding.etBlockPassword.text?.toString() ?: ""
         val confirmPassword = binding.etConfirmPassword.text?.toString() ?: ""
         typeOverIsRandom = binding.switchTypeOverRandom.isChecked
@@ -950,7 +961,8 @@ class EditBlockActivity : AppCompatActivity() {
             waitTimerWaitMinutes = waitTimerWaitMinutes,
             waitTimerUseMinutes = waitTimerUseMinutes,
             waitTimerAdaptive = waitTimerAdaptive,
-            timerBreakMinutes = timerBreakMinutes
+            timerBreakMinutes = timerBreakMinutes,
+            showTimer = showTimer
         )
 
         lifecycleScope.launch {

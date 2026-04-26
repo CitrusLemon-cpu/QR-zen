@@ -74,5 +74,6 @@ data class AppBlock(
     val waitTimerWaitMinutes: Int = 30,
     val waitTimerUseMinutes: Int = 5,
     val waitTimerAdaptive: Boolean = false,
-    val timerBreakMinutes: Int = 0
+    val timerBreakMinutes: Int = 0,
+    val showTimer: Boolean = false
 )
