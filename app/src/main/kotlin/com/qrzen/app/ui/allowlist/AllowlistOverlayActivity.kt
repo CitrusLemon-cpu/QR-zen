@@ -213,6 +213,32 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                 continue
             }
             if (Prefs.getAllowlistUsageRemaining(block.id) > 0L) {
+                countdownTimers[block.id] = object : CountDownTimer(86_400_000L * 30, 1_000L) {
+                    override fun onTick(millisUntilFinished: Long) {
+                        val remaining = Prefs.getAllowlistUsageRemaining(block.id)
+                        if (remaining <= 0L) {
+                            cancel()
+                            countdownTimers.remove(block.id)
+                            activeBlocks.removeAll { it.id == block.id }
+                            timeBlocksByBlockId = timeBlocksByBlockId - block.id
+                            if (activeBlocks.isEmpty()) {
+                                SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)
+                                finish()
+                            } else {
+                                displayedCountdownIndex = displayedCountdownIndex.coerceAtMost(activeBlocks.size - 1)
+                                refreshOverlay()
+                            }
+                            return
+                        }
+                        if (displayedCountdownIndex < activeBlocks.size && activeBlocks[displayedCountdownIndex].id == block.id) {
+                            binding.tvCountdown.text = formatCountdown(remaining)
+                        }
+                    }
+
+                    override fun onFinish() {
+                        refreshOverlay()
+                    }
+                }.start()
                 continue
             }
             if (millis > 86_400_000L * 30) {

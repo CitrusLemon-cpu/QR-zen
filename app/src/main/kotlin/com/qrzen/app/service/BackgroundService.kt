@@ -264,6 +264,23 @@ class BackgroundService : Service() {
             }
         allBlocks
             .filter { block ->
+                block.isEnabled && block.isAllowlistMode && !block.isArchived &&
+                    Prefs.getAllowlistUsageRemaining(block.id) == 0L
+            }
+            .forEach { block ->
+                Prefs.clearAllowlistUsageTimer(block.id)
+                dao.update(
+                    block.copy(
+                        isEnabled = false,
+                        activeUntil = 0L,
+                        toggleLockUntil = 0L,
+                        autoDisableOnToggleLockExpiry = false
+                    )
+                )
+                shouldRefresh = true
+            }
+        allBlocks
+            .filter { block ->
                 block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO &&
                     block.isEnabled &&
                     block.pomodoroRoundsTotal > 0
@@ -735,8 +752,10 @@ class BackgroundService : Service() {
                     val newRemaining = (remaining - elapsed).coerceAtLeast(0L)
                     Prefs.setAllowlistUsageRemaining(block.id, newRemaining)
                     if (newRemaining <= 0L) {
-                        Prefs.clearAllowlistUsageTimer(block.id)
+                        Prefs.setAllowlistUsageRemaining(block.id, 0L)
+                        Prefs.setAllowlistUsageLastFg(block.id, 0L)
                         scope.launch {
+                            Prefs.clearAllowlistUsageTimer(block.id)
                             dao.update(
                                 block.copy(
                                     isEnabled = false,

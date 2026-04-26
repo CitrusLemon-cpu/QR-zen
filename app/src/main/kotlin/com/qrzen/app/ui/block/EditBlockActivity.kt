@@ -980,7 +980,7 @@ class EditBlockActivity : AppCompatActivity() {
             masterPasswordEnabled = existingBlock?.masterPasswordEnabled ?: false,
             pausedUntil = existingBlock?.pausedUntil ?: 0L,
             blockNowUntil = existingBlock?.blockNowUntil ?: 0L,
-            isEnabled = existingBlock?.isEnabled ?: true,
+            isEnabled = existingBlock?.isEnabled ?: (!isAllowlistMode),
             isPomodoroBlock = blockingStyle == UnlockMethodUtils.STYLE_POMODORO,
             pomodoroDurationMin = if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) binding.npPomodoroDuration.value else existingBlock?.pomodoroDurationMin ?: 25,
             pomodoroBreakMin = if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) binding.npPomodoroBreak.value else existingBlock?.pomodoroBreakMin ?: 5,
