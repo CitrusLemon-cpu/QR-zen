@@ -100,6 +100,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var nextTempId: Int = -1
     private var selectedAppsLoadJob: Job? = null
     private var isUpdatingTimerBreakPresets = false
+    private val pendingAppTimers = mutableMapOf<String, Long>()
     private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     private val qrScanForSetLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
@@ -491,7 +492,14 @@ class EditBlockActivity : AppCompatActivity() {
                             packageName = pkg,
                             label = packageManager.getApplicationLabel(appInfo).toString(),
                             icon = packageManager.getApplicationIcon(appInfo),
-                            timerExpiry = if (isAllowlistMode) Prefs.getAppTimerExpiry(pkg) else 0L
+                            timerExpiry = if (isAllowlistMode) {
+                                val blockId = existingBlock?.id
+                                if (blockId != null) {
+                                    Prefs.getAppTimerExpiry(blockId, pkg)
+                                } else {
+                                    pendingAppTimers[pkg]?.let { System.currentTimeMillis() + it } ?: 0L
+                                }
+                            } else 0L
                         )
                     } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
                         null
@@ -588,13 +596,23 @@ class EditBlockActivity : AppCompatActivity() {
             .setPositiveButton(R.string.timer_set) { _, _ ->
                 val totalMinutes = npHours.value * 60L + npMinutes.value
                 if (totalMinutes > 0) {
-                    val expiry = System.currentTimeMillis() + totalMinutes * 60_000L
-                    Prefs.setAppTimerExpiry(appItem.packageName, expiry)
+                    val blockId = existingBlock?.id
+                    if (blockId != null) {
+                        val expiry = System.currentTimeMillis() + totalMinutes * 60_000L
+                        Prefs.setAppTimerExpiry(blockId, appItem.packageName, expiry)
+                    } else {
+                        pendingAppTimers[appItem.packageName] = totalMinutes * 60_000L
+                    }
                 }
                 updateSelectedAppsDisplay()
             }
             .setNeutralButton(R.string.timer_clear) { _, _ ->
-                Prefs.setAppTimerExpiry(appItem.packageName, 0L)
+                val blockId = existingBlock?.id
+                if (blockId != null) {
+                    Prefs.setAppTimerExpiry(blockId, appItem.packageName, 0L)
+                } else {
+                    pendingAppTimers.remove(appItem.packageName)
+                }
                 updateSelectedAppsDisplay()
             }
             .setNegativeButton(android.R.string.cancel, null)
@@ -1007,6 +1025,14 @@ class EditBlockActivity : AppCompatActivity() {
             } else {
                 dao.update(block)
                 block.id
+            }
+
+            if (existingBlock == null && pendingAppTimers.isNotEmpty()) {
+                for ((pkg, remainingMs) in pendingAppTimers) {
+                    Prefs.setAppTimerRemaining(savedId, pkg, remainingMs)
+                    Prefs.setAppTimerLastFg(savedId, pkg, 0L)
+                }
+                pendingAppTimers.clear()
             }
 
             if (blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE) {

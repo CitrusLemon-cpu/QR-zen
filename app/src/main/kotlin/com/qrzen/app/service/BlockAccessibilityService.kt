@@ -175,7 +175,7 @@ class BlockAccessibilityService : AccessibilityService() {
                     block.appPackages.split(",")
                         .map { it.trim() }
                         .filter { it.isNotEmpty() }
-                        .filterNot { Prefs.isAppTimerExpired(it) }
+                        .filterNot { Prefs.isAppTimerExpired(block.id, it) }
                         .toSet()
                 }
                 val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }

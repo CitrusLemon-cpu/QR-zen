@@ -155,7 +155,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             block.appPackages.split(',')
                 .map { it.trim() }
                 .filter { it.isNotEmpty() }
-                .filterNot(Prefs::isAppTimerExpired)
+                .filterNot { Prefs.isAppTimerExpired(block.id, it) }
                 .filterNot { it in sessionRemovedApps }
                 .toSet()
         }
@@ -163,11 +163,15 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         return intersection.mapNotNull { pkg ->
             try {
                 val info = pm.getApplicationInfo(pkg, 0)
+                val minExpiry = activeBlocks.mapNotNull { block ->
+                    val expiry = Prefs.getAppTimerExpiry(block.id, pkg)
+                    if (expiry > 0L) expiry else null
+                }.minOrNull() ?: 0L
                 AllowedAppItem(
                     packageName = pkg,
                     label = pm.getApplicationLabel(info).toString(),
                     icon = pm.getApplicationIcon(info),
-                    timerExpiry = Prefs.getAppTimerExpiry(pkg)
+                    timerExpiry = minExpiry
                 )
             } catch (_: PackageManager.NameNotFoundException) {
                 null
@@ -184,6 +188,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         setupBlockSelector(timeBlocksMap)
         binding.rvAllowedApps.adapter = AllowedAppAdapter(
             allowedApps,
+            activeBlocks.map { it.id },
             onClick = { launchAllowedApp(it) },
             onLongPress = { showRemoveAppDialog(it) },
             onTimerExpired = { refreshOverlay() }
@@ -698,6 +703,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
 
     class AllowedAppAdapter(
         private val apps: List<AllowedAppItem>,
+        private val blockIds: List<Int>,
         private val onClick: (String) -> Unit,
         private val onLongPress: (AllowedAppItem) -> Unit,
         private val onTimerExpired: () -> Unit
@@ -716,7 +722,10 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                     true
                 }
 
-                val remaining = Prefs.getAppTimerRemaining(item.packageName)
+                val remaining = blockIds.mapNotNull { id ->
+                    val value = Prefs.getAppTimerRemaining(id, item.packageName)
+                    if (value >= 0L) value else null
+                }.minOrNull() ?: -1L
                 if (remaining > 0L) {
                     binding.tvTimerOverlay.visibility = View.VISIBLE
                     binding.tvTimerOverlay.text = formatTimerOverlay(remaining)
