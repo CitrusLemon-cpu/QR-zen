@@ -420,6 +420,14 @@ class AllowlistOverlayActivity : AppCompatActivity() {
 
     private fun showPauseDurationSheet(block: AppBlock) {
         if (pauseSheetShown) return
+        if (block.toggleLockUntil > System.currentTimeMillis()) {
+            android.widget.Toast.makeText(
+                this,
+                getString(R.string.lock_timer_locked, UnlockMethodUtils.formatDateTime(block.toggleLockUntil)),
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
         pauseSheetShown = true
         val sheet = BottomSheetDialog(this)
         val sb = BottomSheetPauseDurationBinding.inflate(LayoutInflater.from(this))
