@@ -28,6 +28,11 @@ object UnlockMethodUtils {
     const val STYLE_USAGE_LIMIT = "USAGE_LIMIT"
     const val STYLE_WAIT_TIMER = "WAIT_TIMER"
     const val STYLE_POMODORO = "POMODORO"
+    const val BREAK_NONE = "NONE"
+    const val BREAK_POMODORO = "POMODORO"
+    const val BREAK_WAIT_TIMER = "WAIT_TIMER"
+    const val BREAK_USAGE_LIMIT = "USAGE_LIMIT"
+    const val BREAK_SCHEDULED_ALLOWANCE = "SCHEDULED_ALLOWANCE"
 
     private val displayDateTimeFormatter = SimpleDateFormat("EEE, MMM d, yyyy HH:mm", Locale.getDefault())
     private val challengeWords = listOf(

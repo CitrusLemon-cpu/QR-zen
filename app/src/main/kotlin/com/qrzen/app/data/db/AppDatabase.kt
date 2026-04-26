@@ -8,7 +8,7 @@ import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.data.model.TimeBlock
 
-@Database(entities = [AppBlock::class, BlockEvent::class, TimeBlock::class], version = 12, exportSchema = false)
+@Database(entities = [AppBlock::class, BlockEvent::class, TimeBlock::class], version = 13, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appBlockDao(): AppBlockDao
     abstract fun blockEventDao(): BlockEventDao
@@ -97,6 +97,13 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE app_blocks ADD COLUMN pomodoroRoundsTotal INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE app_blocks ADD COLUMN pomodoroSessionStartMillis INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE app_blocks ADD COLUMN pomodoroLockEditing INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE app_blocks ADD COLUMN scheduleBreakType TEXT NOT NULL DEFAULT 'NONE'")
+                db.execSQL("ALTER TABLE app_blocks ADD COLUMN scheduledAllowanceMinutes INTEGER NOT NULL DEFAULT 10")
             }
         }
     }

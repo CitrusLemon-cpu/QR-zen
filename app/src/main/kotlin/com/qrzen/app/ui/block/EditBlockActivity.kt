@@ -92,12 +92,17 @@ class EditBlockActivity : AppCompatActivity() {
     private var waitTimerWaitMinutes: Int = 30
     private var waitTimerUseMinutes: Int = 5
     private var waitTimerAdaptive: Boolean = false
+    private var pomodoroDurationMin: Int = 25
+    private var pomodoroBreakMin: Int = 5
+    private var scheduleBreakType: String = UnlockMethodUtils.BREAK_NONE
+    private var scheduledAllowanceMinutes: Int = 10
     private var timerBreakMinutes: Int = 0
     private var showTimer: Boolean = false
     private var lockUntil: Long = 0L
     private var pomodoroLockEditing: Boolean = false
     private var currentTimeBlocks: MutableList<TimeBlock> = mutableListOf()
     private var nextTempId: Int = -1
+    private var selectedTimeBlockId: Int? = null
     private var selectedAppsLoadJob: Job? = null
     private var isUpdatingTimerBreakPresets = false
     private val pendingAppTimers = mutableMapOf<String, Long>()
@@ -148,6 +153,15 @@ class EditBlockActivity : AppCompatActivity() {
             }
         }
 
+    private val scheduleBreakTypes: List<Pair<String, String>>
+        get() = listOf(
+            UnlockMethodUtils.BREAK_NONE to getString(R.string.schedule_break_type_none_option),
+            UnlockMethodUtils.BREAK_POMODORO to getString(R.string.schedule_break_type_pomodoro_option),
+            UnlockMethodUtils.BREAK_WAIT_TIMER to getString(R.string.schedule_break_type_wait_timer_option),
+            UnlockMethodUtils.BREAK_USAGE_LIMIT to getString(R.string.schedule_break_type_usage_limit_option),
+            UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE to getString(R.string.schedule_break_type_allowance_option)
+        )
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityEditBlockBinding.inflate(layoutInflater)
@@ -193,10 +207,15 @@ class EditBlockActivity : AppCompatActivity() {
             findViewById(R.id.tvSelectedDayFri),
             findViewById(R.id.tvSelectedDaySat)
         )
+        selectedBlockDetailView.isClickable = true
+        selectedBlockStartButton.setOnClickListener { editSelectedTimeBlock(isStart = true) }
+        selectedBlockEndButton.setOnClickListener { editSelectedTimeBlock(isStart = false) }
+        selectedBlockDeleteButton.setOnClickListener { deleteSelectedTimeBlock() }
 
         binding.rvSelectedApps.layoutManager = GridLayoutManager(this, 5)
         binding.actUnlockMethod.keyListener = null
         binding.actBlockingStyle.keyListener = null
+        binding.actScheduleBreakType.keyListener = null
 
         binding.npDelayMinutes.minValue = 1
         binding.npDelayMinutes.maxValue = 60
@@ -210,6 +229,7 @@ class EditBlockActivity : AppCompatActivity() {
         binding.npUsageLimitMinutes.value = usageLimitMinutes
         binding.npUsageLimitMinutes.setOnValueChangedListener { _, _, newVal ->
             usageLimitMinutes = newVal
+            syncUsageLimitPickers()
         }
 
         binding.npWaitTimerWait.minValue = 1
@@ -217,6 +237,7 @@ class EditBlockActivity : AppCompatActivity() {
         binding.npWaitTimerWait.value = waitTimerWaitMinutes
         binding.npWaitTimerWait.setOnValueChangedListener { _, _, newVal ->
             waitTimerWaitMinutes = newVal
+            syncWaitTimerUi()
         }
 
         binding.npWaitTimerUse.minValue = 1
@@ -224,9 +245,11 @@ class EditBlockActivity : AppCompatActivity() {
         binding.npWaitTimerUse.value = waitTimerUseMinutes
         binding.npWaitTimerUse.setOnValueChangedListener { _, _, newVal ->
             waitTimerUseMinutes = newVal
+            syncWaitTimerUi()
         }
         binding.cbWaitTimerAdaptive.setOnCheckedChangeListener { _, isChecked ->
             waitTimerAdaptive = isChecked
+            syncWaitTimerUi()
         }
         binding.cbShowTimer.setOnCheckedChangeListener { _, isChecked ->
             showTimer = isChecked
@@ -234,11 +257,72 @@ class EditBlockActivity : AppCompatActivity() {
 
         binding.npPomodoroDuration.minValue = 1
         binding.npPomodoroDuration.maxValue = 120
-        binding.npPomodoroDuration.value = 25
+        binding.npPomodoroDuration.value = pomodoroDurationMin
+        binding.npPomodoroDuration.setOnValueChangedListener { _, _, newVal ->
+            pomodoroDurationMin = newVal
+            syncPomodoroConfigUi()
+        }
 
         binding.npPomodoroBreak.minValue = 1
         binding.npPomodoroBreak.maxValue = 60
-        binding.npPomodoroBreak.value = 5
+        binding.npPomodoroBreak.value = pomodoroBreakMin
+        binding.npPomodoroBreak.setOnValueChangedListener { _, _, newVal ->
+            pomodoroBreakMin = newVal
+            syncPomodoroConfigUi()
+        }
+
+        binding.npScheduleBreakPomodoroDuration.minValue = 1
+        binding.npScheduleBreakPomodoroDuration.maxValue = 120
+        binding.npScheduleBreakPomodoroDuration.value = pomodoroDurationMin
+        binding.npScheduleBreakPomodoroDuration.setOnValueChangedListener { _, _, newVal ->
+            pomodoroDurationMin = newVal
+            syncPomodoroConfigUi()
+        }
+
+        binding.npScheduleBreakPomodoroBreak.minValue = 1
+        binding.npScheduleBreakPomodoroBreak.maxValue = 60
+        binding.npScheduleBreakPomodoroBreak.value = pomodoroBreakMin
+        binding.npScheduleBreakPomodoroBreak.setOnValueChangedListener { _, _, newVal ->
+            pomodoroBreakMin = newVal
+            syncPomodoroConfigUi()
+        }
+
+        binding.npScheduleBreakWaitUse.minValue = 1
+        binding.npScheduleBreakWaitUse.maxValue = 120
+        binding.npScheduleBreakWaitUse.value = waitTimerUseMinutes
+        binding.npScheduleBreakWaitUse.setOnValueChangedListener { _, _, newVal ->
+            waitTimerUseMinutes = newVal
+            syncWaitTimerUi()
+        }
+
+        binding.npScheduleBreakWaitBlock.minValue = 1
+        binding.npScheduleBreakWaitBlock.maxValue = 120
+        binding.npScheduleBreakWaitBlock.value = waitTimerWaitMinutes
+        binding.npScheduleBreakWaitBlock.setOnValueChangedListener { _, _, newVal ->
+            waitTimerWaitMinutes = newVal
+            syncWaitTimerUi()
+        }
+
+        binding.cbScheduleBreakWaitAdaptive.setOnCheckedChangeListener { _, isChecked ->
+            waitTimerAdaptive = isChecked
+            syncWaitTimerUi()
+        }
+
+        binding.npScheduleBreakUsageLimitMinutes.minValue = 1
+        binding.npScheduleBreakUsageLimitMinutes.maxValue = 480
+        binding.npScheduleBreakUsageLimitMinutes.value = usageLimitMinutes
+        binding.npScheduleBreakUsageLimitMinutes.setOnValueChangedListener { _, _, newVal ->
+            usageLimitMinutes = newVal
+            syncUsageLimitPickers()
+        }
+
+        binding.npScheduledAllowanceMinutes.minValue = 1
+        binding.npScheduledAllowanceMinutes.maxValue = 120
+        binding.npScheduledAllowanceMinutes.value = scheduledAllowanceMinutes
+        binding.npScheduledAllowanceMinutes.setOnValueChangedListener { _, _, newVal ->
+            scheduledAllowanceMinutes = newVal
+            syncScheduledAllowanceUi()
+        }
 
         binding.cbPomodoroLockEditing.setOnCheckedChangeListener { _, isChecked ->
             pomodoroLockEditing = isChecked
@@ -246,6 +330,7 @@ class EditBlockActivity : AppCompatActivity() {
 
         setupBlockingStyleDropdown()
         setupUnlockMethodDropdown()
+        setupScheduleBreakDropdown()
 
         binding.switchTypeOverRandom.setOnCheckedChangeListener { _, isChecked ->
             typeOverIsRandom = isChecked
@@ -268,6 +353,11 @@ class EditBlockActivity : AppCompatActivity() {
 
         binding.cgUsagePeriod.setOnCheckedStateChangeListener { _, checkedIds ->
             usageLimitPeriod = if (checkedIds.firstOrNull() == R.id.chipHourly) "HOURLY" else "DAILY"
+            syncUsageLimitPickers()
+        }
+        binding.cgScheduleBreakUsagePeriod.setOnCheckedStateChangeListener { _, checkedIds ->
+            usageLimitPeriod = if (checkedIds.firstOrNull() == R.id.chipScheduleBreakHourly) "HOURLY" else "DAILY"
+            syncUsageLimitPickers()
         }
 
         binding.cgTimerBreakPresets.setOnCheckedStateChangeListener { _, checkedIds ->
@@ -362,6 +452,14 @@ class EditBlockActivity : AppCompatActivity() {
         }
     }
 
+    private fun setupScheduleBreakDropdown() {
+        refreshScheduleBreakDropdown()
+        binding.actScheduleBreakType.setOnItemClickListener { _, _, position, _ ->
+            scheduleBreakType = scheduleBreakTypes[position].first
+            updateScheduleBreakUi()
+        }
+    }
+
     private fun refreshUnlockMethodDropdown() {
         if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO && unlockMethod == UNLOCK_TIMER) {
             unlockMethod = UNLOCK_NONE
@@ -370,6 +468,14 @@ class EditBlockActivity : AppCompatActivity() {
             ArrayAdapter(this, android.R.layout.simple_list_item_1, unlockMethods.map { it.second })
         )
         binding.actUnlockMethod.setText(getUnlockMethodLabel(unlockMethod), false)
+    }
+
+    private fun refreshScheduleBreakDropdown() {
+        normalizeScheduleBreakType()
+        binding.actScheduleBreakType.setAdapter(
+            ArrayAdapter(this, android.R.layout.simple_list_item_1, scheduleBreakTypes.map { it.second })
+        )
+        binding.actScheduleBreakType.setText(getScheduleBreakTypeLabel(scheduleBreakType), false)
     }
 
     private fun populateForm(block: AppBlock) {
@@ -387,11 +493,15 @@ class EditBlockActivity : AppCompatActivity() {
         editWindowEnd = block.editWindowEnd.ifBlank { "10:00" }
         editWindowDays = block.editWindowDays.ifBlank { "1111111" }
         activeDays = block.activeDays.ifBlank { "1111111" }
-        usageLimitMinutes = block.usageLimitMinutes.coerceIn(1, 480)
         usageLimitPeriod = block.usageLimitPeriod.ifBlank { "DAILY" }
+        usageLimitMinutes = block.usageLimitMinutes.coerceIn(1, usageLimitMaxForPeriod(usageLimitPeriod))
         waitTimerWaitMinutes = block.waitTimerWaitMinutes.coerceIn(1, 120)
         waitTimerUseMinutes = block.waitTimerUseMinutes.coerceIn(1, 120)
         waitTimerAdaptive = block.waitTimerAdaptive
+        pomodoroDurationMin = block.pomodoroDurationMin.coerceIn(1, 120)
+        pomodoroBreakMin = block.pomodoroBreakMin.coerceIn(1, 60)
+        scheduleBreakType = block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE }
+        scheduledAllowanceMinutes = block.scheduledAllowanceMinutes.coerceIn(1, 120)
         showTimer = block.showTimer
         timerBreakMinutes = block.timerBreakMinutes
         lockUntil = block.lockUntil
@@ -399,9 +509,6 @@ class EditBlockActivity : AppCompatActivity() {
 
         binding.etTitle.setText(block.title)
         binding.npDelayMinutes.value = delayMinutes
-        binding.npUsageLimitMinutes.value = usageLimitMinutes
-        binding.npWaitTimerWait.value = waitTimerWaitMinutes
-        binding.npWaitTimerUse.value = waitTimerUseMinutes
         binding.etBlockPassword.setText(blockPassword)
         binding.etConfirmPassword.setText(blockPassword)
         binding.switchTypeOverRandom.isChecked = typeOverIsRandom
@@ -411,11 +518,7 @@ class EditBlockActivity : AppCompatActivity() {
         setToggleStates(usageLimitDayToggles(), activeDays)
         setToggleStates(waitTimerDayToggles(), activeDays)
 
-        if (block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO) {
-            binding.npPomodoroDuration.value = block.pomodoroDurationMin.coerceIn(1, 120)
-            binding.npPomodoroBreak.value = block.pomodoroBreakMin.coerceIn(1, 60)
-            binding.cbPomodoroLockEditing.isChecked = pomodoroLockEditing
-        }
+        binding.cbPomodoroLockEditing.isChecked = pomodoroLockEditing
 
         applyCurrentStateToUi()
 
@@ -435,17 +538,17 @@ class EditBlockActivity : AppCompatActivity() {
         }
         binding.tvQrSecret.text = currentQrSecret
         binding.actBlockingStyle.setText(getBlockingStyleLabel(blockingStyle), false)
+        refreshScheduleBreakDropdown()
         refreshUnlockMethodDropdown()
         binding.npDelayMinutes.value = delayMinutes.coerceIn(1, 60)
-        binding.npUsageLimitMinutes.value = usageLimitMinutes.coerceIn(1, 480)
-        binding.npWaitTimerWait.value = waitTimerWaitMinutes.coerceIn(1, 120)
-        binding.npWaitTimerUse.value = waitTimerUseMinutes.coerceIn(1, 120)
-        binding.cbWaitTimerAdaptive.isChecked = waitTimerAdaptive
+        syncUsageLimitPickers()
+        syncWaitTimerUi()
+        syncPomodoroConfigUi()
+        syncScheduledAllowanceUi()
         binding.cbShowTimer.isChecked = showTimer
         binding.cbPomodoroLockEditing.isChecked = pomodoroLockEditing
         binding.etTypeOverText.setText(typeOverText)
         binding.switchTypeOverRandom.isChecked = typeOverIsRandom
-        binding.cgUsagePeriod.check(if (usageLimitPeriod == "HOURLY") R.id.chipHourly else R.id.chipDaily)
         setToggleStates(usageLimitDayToggles(), activeDays)
         setToggleStates(waitTimerDayToggles(), activeDays)
         updateSelectedAppsDisplay()
@@ -453,6 +556,7 @@ class EditBlockActivity : AppCompatActivity() {
         updateLockUntilDisplay()
         updateTypeOverUi()
         updateBlockingStyleUi()
+        updateScheduleBreakUi()
         updateUnlockMethodUi()
         syncTimerBreakPresetSelection()
     }
@@ -632,6 +736,63 @@ class EditBlockActivity : AppCompatActivity() {
         binding.btnEditWindowEnd.text = "${getString(R.string.unlock_edit_window_end)}: $editWindowEnd"
     }
 
+    private fun syncUsageLimitPickers() {
+        usageLimitPeriod = if (usageLimitPeriod == "HOURLY") "HOURLY" else "DAILY"
+        val maxValue = usageLimitMaxForPeriod(usageLimitPeriod)
+        usageLimitMinutes = usageLimitMinutes.coerceIn(1, maxValue)
+        setNumberPickerValue(binding.npUsageLimitMinutes, usageLimitMinutes, maxValue)
+        setNumberPickerValue(binding.npScheduleBreakUsageLimitMinutes, usageLimitMinutes, maxValue)
+        val standaloneChipId = if (usageLimitPeriod == "HOURLY") R.id.chipHourly else R.id.chipDaily
+        if (binding.cgUsagePeriod.checkedChipId != standaloneChipId) {
+            binding.cgUsagePeriod.check(standaloneChipId)
+        }
+        val scheduleChipId = if (usageLimitPeriod == "HOURLY") R.id.chipScheduleBreakHourly else R.id.chipScheduleBreakDaily
+        if (binding.cgScheduleBreakUsagePeriod.checkedChipId != scheduleChipId) {
+            binding.cgScheduleBreakUsagePeriod.check(scheduleChipId)
+        }
+    }
+
+    private fun syncWaitTimerUi() {
+        waitTimerUseMinutes = waitTimerUseMinutes.coerceIn(1, 120)
+        waitTimerWaitMinutes = waitTimerWaitMinutes.coerceIn(1, 120)
+        setNumberPickerValue(binding.npWaitTimerUse, waitTimerUseMinutes, 120)
+        setNumberPickerValue(binding.npWaitTimerWait, waitTimerWaitMinutes, 120)
+        setNumberPickerValue(binding.npScheduleBreakWaitUse, waitTimerUseMinutes, 120)
+        setNumberPickerValue(binding.npScheduleBreakWaitBlock, waitTimerWaitMinutes, 120)
+        if (binding.cbWaitTimerAdaptive.isChecked != waitTimerAdaptive) {
+            binding.cbWaitTimerAdaptive.isChecked = waitTimerAdaptive
+        }
+        if (binding.cbScheduleBreakWaitAdaptive.isChecked != waitTimerAdaptive) {
+            binding.cbScheduleBreakWaitAdaptive.isChecked = waitTimerAdaptive
+        }
+    }
+
+    private fun syncPomodoroConfigUi() {
+        pomodoroDurationMin = pomodoroDurationMin.coerceIn(1, 120)
+        pomodoroBreakMin = pomodoroBreakMin.coerceIn(1, 60)
+        setNumberPickerValue(binding.npPomodoroDuration, pomodoroDurationMin, 120)
+        setNumberPickerValue(binding.npPomodoroBreak, pomodoroBreakMin, 60)
+        setNumberPickerValue(binding.npScheduleBreakPomodoroDuration, pomodoroDurationMin, 120)
+        setNumberPickerValue(binding.npScheduleBreakPomodoroBreak, pomodoroBreakMin, 60)
+    }
+
+    private fun syncScheduledAllowanceUi() {
+        scheduledAllowanceMinutes = scheduledAllowanceMinutes.coerceIn(1, 120)
+        setNumberPickerValue(binding.npScheduledAllowanceMinutes, scheduledAllowanceMinutes, 120)
+    }
+
+    private fun setNumberPickerValue(picker: NumberPicker, value: Int, maxValue: Int) {
+        if (picker.maxValue != maxValue) {
+            picker.maxValue = maxValue
+        }
+        val clampedValue = value.coerceIn(picker.minValue, picker.maxValue)
+        if (picker.value != clampedValue) {
+            picker.value = clampedValue
+        }
+    }
+
+    private fun usageLimitMaxForPeriod(period: String): Int = if (period == "HOURLY") 60 else 480
+
     private fun updateBlockingStyleUi() {
         binding.tvBlockingStyleDesc.text = when (blockingStyle) {
             UnlockMethodUtils.STYLE_SCHEDULE -> getString(R.string.blocking_style_schedule_desc)
@@ -648,6 +809,29 @@ class EditBlockActivity : AppCompatActivity() {
             blockingStyle == UnlockMethodUtils.STYLE_USAGE_LIMIT ||
             blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER
         ) View.VISIBLE else View.GONE
+        if (blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) {
+            hideSelectedBlockDetail()
+        }
+        updateScheduleBreakUi()
+    }
+
+    private fun updateScheduleBreakUi() {
+        refreshScheduleBreakDropdown()
+        binding.tvScheduleBreakDesc.text = when (scheduleBreakType) {
+            UnlockMethodUtils.BREAK_POMODORO -> getString(R.string.schedule_break_pomodoro_desc)
+            UnlockMethodUtils.BREAK_WAIT_TIMER -> getString(R.string.schedule_break_wait_timer_desc)
+            UnlockMethodUtils.BREAK_USAGE_LIMIT -> getString(R.string.schedule_break_usage_limit_desc)
+            UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE -> getString(R.string.schedule_break_allowance_desc)
+            else -> getString(R.string.schedule_break_none_desc)
+        }
+        binding.llScheduleBreakPomodoroSection.visibility =
+            if (scheduleBreakType == UnlockMethodUtils.BREAK_POMODORO) View.VISIBLE else View.GONE
+        binding.llScheduleBreakWaitTimerSection.visibility =
+            if (scheduleBreakType == UnlockMethodUtils.BREAK_WAIT_TIMER) View.VISIBLE else View.GONE
+        binding.llScheduleBreakUsageLimitSection.visibility =
+            if (scheduleBreakType == UnlockMethodUtils.BREAK_USAGE_LIMIT) View.VISIBLE else View.GONE
+        binding.llScheduleBreakAllowanceSection.visibility =
+            if (scheduleBreakType == UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE) View.VISIBLE else View.GONE
     }
 
     private fun updateUnlockMethodUi() {
@@ -743,43 +927,51 @@ class EditBlockActivity : AppCompatActivity() {
 
     private fun showSelectedBlockDetail(timeBlock: TimeBlock) {
         val selectedBlock = currentTimeBlocks.firstOrNull { it.id == timeBlock.id } ?: timeBlock
+        selectedTimeBlockId = selectedBlock.id
         selectedBlockDetailView.visibility = View.VISIBLE
+        selectedBlockDetailView.bringToFront()
         selectedBlockStartButton.text = selectedBlock.startTime
         selectedBlockEndButton.text = selectedBlock.endTime
+        selectedBlockStartButton.isEnabled = true
+        selectedBlockEndButton.isEnabled = true
         highlightSelectedDays(selectedBlock.activeDays)
-
-        selectedBlockStartButton.setOnClickListener {
-            showTimePicker(getString(R.string.add_time_block_from), selectedBlock.startTime) { time ->
-                val updated = selectedBlock.copy(startTime = time)
-                if (hasTimeBlockOverlap(updated.startTime, updated.endTime, updated.activeDays, updated.id)) {
-                    Toast.makeText(this, getString(R.string.add_time_block_overlap_error), Toast.LENGTH_SHORT).show()
-                } else {
-                    replaceTimeBlock(updated)
-                    showSelectedBlockDetail(updated)
-                }
-            }
-        }
-        selectedBlockEndButton.setOnClickListener {
-            showTimePicker(getString(R.string.add_time_block_until), selectedBlock.endTime) { time ->
-                val updated = selectedBlock.copy(endTime = time)
-                if (hasTimeBlockOverlap(updated.startTime, updated.endTime, updated.activeDays, updated.id)) {
-                    Toast.makeText(this, getString(R.string.add_time_block_overlap_error), Toast.LENGTH_SHORT).show()
-                } else {
-                    replaceTimeBlock(updated)
-                    showSelectedBlockDetail(updated)
-                }
-            }
-        }
-        selectedBlockDeleteButton.setOnClickListener {
-            currentTimeBlocks.removeAll { it.id == selectedBlock.id }
-            binding.weeklyGrid.setTimeBlocks(currentTimeBlocks)
-            binding.weeklyGrid.setSelectedBlockId(null)
-            hideSelectedBlockDetail()
-        }
     }
 
     private fun hideSelectedBlockDetail() {
+        selectedTimeBlockId = null
         selectedBlockDetailView.visibility = View.GONE
+    }
+
+    private fun getSelectedTimeBlock(): TimeBlock? {
+        val blockId = selectedTimeBlockId ?: return null
+        return currentTimeBlocks.firstOrNull { it.id == blockId }
+    }
+
+    private fun editSelectedTimeBlock(isStart: Boolean) {
+        val selectedBlock = getSelectedTimeBlock() ?: return
+        val titleRes = if (isStart) R.string.add_time_block_from else R.string.add_time_block_until
+        val currentValue = if (isStart) selectedBlock.startTime else selectedBlock.endTime
+        showTimePicker(getString(titleRes), currentValue) { time ->
+            val updated = if (isStart) {
+                selectedBlock.copy(startTime = time)
+            } else {
+                selectedBlock.copy(endTime = time)
+            }
+            if (hasTimeBlockOverlap(updated.startTime, updated.endTime, updated.activeDays, updated.id)) {
+                Toast.makeText(this, getString(R.string.add_time_block_overlap_error), Toast.LENGTH_SHORT).show()
+            } else {
+                replaceTimeBlock(updated)
+                showSelectedBlockDetail(updated)
+            }
+        }
+    }
+
+    private fun deleteSelectedTimeBlock() {
+        val selectedBlock = getSelectedTimeBlock() ?: return
+        currentTimeBlocks.removeAll { it.id == selectedBlock.id }
+        binding.weeklyGrid.setTimeBlocks(currentTimeBlocks)
+        binding.weeklyGrid.setSelectedBlockId(null)
+        hideSelectedBlockDetail()
     }
 
     private fun highlightSelectedDays(activeDays: String) {
@@ -930,11 +1122,39 @@ class EditBlockActivity : AppCompatActivity() {
         binding.tilTypeOverText.error = null
 
         delayMinutes = binding.npDelayMinutes.value
-        usageLimitMinutes = binding.npUsageLimitMinutes.value
-        usageLimitPeriod = if (binding.cgUsagePeriod.checkedChipId == R.id.chipHourly) "HOURLY" else "DAILY"
-        waitTimerWaitMinutes = binding.npWaitTimerWait.value
-        waitTimerUseMinutes = binding.npWaitTimerUse.value
-        waitTimerAdaptive = binding.cbWaitTimerAdaptive.isChecked
+        if (blockingStyle == UnlockMethodUtils.STYLE_USAGE_LIMIT) {
+            usageLimitMinutes = binding.npUsageLimitMinutes.value
+            usageLimitPeriod = if (binding.cgUsagePeriod.checkedChipId == R.id.chipHourly) "HOURLY" else "DAILY"
+        } else if (blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE && scheduleBreakType == UnlockMethodUtils.BREAK_USAGE_LIMIT) {
+            usageLimitMinutes = binding.npScheduleBreakUsageLimitMinutes.value
+            usageLimitPeriod = if (binding.cgScheduleBreakUsagePeriod.checkedChipId == R.id.chipScheduleBreakHourly) "HOURLY" else "DAILY"
+        }
+        syncUsageLimitPickers()
+
+        if (blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER) {
+            waitTimerWaitMinutes = binding.npWaitTimerWait.value
+            waitTimerUseMinutes = binding.npWaitTimerUse.value
+            waitTimerAdaptive = binding.cbWaitTimerAdaptive.isChecked
+        } else if (blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE && scheduleBreakType == UnlockMethodUtils.BREAK_WAIT_TIMER) {
+            waitTimerWaitMinutes = binding.npScheduleBreakWaitBlock.value
+            waitTimerUseMinutes = binding.npScheduleBreakWaitUse.value
+            waitTimerAdaptive = binding.cbScheduleBreakWaitAdaptive.isChecked
+        }
+        syncWaitTimerUi()
+
+        if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) {
+            pomodoroDurationMin = binding.npPomodoroDuration.value
+            pomodoroBreakMin = binding.npPomodoroBreak.value
+        } else if (blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE && scheduleBreakType == UnlockMethodUtils.BREAK_POMODORO) {
+            pomodoroDurationMin = binding.npScheduleBreakPomodoroDuration.value
+            pomodoroBreakMin = binding.npScheduleBreakPomodoroBreak.value
+        }
+        syncPomodoroConfigUi()
+
+        if (blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE && scheduleBreakType == UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE) {
+            scheduledAllowanceMinutes = binding.npScheduledAllowanceMinutes.value
+        }
+        syncScheduledAllowanceUi()
         showTimer = binding.cbShowTimer.isChecked
         blockPassword = binding.etBlockPassword.text?.toString() ?: ""
         val confirmPassword = binding.etConfirmPassword.text?.toString() ?: ""
@@ -1000,10 +1220,12 @@ class EditBlockActivity : AppCompatActivity() {
             blockNowUntil = existingBlock?.blockNowUntil ?: 0L,
             isEnabled = existingBlock?.isEnabled ?: (!isAllowlistMode),
             isPomodoroBlock = blockingStyle == UnlockMethodUtils.STYLE_POMODORO,
-            pomodoroDurationMin = if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) binding.npPomodoroDuration.value else existingBlock?.pomodoroDurationMin ?: 25,
-            pomodoroBreakMin = if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) binding.npPomodoroBreak.value else existingBlock?.pomodoroBreakMin ?: 5,
+            pomodoroDurationMin = pomodoroDurationMin,
+            pomodoroBreakMin = pomodoroBreakMin,
             isArchived = existingBlock?.isArchived ?: false,
             blockingStyle = blockingStyle,
+            scheduleBreakType = scheduleBreakType,
+            scheduledAllowanceMinutes = scheduledAllowanceMinutes,
             usageLimitMinutes = usageLimitMinutes,
             usageLimitPeriod = usageLimitPeriod,
             waitTimerWaitMinutes = waitTimerWaitMinutes,
@@ -1178,6 +1400,12 @@ class EditBlockActivity : AppCompatActivity() {
         }
     }
 
+    private fun normalizeScheduleBreakType() {
+        if (scheduleBreakTypes.none { it.first == scheduleBreakType }) {
+            scheduleBreakType = UnlockMethodUtils.BREAK_NONE
+        }
+    }
+
     private fun getBlockingStyleLabel(style: String): String {
         return blockingStyles.firstOrNull { it.first == style }?.second
             ?: getString(R.string.blocking_style_manual)
@@ -1186,6 +1414,11 @@ class EditBlockActivity : AppCompatActivity() {
     private fun getUnlockMethodLabel(method: String): String {
         return unlockMethods.firstOrNull { it.first == method }?.second
             ?: getString(R.string.unlock_method_none)
+    }
+
+    private fun getScheduleBreakTypeLabel(type: String): String {
+        return scheduleBreakTypes.firstOrNull { it.first == type }?.second
+            ?: getString(R.string.schedule_break_type_none_option)
     }
 
     private fun formatDateTime(epochMillis: Long): String {
