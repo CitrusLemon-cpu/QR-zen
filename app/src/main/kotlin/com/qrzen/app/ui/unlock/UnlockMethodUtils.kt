@@ -111,7 +111,7 @@ object UnlockMethodUtils {
 
     fun isBlockCurrentlyActive(block: AppBlock, timeBlocks: List<TimeBlock>): Boolean {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
-        if (block.blockingStyle == STYLE_MANUAL) return false
+        if (block.blockingStyle == STYLE_MANUAL) return true
         if (block.blockingStyle != STYLE_SCHEDULE) return true
 
         val now = LocalTime.now()

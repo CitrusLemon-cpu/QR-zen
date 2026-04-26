@@ -29,7 +29,8 @@ class BlockAdapter(
     private val onEdit: (AppBlock) -> Unit,
     private val onArchive: (AppBlock) -> Unit,
     private val onDelete: (AppBlock) -> Unit,
-    private val onRestartFromPause: (AppBlock) -> Unit
+    private val onRestartFromPause: (AppBlock) -> Unit,
+    private val onLockWithTimer: (AppBlock) -> Unit
 ) : ListAdapter<AppBlock, BlockAdapter.ViewHolder>(DIFF) {
 
     companion object {
@@ -65,6 +66,8 @@ class BlockAdapter(
         private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
         private var countDownTimer: CountDownTimer? = null
         private var blockNowTimer: CountDownTimer? = null
+        private var lockTimer: CountDownTimer? = null
+        private var activeTimer: CountDownTimer? = null
         private var usageStatusTimer: CountDownTimer? = null
         private var iconLoadJob: Job? = null
         private var usageQueryJob: Job? = null
@@ -75,6 +78,10 @@ class BlockAdapter(
             countDownTimer = null
             blockNowTimer?.cancel()
             blockNowTimer = null
+            lockTimer?.cancel()
+            lockTimer = null
+            activeTimer?.cancel()
+            activeTimer = null
             usageStatusTimer?.cancel()
             usageStatusTimer = null
             iconLoadJob?.cancel()
@@ -152,6 +159,8 @@ class BlockAdapter(
 
             setupPauseTimer(block)
             setupBlockNowTimer(block)
+            setupLockTimer(block)
+            setupActiveTimer(block)
 
             val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             boundPackages = packages
@@ -252,6 +261,46 @@ class BlockAdapter(
             }
         }
 
+        private fun setupLockTimer(block: AppBlock) {
+            val now = System.currentTimeMillis()
+            if (block.toggleLockUntil > now) {
+                binding.tvLockTimer.visibility = View.VISIBLE
+                val remaining = block.toggleLockUntil - now
+                binding.tvLockTimer.text = "🔒 Locked for ${formatDuration(remaining)}"
+                lockTimer = object : CountDownTimer(remaining, 1000L) {
+                    override fun onTick(ms: Long) {
+                        binding.tvLockTimer.text = "🔒 Locked for ${formatDuration(ms)}"
+                    }
+
+                    override fun onFinish() {
+                        binding.tvLockTimer.visibility = View.GONE
+                    }
+                }.start()
+            } else {
+                binding.tvLockTimer.visibility = View.GONE
+            }
+        }
+
+        private fun setupActiveTimer(block: AppBlock) {
+            val now = System.currentTimeMillis()
+            if (block.activeUntil > now) {
+                binding.tvActiveTimer.visibility = View.VISIBLE
+                val remaining = block.activeUntil - now
+                binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(remaining)}"
+                activeTimer = object : CountDownTimer(remaining, 1000L) {
+                    override fun onTick(ms: Long) {
+                        binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(ms)}"
+                    }
+
+                    override fun onFinish() {
+                        binding.tvActiveTimer.visibility = View.GONE
+                    }
+                }.start()
+            } else {
+                binding.tvActiveTimer.visibility = View.GONE
+            }
+        }
+
         private fun showPopupMenu(anchor: View, block: AppBlock) {
             val popup = PopupMenu(anchor.context, anchor)
             popup.menuInflater.inflate(R.menu.menu_block_overflow, popup.menu)
@@ -259,6 +308,13 @@ class BlockAdapter(
             val now = System.currentTimeMillis()
             val isPaused = block.pausedUntil > now || block.pausedUntil == Long.MAX_VALUE
             popup.menu.findItem(R.id.action_pause)?.title = if (isPaused) "Unpause" else "Pause"
+
+            val isManualNoMethod = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
+                UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
+
+            popup.menu.findItem(R.id.action_pause)?.isVisible = !isManualNoMethod
+            popup.menu.findItem(R.id.action_block_now)?.isVisible = !isManualNoMethod
+            popup.menu.findItem(R.id.action_lock_with_timer)?.isVisible = isManualNoMethod
 
             popup.setOnMenuItemClickListener { item ->
                 when (item.itemId) {
@@ -268,6 +324,10 @@ class BlockAdapter(
                     }
                     R.id.action_block_now -> {
                         onBlockNow(block)
+                        true
+                    }
+                    R.id.action_lock_with_timer -> {
+                        onLockWithTimer(block)
                         true
                     }
                     R.id.action_edit -> {
@@ -293,6 +353,10 @@ class BlockAdapter(
             countDownTimer = null
             blockNowTimer?.cancel()
             blockNowTimer = null
+            lockTimer?.cancel()
+            lockTimer = null
+            activeTimer?.cancel()
+            activeTimer = null
             usageStatusTimer?.cancel()
             usageStatusTimer = null
             iconLoadJob?.cancel()

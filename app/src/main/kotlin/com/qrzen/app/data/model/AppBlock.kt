@@ -75,5 +75,11 @@ data class AppBlock(
     val waitTimerUseMinutes: Int = 5,
     val waitTimerAdaptive: Boolean = false,
     val timerBreakMinutes: Int = 0,
-    val showTimer: Boolean = false
+    val showTimer: Boolean = false,
+    /** Epoch millis until which the toggle is locked (can't turn off). 0 = not locked. */
+    val toggleLockUntil: Long = 0L,
+    /** If true, auto-set isEnabled=false when toggleLockUntil expires */
+    val autoDisableOnToggleLockExpiry: Boolean = false,
+    /** Epoch millis until which this block auto-expires (for allowlist mandatory timer). 0 = no auto-expiry. */
+    val activeUntil: Long = 0L
 )

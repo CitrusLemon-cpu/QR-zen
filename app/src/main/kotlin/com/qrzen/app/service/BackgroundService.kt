@@ -168,6 +168,49 @@ class BackgroundService : Service() {
                 dao.update(block.copy(blockNowUntil = 0L))
                 shouldRefresh = true
             }
+        allBlocks
+            .filter { block ->
+                block.toggleLockUntil != 0L &&
+                    block.toggleLockUntil != Long.MAX_VALUE &&
+                    now > block.toggleLockUntil
+            }
+            .forEach { block ->
+                if (block.autoDisableOnToggleLockExpiry || block.isAllowlistMode) {
+                    dao.update(
+                        block.copy(
+                            isEnabled = false,
+                            toggleLockUntil = 0L,
+                            autoDisableOnToggleLockExpiry = false,
+                            activeUntil = 0L
+                        )
+                    )
+                } else {
+                    dao.update(
+                        block.copy(
+                            toggleLockUntil = 0L,
+                            autoDisableOnToggleLockExpiry = false
+                        )
+                    )
+                }
+                shouldRefresh = true
+            }
+        allBlocks
+            .filter { block ->
+                block.activeUntil != 0L &&
+                    block.activeUntil != Long.MAX_VALUE &&
+                    now > block.activeUntil
+            }
+            .forEach { block ->
+                dao.update(
+                    block.copy(
+                        isEnabled = false,
+                        activeUntil = 0L,
+                        toggleLockUntil = 0L,
+                        autoDisableOnToggleLockExpiry = false
+                    )
+                )
+                shouldRefresh = true
+            }
         val currentlyActiveIds = mutableSetOf<Int>()
         allBlocks
             .filter { it.isEnabled && !it.isArchived && it.pausedUntil <= now }
@@ -200,7 +243,7 @@ class BackgroundService : Service() {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
 
         return when (block.blockingStyle) {
-            UnlockMethodUtils.STYLE_MANUAL -> false
+            UnlockMethodUtils.STYLE_MANUAL -> true
             UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
             UnlockMethodUtils.STYLE_USAGE_LIMIT -> isUsageLimitExceeded(block)
             UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block, foregroundPkg)

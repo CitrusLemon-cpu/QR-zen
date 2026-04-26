@@ -113,7 +113,7 @@
     <string name="overlay_remove_app_confirm">Remove</string>
     <string name="blocking_style_section">Blocking Condition</string>
     <string name="blocking_style_manual">Block Manually</string>
-    <string name="blocking_style_manual_desc">Use the "Block Now" button to activate blocking.</string>
+    <string name="blocking_style_manual_desc">Toggle on to activate blocking.</string>
     <string name="blocking_style_schedule">Weekly Schedule</string>
     <string name="blocking_style_schedule_desc">Block during specific times on selected days.</string>
     <string name="blocking_style_usage_limit">Usage Limit</string>
@@ -137,4 +137,9 @@
     <string name="wait_timer_wait_label">Block for</string>
     <string name="wait_timer_use_label">after every</string>
     <string name="wait_timer_minutes">minutes of use</string>
+    <string name="lock_with_timer_title">Lock “%1$s” for…</string>
+    <string name="lock_with_timer_auto_off">Automatically toggle off when timer expires</string>
+    <string name="lock_timer_locked">Toggle is locked until %1$s</string>
+    <string name="allowlist_duration_title">How long should “%1$s” be active?</string>
+    <string name="blocking_style_manual_desc_new">Toggle on to activate blocking.</string>
 </resources>

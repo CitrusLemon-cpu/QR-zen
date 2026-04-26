@@ -10,6 +10,9 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
+import android.widget.CheckBox
+import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.fragment.app.Fragment
@@ -65,11 +68,34 @@ class HomeFragment : Fragment() {
         adapter = BlockAdapter(
             onToggle = { block, enabled ->
                 if (enabled) {
-                    viewModel.setEnabled(block, true)
-                    goToHomeIfBlockActive(block)
-                    true
+                    val isManualNoMethod = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
+                        UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
+                    if (isManualNoMethod && block.isAllowlistMode) {
+                        showAllowlistDurationPicker(block)
+                        false
+                    } else {
+                        viewModel.setEnabled(block, true)
+                        goToHomeIfBlockActive(block)
+                        true
+                    }
                 } else {
-                    requestUnlock(block, UnlockChallengeActivity.ACTION_TOGGLE, enabled)
+                    if (block.toggleLockUntil > System.currentTimeMillis()) {
+                        Toast.makeText(
+                            requireContext(),
+                            getString(R.string.lock_timer_locked, UnlockMethodUtils.formatDateTime(block.toggleLockUntil)),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        false
+                    } else {
+                        val isManualNoMethod = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
+                            UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
+                        if (isManualNoMethod) {
+                            viewModel.disableAndClearTimers(block)
+                            true
+                        } else {
+                            requestUnlock(block, UnlockChallengeActivity.ACTION_TOGGLE, enabled)
+                        }
+                    }
                 }
             },
             onPause = { block ->
@@ -95,7 +121,8 @@ class HomeFragment : Fragment() {
                     }
                     .setNegativeButton("Cancel", null)
                     .show()
-            }
+            },
+            onLockWithTimer = { block -> showLockWithTimerDialog(block) }
         )
         binding.rvBlocks.layoutManager = LinearLayoutManager(requireContext())
         binding.rvBlocks.adapter = adapter
@@ -253,6 +280,76 @@ class HomeFragment : Fragment() {
             .show()
     }
 
+    private fun showAllowlistDurationPicker(block: AppBlock) {
+        val options = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "Rest of day")
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.allowlist_duration_title, block.title))
+            .setItems(options) { _, which ->
+                val durationMs = when (which) {
+                    0 -> 15 * 60_000L
+                    1 -> 30 * 60_000L
+                    2 -> 60 * 60_000L
+                    3 -> 2 * 60 * 60_000L
+                    4 -> 4 * 60 * 60_000L
+                    5 -> millisUntilMidnight()
+                    else -> 0L
+                }
+                if (durationMs > 0L) {
+                    viewModel.enableWithActiveUntil(block, durationMs)
+                    startActivity(Intent(Intent.ACTION_MAIN).apply {
+                        addCategory(Intent.CATEGORY_HOME)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    })
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showLockWithTimerDialog(block: AppBlock) {
+        val options = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "4 hours", "8 hours", "Rest of day")
+        var selectedIndex = 0
+
+        val dialogView = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 0)
+        }
+
+        val checkBox = if (!block.isAllowlistMode) {
+            CheckBox(requireContext()).apply {
+                text = getString(R.string.lock_with_timer_auto_off)
+                isChecked = false
+            }.also { dialogView.addView(it) }
+        } else {
+            null
+        }
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.lock_with_timer_title, block.title))
+            .setSingleChoiceItems(options, selectedIndex) { _, which ->
+                selectedIndex = which
+            }
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val durationMs = when (selectedIndex) {
+                    0 -> 15 * 60_000L
+                    1 -> 30 * 60_000L
+                    2 -> 60 * 60_000L
+                    3 -> 2 * 60 * 60_000L
+                    4 -> 4 * 60 * 60_000L
+                    5 -> 8 * 60 * 60_000L
+                    6 -> millisUntilMidnight()
+                    else -> 0L
+                }
+                if (durationMs > 0L) {
+                    val autoDisable = block.isAllowlistMode || (checkBox?.isChecked == true)
+                    viewModel.lockWithTimer(block, durationMs, autoDisable)
+                }
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
     private fun millisUntilMidnight(): Long {
         val cal = Calendar.getInstance().apply {
             set(Calendar.HOUR_OF_DAY, 23)
@@ -264,7 +361,6 @@ class HomeFragment : Fragment() {
     }
 
     private fun goToHomeIfBlockActive(block: AppBlock) {
-        if (block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL) return
         viewLifecycleOwner.lifecycleScope.launch {
             if (viewModel.isBlockCurrentlyActive(block)) {
                 startActivity(Intent(Intent.ACTION_MAIN).apply {
