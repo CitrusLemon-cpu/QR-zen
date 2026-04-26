@@ -49,8 +49,6 @@
     <string name="qr_display_instructions">Print or save this QR code. You’ll need to scan it to unlock this block.</string>
     <string name="home_empty">No blocks yet. Tap + to add one.</string>
     <string name="allowlist_remaining">remaining</string>
-    <string name="allowlist_usage_remaining">usage remaining</string>
-    <string name="allowlist_usage_hint">Timer only counts while using allowed apps</string>
     <string name="allowlist_allowed_apps">Allowed Apps</string>
     <string name="allowlist_multi_title">%1$d Allowlist Blocks Active</string>
     <string name="allowlist_tap_switch">%1$s (tap to switch)</string>

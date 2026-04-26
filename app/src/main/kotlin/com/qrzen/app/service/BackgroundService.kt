@@ -263,23 +263,6 @@ class BackgroundService : Service() {
             }
         allBlocks
             .filter { block ->
-                block.isEnabled && block.isAllowlistMode && !block.isArchived &&
-                    Prefs.getAllowlistUsageRemaining(block.id) == 0L
-            }
-            .forEach { block ->
-                Prefs.clearAllowlistUsageTimer(block.id)
-                dao.update(
-                    block.copy(
-                        isEnabled = false,
-                        activeUntil = 0L,
-                        toggleLockUntil = 0L,
-                        autoDisableOnToggleLockExpiry = false
-                    )
-                )
-                shouldRefresh = true
-            }
-        allBlocks
-            .filter { block ->
                 block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO &&
                     block.isEnabled &&
                     block.pomodoroRoundsTotal > 0
@@ -330,17 +313,13 @@ class BackgroundService : Service() {
                 it.blockingStyle == UnlockMethodUtils.STYLE_POMODORO &&
                 it.pomodoroRoundsTotal > 0
         }
-        val hasUsageTimers = allBlocks.any {
-            it.isEnabled && !it.isArchived && it.isAllowlistMode &&
-                Prefs.hasAllowlistUsageTimer(it.id)
-        }
         val hasScheduleBreakBlocks = allBlocks.any {
             it.isEnabled && !it.isArchived && it.pausedUntil <= now &&
                 it.blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE &&
                 it.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE } != UnlockMethodUtils.BREAK_NONE
         }
         val needsPolling =
-            hasActiveBlocks || hasWaitTimerBlocks || hasPomodoroBlocks || hasUsageTimers || hasScheduleBreakBlocks
+            hasActiveBlocks || hasWaitTimerBlocks || hasPomodoroBlocks || hasScheduleBreakBlocks
         if (needsPolling) {
             startUsagePolling()
         } else {
@@ -913,45 +892,8 @@ class BackgroundService : Service() {
     }
 
     private fun trackAllowlistUsageTimers(blocks: List<AppBlock>, foregroundPkg: String) {
-        val now = System.currentTimeMillis()
-        for (block in blocks) {
-            if (!block.isAllowlistMode) continue
-            if (!block.isEnabled || block.isArchived) continue
-            val remaining = Prefs.getAllowlistUsageRemaining(block.id)
-            if (remaining <= 0L) continue
-
-            val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-            val isInAllowedApp = foregroundPkg in packages && !Prefs.isAppTimerExpired(block.id, foregroundPkg)
-
-            if (isInAllowedApp) {
-                val lastFg = Prefs.getAllowlistUsageLastFg(block.id)
-                if (lastFg > 0L) {
-                    val elapsed = (now - lastFg).coerceAtLeast(0L).coerceAtMost(5_000L)
-                    val newRemaining = (remaining - elapsed).coerceAtLeast(0L)
-                    Prefs.setAllowlistUsageRemaining(block.id, newRemaining)
-                    if (newRemaining <= 0L) {
-                        Prefs.setAllowlistUsageRemaining(block.id, 0L)
-                        Prefs.setAllowlistUsageLastFg(block.id, 0L)
-                        scope.launch {
-                            Prefs.clearAllowlistUsageTimer(block.id)
-                            dao.update(
-                                block.copy(
-                                    isEnabled = false,
-                                    activeUntil = 0L,
-                                    toggleLockUntil = 0L,
-                                    autoDisableOnToggleLockExpiry = false
-                                )
-                            )
-                            WidgetRefresh.refresh(applicationContext)
-                        }
-                        continue
-                    }
-                }
-                Prefs.setAllowlistUsageLastFg(block.id, now)
-            } else {
-                Prefs.setAllowlistUsageLastFg(block.id, 0L)
-            }
-        }
+        // Block-level timer is now pure wall-clock via activeUntil;
+        // expiry handled by checkExpiredPauses().
     }
 
     private fun trackPerAppTimers(blocks: List<AppBlock>, foregroundPkg: String) {
@@ -1000,22 +942,6 @@ class BackgroundService : Service() {
             val icon = getOrLoadIcon(foregroundPkg)
             if (icon != null) {
                 entries.add(AppTimerOverlay.TimerEntry(foregroundPkg, icon, perAppRemaining))
-            }
-        }
-
-        if (entries.isEmpty()) {
-            for (block in blocks) {
-                if (!block.isAllowlistMode || !block.isEnabled || block.isArchived) continue
-                val remaining = Prefs.getAllowlistUsageRemaining(block.id)
-                if (remaining <= 0L) continue
-                val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                if (foregroundPkg in packages) {
-                    val icon = getOrLoadIcon(foregroundPkg)
-                    if (icon != null) {
-                        entries.add(AppTimerOverlay.TimerEntry(foregroundPkg, icon, remaining))
-                    }
-                    break
-                }
             }
         }
 

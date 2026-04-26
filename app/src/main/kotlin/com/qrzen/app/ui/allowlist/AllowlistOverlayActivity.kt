@@ -217,35 +217,6 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                 expiredBlockIds += block.id
                 continue
             }
-            if (Prefs.getAllowlistUsageRemaining(block.id) > 0L) {
-                countdownTimers[block.id] = object : CountDownTimer(86_400_000L * 30, 1_000L) {
-                    override fun onTick(millisUntilFinished: Long) {
-                        val remaining = Prefs.getAllowlistUsageRemaining(block.id)
-                        if (remaining <= 0L) {
-                            cancel()
-                            countdownTimers.remove(block.id)
-                            activeBlocks.removeAll { it.id == block.id }
-                            timeBlocksByBlockId = timeBlocksByBlockId - block.id
-                            if (activeBlocks.isEmpty()) {
-                                SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)
-                                finish()
-                            } else {
-                                displayedCountdownIndex = displayedCountdownIndex.coerceAtMost(activeBlocks.size - 1)
-                                refreshOverlay()
-                            }
-                            return
-                        }
-                        if (displayedCountdownIndex < activeBlocks.size && activeBlocks[displayedCountdownIndex].id == block.id) {
-                            binding.tvCountdown.text = formatCountdown(remaining)
-                        }
-                    }
-
-                    override fun onFinish() {
-                        refreshOverlay()
-                    }
-                }.start()
-                continue
-            }
             if (millis > 86_400_000L * 30) {
                 continue
             }
@@ -306,13 +277,12 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         } else {
             block.title
         }
-        val isUsageBased = Prefs.getAllowlistUsageRemaining(block.id) > 0L
-        if (isUsageBased) {
-            binding.tvRemainingLabel.text = getString(R.string.allowlist_usage_remaining)
+        binding.tvRemainingLabel.text = getString(R.string.allowlist_remaining)
+        if (block.activeUntil > System.currentTimeMillis() && block.activeUntil != Long.MAX_VALUE) {
             binding.tvUsageHint.visibility = View.VISIBLE
-            binding.tvUsageHint.text = getString(R.string.allowlist_usage_hint)
+            val sdf = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+            binding.tvUsageHint.text = "Ends at ${sdf.format(java.util.Date(block.activeUntil))}"
         } else {
-            binding.tvRemainingLabel.text = getString(R.string.allowlist_remaining)
             binding.tvUsageHint.visibility = View.GONE
         }
         val millis = calculateMillisUntilBlockEnd(block)
@@ -330,21 +300,8 @@ class AllowlistOverlayActivity : AppCompatActivity() {
 
     private fun calculateMillisUntilBlockEnd(block: AppBlock): Long {
         val now = System.currentTimeMillis()
-        val usageRemaining = Prefs.getAllowlistUsageRemaining(block.id)
-        val wallClockRemaining = if (block.activeUntil > now && block.activeUntil != Long.MAX_VALUE) {
-            block.activeUntil - now
-        } else {
-            Long.MAX_VALUE
-        }
-        if (usageRemaining > 0L) {
-            // Use the smaller of usage remaining and wall-clock remaining
-            return minOf(usageRemaining, wallClockRemaining)
-        }
-        if (usageRemaining == 0L && Prefs.hasAllowlistUsageTimer(block.id)) {
-            return 0L
-        }
-        if (wallClockRemaining < Long.MAX_VALUE) {
-            return wallClockRemaining
+        if (block.activeUntil > now && block.activeUntil != Long.MAX_VALUE) {
+            return block.activeUntil - now
         }
         if (block.blockNowUntil > now && block.blockNowUntil != Long.MAX_VALUE) {
             return block.blockNowUntil - now
