@@ -306,6 +306,15 @@ class AllowlistOverlayActivity : AppCompatActivity() {
         } else {
             block.title
         }
+        val isUsageBased = Prefs.getAllowlistUsageRemaining(block.id) > 0L
+        if (isUsageBased) {
+            binding.tvRemainingLabel.text = getString(R.string.allowlist_usage_remaining)
+            binding.tvUsageHint.visibility = View.VISIBLE
+            binding.tvUsageHint.text = getString(R.string.allowlist_usage_hint)
+        } else {
+            binding.tvRemainingLabel.text = getString(R.string.allowlist_remaining)
+            binding.tvUsageHint.visibility = View.GONE
+        }
         val millis = calculateMillisUntilBlockEnd(block)
         if (millis <= 0L) {
             binding.tvCountdown.text = formatCountdown(0L)
