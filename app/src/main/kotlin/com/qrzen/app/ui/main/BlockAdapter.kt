@@ -11,7 +11,9 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.qrzen.app.R
+import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.TimeBlock
 import com.qrzen.app.databinding.ItemBlockBinding
 import com.qrzen.app.databinding.ItemSelectedAppIconBinding
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
@@ -23,6 +25,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class BlockAdapter(
+    private val timeBlockDao: TimeBlockDao,
     private val onToggle: (AppBlock, Boolean) -> Boolean,
     private val onPause: (AppBlock) -> Unit,
     private val onBlockNow: (AppBlock) -> Unit,
@@ -72,6 +75,7 @@ class BlockAdapter(
         private var usageStatusTimer: CountDownTimer? = null
         private var iconLoadJob: Job? = null
         private var usageQueryJob: Job? = null
+        private var boundBlockId: Int? = null
         private var boundPackages: List<String> = emptyList()
 
         fun bind(block: AppBlock) {
@@ -92,6 +96,7 @@ class BlockAdapter(
             usageQueryJob?.cancel()
             usageQueryJob = null
 
+            boundBlockId = block.id
             binding.tvTitle.text = block.title
             val modePrefix = if (block.isAllowlistMode) "Allowlist" else "Blocklist"
             when (block.blockingStyle) {
@@ -100,9 +105,16 @@ class BlockAdapter(
                     binding.tvDays.text = modePrefix
                 }
                 UnlockMethodUtils.STYLE_SCHEDULE -> {
-                    binding.tvTimeRange.text = when (block.scheduleBreakType) {
-                        UnlockMethodUtils.BREAK_POMODORO ->
+                    val timeRangeText = when (block.scheduleBreakType) {
+                        UnlockMethodUtils.BREAK_POMODORO -> {
+                            usageQueryJob = scope.launch {
+                                val timeBlocks = withContext(Dispatchers.IO) {
+                                    timeBlockDao.getByBlockId(block.id)
+                                }
+                                bindSchedulePomodoroPhase(block, timeBlocks)
+                            }
                             "Scheduled · Pomodoro (${block.pomodoroDurationMin}m/${block.pomodoroBreakMin}m)"
+                        }
                         UnlockMethodUtils.BREAK_WAIT_TIMER -> {
                             val adaptiveSuffix = if (block.waitTimerAdaptive) " · adaptive" else ""
                             "Scheduled · Wait Timer (${block.waitTimerUseMinutes}m use / ${block.waitTimerWaitMinutes}m block$adaptiveSuffix)"
@@ -115,6 +127,7 @@ class BlockAdapter(
                             "Scheduled · Allowance (${block.scheduledAllowanceMinutes} min/window)"
                         else -> "Scheduled"
                     }
+                    binding.tvTimeRange.text = timeRangeText
                     binding.tvDays.text = modePrefix
                 }
                 UnlockMethodUtils.STYLE_USAGE_LIMIT -> {
@@ -359,6 +372,32 @@ class BlockAdapter(
             }.start()
         }
 
+        private fun bindSchedulePomodoroPhase(block: AppBlock, timeBlocks: List<TimeBlock>) {
+            if (boundBlockId != block.id) return
+            val phase = UnlockMethodUtils.computeSchedulePomodoroPhase(block, timeBlocks)
+            if (!phase.isActive || phase.phaseRemainingMs <= 0L) {
+                binding.tvTimeRange.text = "Scheduled · Pomodoro (${block.pomodoroDurationMin}m/${block.pomodoroBreakMin}m)"
+                return
+            }
+
+            val phaseEmoji = if (phase.isInFocus) "\uD83C\uDFAF" else "\u2615"
+            val phaseWord = if (phase.isInFocus) "Focus" else "Break"
+            binding.tvTimeRange.text = "$phaseEmoji $phaseWord ${formatPhaseDuration(phase.phaseRemainingMs)}"
+
+            usageStatusTimer?.cancel()
+            usageStatusTimer = object : CountDownTimer(phase.phaseRemainingMs, 1000L) {
+                override fun onTick(ms: Long) {
+                    binding.tvTimeRange.text = "$phaseEmoji $phaseWord ${formatPhaseDuration(ms)}"
+                }
+
+                override fun onFinish() {
+                    scope.launch {
+                        bindSchedulePomodoroPhase(block, timeBlocks)
+                    }
+                }
+            }.start()
+        }
+
         private fun showPopupMenu(anchor: View, block: AppBlock) {
             val popup = PopupMenu(anchor.context, anchor)
             popup.menuInflater.inflate(R.menu.menu_block_overflow, popup.menu)
@@ -423,6 +462,7 @@ class BlockAdapter(
             iconLoadJob = null
             usageQueryJob?.cancel()
             usageQueryJob = null
+            boundBlockId = null
         }
     }
 
@@ -516,6 +556,12 @@ class BlockAdapter(
         val seconds = totalSeconds % 60
         return if (hours > 0) String.format("%d:%02d:%02d", hours, minutes, seconds)
         else String.format("%d:%02d", minutes, seconds)
+    }
+
+    private fun formatPhaseDuration(ms: Long): String {
+        val min = ms / 60_000L
+        val sec = (ms % 60_000L) / 1000L
+        return "${min}m ${sec}s"
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =

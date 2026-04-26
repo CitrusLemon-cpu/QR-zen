@@ -49,6 +49,14 @@ object UnlockMethodUtils {
         val nextAvailableMillis: Long?
     )
 
+    data class SchedulePomodoroPhase(
+        val isActive: Boolean,
+        val isInFocus: Boolean,
+        val phaseRemainingMs: Long,
+        val focusDurationMin: Int,
+        val breakDurationMin: Int
+    )
+
     fun getNormalizedMethod(block: AppBlock): String = block.unlockMethod.ifBlank { METHOD_NONE }
 
     fun isTimerExpired(block: AppBlock, nowMillis: Long = System.currentTimeMillis()): Boolean {
@@ -226,24 +234,71 @@ object UnlockMethodUtils {
 
     private data class ActiveWindow(val windowStartMillis: Long)
 
+    fun computeSchedulePomodoroPhase(
+        block: AppBlock,
+        timeBlocks: List<TimeBlock>,
+        nowMillis: Long = System.currentTimeMillis()
+    ): SchedulePomodoroPhase {
+        val windowStartMs = if (timeBlocks.isEmpty()) {
+            computeLegacyScheduleWindowStartMs(block, nowMillis)
+        } else {
+            computeCurrentWindowStartMs(timeBlocks, nowMillis)
+        } ?: return SchedulePomodoroPhase(
+            isActive = false,
+            isInFocus = false,
+            phaseRemainingMs = 0L,
+            focusDurationMin = block.pomodoroDurationMin,
+            breakDurationMin = block.pomodoroBreakMin
+        )
+
+        val elapsed = nowMillis - windowStartMs
+        if (elapsed < 0L) {
+            return SchedulePomodoroPhase(
+                isActive = true,
+                isInFocus = true,
+                phaseRemainingMs = block.pomodoroDurationMin * 60_000L,
+                focusDurationMin = block.pomodoroDurationMin,
+                breakDurationMin = block.pomodoroBreakMin
+            )
+        }
+
+        val focusMs = block.pomodoroDurationMin * 60_000L
+        val breakMs = block.pomodoroBreakMin * 60_000L
+        val cycleMs = focusMs + breakMs
+        if (cycleMs <= 0L) {
+            return SchedulePomodoroPhase(
+                isActive = true,
+                isInFocus = true,
+                phaseRemainingMs = 0L,
+                focusDurationMin = block.pomodoroDurationMin,
+                breakDurationMin = block.pomodoroBreakMin
+            )
+        }
+
+        val positionInCycle = elapsed % cycleMs
+        val isInFocus = positionInCycle < focusMs
+        val phaseRemainingMs = if (isInFocus) {
+            focusMs - positionInCycle
+        } else {
+            cycleMs - positionInCycle
+        }
+
+        return SchedulePomodoroPhase(
+            isActive = true,
+            isInFocus = isInFocus,
+            phaseRemainingMs = phaseRemainingMs,
+            focusDurationMin = block.pomodoroDurationMin,
+            breakDurationMin = block.pomodoroBreakMin
+        )
+    }
+
     private fun isSchedulePomodoroBlocking(
         block: AppBlock,
         timeBlocks: List<TimeBlock>,
         nowMillis: Long = System.currentTimeMillis()
     ): Boolean {
-        val windowStartMs = if (timeBlocks.isEmpty()) {
-            computeLegacyScheduleWindowStartMs(block, nowMillis)
-        } else {
-            computeCurrentWindowStartMs(timeBlocks, nowMillis)
-        } ?: return true
-        val elapsed = nowMillis - windowStartMs
-        if (elapsed < 0L) return true
-        val focusMs = block.pomodoroDurationMin * 60_000L
-        val breakMs = block.pomodoroBreakMin * 60_000L
-        val cycleMs = focusMs + breakMs
-        if (cycleMs <= 0L) return true
-        val positionInCycle = elapsed % cycleMs
-        return positionInCycle < focusMs
+        val phase = computeSchedulePomodoroPhase(block, timeBlocks, nowMillis)
+        return !phase.isActive || phase.isInFocus
     }
 
     private fun findCurrentWindow(

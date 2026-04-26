@@ -23,12 +23,14 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.qrzen.app.R
+import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.databinding.FragmentHomeBinding
 import com.qrzen.app.ui.block.EditBlockActivity
 import com.qrzen.app.ui.unlock.UnlockChallengeActivity
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
@@ -44,6 +46,7 @@ class HomeFragment : Fragment() {
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private val viewModel: HomeViewModel by viewModels()
+    @Inject lateinit var timeBlockDao: TimeBlockDao
     private lateinit var adapter: BlockAdapter
     private var pendingUnlockAction: PendingUnlockAction? = null
 
@@ -67,6 +70,7 @@ class HomeFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         adapter = BlockAdapter(
+            timeBlockDao = timeBlockDao,
             onToggle = { block, enabled ->
                 if (enabled) {
                     if (block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO) {
