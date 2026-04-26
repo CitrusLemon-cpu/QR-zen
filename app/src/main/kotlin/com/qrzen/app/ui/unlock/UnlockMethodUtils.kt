@@ -4,14 +4,16 @@ import android.content.Context
 import com.qrzen.app.R
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.TimeBlock
+import com.qrzen.app.data.prefs.Prefs
 import java.text.SimpleDateFormat
 import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.time.ZoneId
 import java.util.Date
 import java.util.Locale
-import java.util.Calendar
 import kotlin.random.Random
 
 object UnlockMethodUtils {
@@ -28,6 +30,11 @@ object UnlockMethodUtils {
     const val STYLE_USAGE_LIMIT = "USAGE_LIMIT"
     const val STYLE_WAIT_TIMER = "WAIT_TIMER"
     const val STYLE_POMODORO = "POMODORO"
+    const val BREAK_NONE = "NONE"
+    const val BREAK_POMODORO = "POMODORO"
+    const val BREAK_WAIT_TIMER = "WAIT_TIMER"
+    const val BREAK_USAGE_LIMIT = "USAGE_LIMIT"
+    const val BREAK_SCHEDULED_ALLOWANCE = "SCHEDULED_ALLOWANCE"
 
     private val displayDateTimeFormatter = SimpleDateFormat("EEE, MMM d, yyyy HH:mm", Locale.getDefault())
     private val challengeWords = listOf(
@@ -119,24 +126,16 @@ object UnlockMethodUtils {
         }
         if (block.blockingStyle != STYLE_SCHEDULE) return true
 
-        val now = LocalTime.now()
-        val cal = Calendar.getInstance()
-        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        val scheduleActive = isScheduleCurrentlyActive(block, timeBlocks)
+        if (!scheduleActive) return false
 
-        if (timeBlocks.isEmpty()) {
-            val start = parseTime(block.startTime, LocalTime.MIN)
-            val end = parseTime(block.endTime, LocalTime.MAX)
-            val timeOk = if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
-            else !now.isBefore(start) || !now.isAfter(end)
-            return timeOk && block.activeDays.getOrNull(dayIndex) == '1'
-        }
-
-        return timeBlocks.any { tb ->
-            if (tb.activeDays.getOrNull(dayIndex) != '1') return@any false
-            val start = parseTime(tb.startTime, LocalTime.MIN)
-            val end = parseTime(tb.endTime, LocalTime.MAX)
-            if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
-            else !now.isBefore(start) || !now.isAfter(end)
+        return when (block.scheduleBreakType.ifBlank { BREAK_NONE }) {
+            BREAK_NONE -> true
+            BREAK_POMODORO -> isSchedulePomodoroBlocking(block, timeBlocks)
+            BREAK_WAIT_TIMER -> Prefs.getScheduleWtBlockingUntil(block.id) > System.currentTimeMillis()
+            BREAK_USAGE_LIMIT -> true
+            BREAK_SCHEDULED_ALLOWANCE -> Prefs.getSchedAllowanceRemaining(block.id) == 0L
+            else -> true
         }
     }
 
@@ -191,6 +190,102 @@ object UnlockMethodUtils {
 
     private fun parseTime(value: String, fallback: LocalTime): LocalTime {
         return runCatching { LocalTime.parse(value) }.getOrDefault(fallback)
+    }
+
+    fun isScheduleCurrentlyActive(
+        block: AppBlock,
+        timeBlocks: List<TimeBlock>,
+        nowMillis: Long = System.currentTimeMillis()
+    ): Boolean {
+        return if (timeBlocks.isEmpty()) {
+            computeLegacyScheduleWindowStartMs(block, nowMillis) != null
+        } else {
+            computeCurrentWindowStartMs(timeBlocks, nowMillis) != null
+        }
+    }
+
+    fun computeCurrentWindowStartMs(
+        timeBlocks: List<TimeBlock>,
+        nowMillis: Long = System.currentTimeMillis()
+    ): Long? {
+        return findCurrentWindow(timeBlocks, nowMillis)?.windowStartMillis
+    }
+
+    fun computeLegacyScheduleWindowStartMs(
+        block: AppBlock,
+        nowMillis: Long = System.currentTimeMillis()
+    ): Long? {
+        val pseudoBlock = TimeBlock(
+            blockId = block.id,
+            startTime = block.startTime,
+            endTime = block.endTime,
+            activeDays = block.activeDays
+        )
+        return findCurrentWindow(listOf(pseudoBlock), nowMillis)?.windowStartMillis
+    }
+
+    private data class ActiveWindow(val windowStartMillis: Long)
+
+    private fun isSchedulePomodoroBlocking(
+        block: AppBlock,
+        timeBlocks: List<TimeBlock>,
+        nowMillis: Long = System.currentTimeMillis()
+    ): Boolean {
+        val windowStartMs = if (timeBlocks.isEmpty()) {
+            computeLegacyScheduleWindowStartMs(block, nowMillis)
+        } else {
+            computeCurrentWindowStartMs(timeBlocks, nowMillis)
+        } ?: return true
+        val elapsed = nowMillis - windowStartMs
+        if (elapsed < 0L) return true
+        val focusMs = block.pomodoroDurationMin * 60_000L
+        val breakMs = block.pomodoroBreakMin * 60_000L
+        val cycleMs = focusMs + breakMs
+        if (cycleMs <= 0L) return true
+        val positionInCycle = elapsed % cycleMs
+        return positionInCycle < focusMs
+    }
+
+    private fun findCurrentWindow(
+        timeBlocks: List<TimeBlock>,
+        nowMillis: Long
+    ): ActiveWindow? {
+        if (timeBlocks.isEmpty()) return null
+
+        val zoneId = ZoneId.systemDefault()
+        val nowDateTime = LocalDateTime.ofInstant(Instant.ofEpochMilli(nowMillis), zoneId)
+        val today = nowDateTime.toLocalDate()
+        val yesterday = today.minusDays(1)
+        val now = nowDateTime.toLocalTime()
+        val dayIndex = today.dayOfWeek.value - 1
+        val yesterdayIndex = (dayIndex + 6) % 7
+
+        return timeBlocks.firstNotNullOfOrNull { timeBlock ->
+            val start = parseTime(timeBlock.startTime, LocalTime.MIN)
+            val end = parseTime(timeBlock.endTime, LocalTime.MAX)
+            if (end.isAfter(start)) {
+                if (timeBlock.activeDays.getOrNull(dayIndex) == '1' &&
+                    !now.isBefore(start) &&
+                    !now.isAfter(end)
+                ) {
+                    ActiveWindow(toEpochMillis(today, start, zoneId))
+                } else {
+                    null
+                }
+            } else {
+                when {
+                    !now.isBefore(start) && timeBlock.activeDays.getOrNull(dayIndex) == '1' ->
+                        ActiveWindow(toEpochMillis(today, start, zoneId))
+                    !now.isAfter(end) && timeBlock.activeDays.getOrNull(yesterdayIndex) == '1' ->
+                        ActiveWindow(toEpochMillis(yesterday, start, zoneId))
+                    else -> null
+                }
+            }
+        }
+    }
+
+    private fun toEpochMillis(date: LocalDate, time: LocalTime, zoneId: ZoneId): Long {
+        return date.atTime(time).atZone(zoneId).toInstant().toEpochMilli()
     }
 
     data class PomodoroState(

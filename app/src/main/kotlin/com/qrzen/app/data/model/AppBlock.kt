@@ -69,6 +69,10 @@ data class AppBlock(
     /** Whether this block is archived (hidden from main list) */
     val isArchived: Boolean = false,
     val blockingStyle: String = "MANUAL",
+    /** Break type for scheduled blocks. NONE means continuous blocking during schedule. */
+    val scheduleBreakType: String = "NONE",
+    /** Minutes of usage allowed per schedule window when scheduleBreakType = SCHEDULED_ALLOWANCE */
+    val scheduledAllowanceMinutes: Int = 10,
     val usageLimitMinutes: Int = 30,
     val usageLimitPeriod: String = "DAILY",
     val waitTimerWaitMinutes: Int = 30,

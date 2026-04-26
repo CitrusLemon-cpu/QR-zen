@@ -20,7 +20,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSelectedBlockStartTime"
-                style="@style/Widget.Material3.Button.TextButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:minWidth="0dp"
@@ -38,7 +38,7 @@
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSelectedBlockEndTime"
-                style="@style/Widget.Material3.Button.TextButton"
+                style="@style/Widget.Material3.Button.OutlinedButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:minWidth="0dp"
