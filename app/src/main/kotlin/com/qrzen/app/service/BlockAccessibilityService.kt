@@ -25,8 +25,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.Calendar
 
 class BlockAccessibilityService : AccessibilityService() {
@@ -59,7 +57,6 @@ class BlockAccessibilityService : AccessibilityService() {
         Log.e(TAG, "Coroutine error in accessibility service", throwable)
     }
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
-    private val fmt = DateTimeFormatter.ofPattern("HH:mm")
     private var accessibilitySettingsObserver: android.database.ContentObserver? = null
 
     private val entryPoint by lazy {
@@ -201,7 +198,17 @@ class BlockAccessibilityService : AccessibilityService() {
                 val state = UnlockMethodUtils.computePomodoroState(block)
                 state.isInFocus
             }
-            UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
+            UnlockMethodUtils.STYLE_SCHEDULE -> {
+                val scheduleActive = isScheduleActive(block)
+                when (block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE }) {
+                    UnlockMethodUtils.BREAK_NONE -> scheduleActive
+                    UnlockMethodUtils.BREAK_POMODORO -> scheduleActive && isSchedulePomodoroBlocking(block)
+                    UnlockMethodUtils.BREAK_WAIT_TIMER -> scheduleActive && isScheduleWaitTimerBlocking(block)
+                    UnlockMethodUtils.BREAK_USAGE_LIMIT -> scheduleActive && isScheduleUsageLimitExceeded(block)
+                    UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE -> scheduleActive && isScheduledAllowanceExhausted(block)
+                    else -> scheduleActive
+                }
+            }
             UnlockMethodUtils.STYLE_USAGE_LIMIT -> isUsageLimitExceeded(block)
             UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block)
             else -> isScheduleActive(block)
@@ -210,29 +217,50 @@ class BlockAccessibilityService : AccessibilityService() {
 
     private suspend fun isScheduleActive(block: AppBlock): Boolean {
         val timeBlocks = entryPoint.timeBlockDao().getByBlockId(block.id)
-        if (timeBlocks.isEmpty()) return isLegacyScheduleActive(block)
-        val now = LocalTime.now()
-        val cal = Calendar.getInstance()
-        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
-        return timeBlocks.any { tb ->
-            if (tb.activeDays.getOrNull(dayIndex) != '1') return@any false
-            val start = LocalTime.parse(tb.startTime, fmt)
-            val end = LocalTime.parse(tb.endTime, fmt)
-            if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
-            else !now.isBefore(start) || !now.isAfter(end)
+        return if (timeBlocks.isEmpty()) {
+            isLegacyScheduleActive(block)
+        } else {
+            UnlockMethodUtils.isScheduleCurrentlyActive(block, timeBlocks)
         }
     }
 
     private fun isLegacyScheduleActive(block: AppBlock): Boolean {
-        val now = LocalTime.now()
-        val start = LocalTime.parse(block.startTime, fmt)
-        val end = LocalTime.parse(block.endTime, fmt)
-        val timeOk = if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
-        else !now.isBefore(start) || !now.isAfter(end)
-        if (!timeOk) return false
+        return UnlockMethodUtils.computeLegacyScheduleWindowStartMs(block) != null
+    }
+
+    private suspend fun isSchedulePomodoroBlocking(block: AppBlock): Boolean {
+        val timeBlocks = entryPoint.timeBlockDao().getByBlockId(block.id)
+        val windowStartMs = if (timeBlocks.isEmpty()) {
+            UnlockMethodUtils.computeLegacyScheduleWindowStartMs(block)
+        } else {
+            UnlockMethodUtils.computeCurrentWindowStartMs(timeBlocks)
+        } ?: return true
+        val now = System.currentTimeMillis()
+        val elapsed = now - windowStartMs
+        if (elapsed < 0L) return true
+        val focusMs = block.pomodoroDurationMin * 60_000L
+        val breakMs = block.pomodoroBreakMin * 60_000L
+        val cycleMs = focusMs + breakMs
+        if (cycleMs <= 0L) return true
+        return elapsed % cycleMs < focusMs
+    }
+
+    private suspend fun isScheduleUsageLimitExceeded(block: AppBlock): Boolean {
+        val timeBlocks = entryPoint.timeBlockDao().getByBlockId(block.id)
+        if (timeBlocks.isEmpty()) return isUsageLimitExceeded(block)
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
-        return block.activeDays.getOrNull(dayIndex) == '1'
+        val hasTodayBlock = timeBlocks.any { it.activeDays.getOrNull(dayIndex) == '1' }
+        if (!hasTodayBlock) return false
+        return computeUsageLimitRemainingMs(block) <= 0L
+    }
+
+    private fun isScheduleWaitTimerBlocking(block: AppBlock): Boolean {
+        return Prefs.getScheduleWtBlockingUntil(block.id) > System.currentTimeMillis()
+    }
+
+    private fun isScheduledAllowanceExhausted(block: AppBlock): Boolean {
+        return Prefs.getSchedAllowanceRemaining(block.id) == 0L
     }
 
     /**
@@ -258,9 +286,12 @@ class BlockAccessibilityService : AccessibilityService() {
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
         if (block.activeDays.getOrNull(dayIndex) != '1') return false
+        return computeUsageLimitRemainingMs(block) <= 0L
+    }
 
+    private fun computeUsageLimitRemainingMs(block: AppBlock): Long {
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
-            ?: return false
+            ?: return block.usageLimitMinutes * 60_000L
         val now = System.currentTimeMillis()
         val startTime = when (block.usageLimitPeriod) {
             "HOURLY" -> now - 3_600_000L
@@ -298,7 +329,7 @@ class BlockAccessibilityService : AccessibilityService() {
         }
 
         val limitMs = block.usageLimitMinutes * 60_000L
-        return totalUsageMs >= limitMs
+        return (limitMs - totalUsageMs).coerceAtLeast(0L)
     }
 
     private fun launchLockScreen(blockedPkg: String, block: AppBlock) {

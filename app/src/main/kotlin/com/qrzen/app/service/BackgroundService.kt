@@ -22,6 +22,7 @@ import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.TimeBlock
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.receiver.AlarmKeepaliveReceiver
 import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
@@ -35,8 +36,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import java.time.LocalTime
-import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -335,7 +334,13 @@ class BackgroundService : Service() {
             it.isEnabled && !it.isArchived && it.isAllowlistMode &&
                 Prefs.hasAllowlistUsageTimer(it.id)
         }
-        val needsPolling = hasActiveBlocks || hasWaitTimerBlocks || hasPomodoroBlocks || hasUsageTimers
+        val hasScheduleBreakBlocks = allBlocks.any {
+            it.isEnabled && !it.isArchived && it.pausedUntil <= now &&
+                it.blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE &&
+                it.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE } != UnlockMethodUtils.BREAK_NONE
+        }
+        val needsPolling =
+            hasActiveBlocks || hasWaitTimerBlocks || hasPomodoroBlocks || hasUsageTimers || hasScheduleBreakBlocks
         if (needsPolling) {
             startUsagePolling()
         } else {
@@ -352,7 +357,17 @@ class BackgroundService : Service() {
                 val state = UnlockMethodUtils.computePomodoroState(block)
                 state.isInFocus
             }
-            UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
+            UnlockMethodUtils.STYLE_SCHEDULE -> {
+                val scheduleActive = isScheduleActive(block)
+                when (block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE }) {
+                    UnlockMethodUtils.BREAK_NONE -> scheduleActive
+                    UnlockMethodUtils.BREAK_POMODORO -> scheduleActive && isSchedulePomodoroBlocking(block)
+                    UnlockMethodUtils.BREAK_WAIT_TIMER -> scheduleActive && isScheduleWaitTimerBlocking(block, foregroundPkg)
+                    UnlockMethodUtils.BREAK_USAGE_LIMIT -> scheduleActive && isScheduleUsageLimitExceeded(block)
+                    UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE -> scheduleActive && isScheduledAllowanceExhausted(block)
+                    else -> scheduleActive
+                }
+            }
             UnlockMethodUtils.STYLE_USAGE_LIMIT -> isUsageLimitExceeded(block)
             UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block, foregroundPkg)
             else -> isScheduleActive(block)
@@ -360,35 +375,61 @@ class BackgroundService : Service() {
     }
 
     private suspend fun isScheduleActive(block: AppBlock): Boolean {
-        val timeBlocks = timeBlockDao.getByBlockId(block.id)
-        if (timeBlocks.isEmpty()) {
-            return isLegacyScheduleActive(block)
-        }
-        val now = LocalTime.now()
-        val cal = Calendar.getInstance()
-        val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
+        return isScheduleActive(block, timeBlockDao.getByBlockId(block.id))
+    }
 
-        return timeBlocks.any { tb ->
-            if (tb.activeDays.getOrNull(dayIndex) != '1') return@any false
-            val fmt = DateTimeFormatter.ofPattern("HH:mm")
-            val start = LocalTime.parse(tb.startTime, fmt)
-            val end = LocalTime.parse(tb.endTime, fmt)
-            if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
-            else !now.isBefore(start) || !now.isAfter(end)
+    private fun isScheduleActive(block: AppBlock, timeBlocks: List<TimeBlock>): Boolean {
+        return if (timeBlocks.isEmpty()) {
+            isLegacyScheduleActive(block)
+        } else {
+            UnlockMethodUtils.isScheduleCurrentlyActive(block, timeBlocks)
         }
     }
 
     private fun isLegacyScheduleActive(block: AppBlock): Boolean {
-        val now = LocalTime.now()
-        val fmt = DateTimeFormatter.ofPattern("HH:mm")
-        val start = LocalTime.parse(block.startTime, fmt)
-        val end = LocalTime.parse(block.endTime, fmt)
-        val timeOk = if (end.isAfter(start)) !now.isBefore(start) && !now.isAfter(end)
-        else !now.isBefore(start) || !now.isAfter(end)
-        if (!timeOk) return false
+        return UnlockMethodUtils.computeLegacyScheduleWindowStartMs(block) != null
+    }
+
+    private suspend fun isSchedulePomodoroBlocking(block: AppBlock): Boolean {
+        val timeBlocks = timeBlockDao.getByBlockId(block.id)
+        val windowStartMs = if (timeBlocks.isEmpty()) {
+            UnlockMethodUtils.computeLegacyScheduleWindowStartMs(block)
+        } else {
+            UnlockMethodUtils.computeCurrentWindowStartMs(timeBlocks)
+        } ?: return true
+        return isSchedulePomodoroBlocking(block, windowStartMs)
+    }
+
+    private fun isSchedulePomodoroBlocking(block: AppBlock, windowStartMs: Long): Boolean {
+        val now = System.currentTimeMillis()
+        val elapsed = now - windowStartMs
+        if (elapsed < 0L) return true
+        val focusMs = block.pomodoroDurationMin * 60_000L
+        val breakMs = block.pomodoroBreakMin * 60_000L
+        val cycleMs = focusMs + breakMs
+        if (cycleMs <= 0L) return true
+        val positionInCycle = elapsed % cycleMs
+        return positionInCycle < focusMs
+    }
+
+    private suspend fun isScheduleUsageLimitExceeded(block: AppBlock): Boolean {
+        val timeBlocks = timeBlockDao.getByBlockId(block.id)
+        if (timeBlocks.isEmpty()) {
+            return isUsageLimitExceeded(block)
+        }
         val cal = Calendar.getInstance()
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
-        return block.activeDays.getOrNull(dayIndex) == '1'
+        val hasTodayBlock = timeBlocks.any { it.activeDays.getOrNull(dayIndex) == '1' }
+        if (!hasTodayBlock) return false
+        return computeUsageLimitRemainingMs(block) <= 0L
+    }
+
+    private fun isScheduleWaitTimerBlocking(block: AppBlock, foregroundPkg: String? = null): Boolean {
+        return Prefs.getScheduleWtBlockingUntil(block.id) > System.currentTimeMillis()
+    }
+
+    private fun isScheduledAllowanceExhausted(block: AppBlock): Boolean {
+        return Prefs.getSchedAllowanceRemaining(block.id) == 0L
     }
 
     private fun isUsageLimitExceeded(block: AppBlock): Boolean {
@@ -505,6 +546,146 @@ class BackgroundService : Service() {
         return false
     }
 
+    private suspend fun trackScheduleBreakState(blocks: List<AppBlock>, foregroundPkg: String?) {
+        for (block in blocks) {
+            if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) continue
+            when (block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE }) {
+                UnlockMethodUtils.BREAK_WAIT_TIMER -> {
+                    val timeBlocks = timeBlockDao.getByBlockId(block.id)
+                    trackScheduleWaitTimerState(block, foregroundPkg, isScheduleActive(block, timeBlocks))
+                }
+                UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE -> {
+                    val timeBlocks = timeBlockDao.getByBlockId(block.id)
+                    trackScheduledAllowanceState(block, foregroundPkg, isScheduleActive(block, timeBlocks), timeBlocks)
+                }
+            }
+        }
+    }
+
+    private fun trackScheduleWaitTimerState(block: AppBlock, foregroundPkg: String?, scheduleActive: Boolean) {
+        val blockId = block.id
+        val now = System.currentTimeMillis()
+        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val isUsingBlockedApp = foregroundPkg != null && foregroundPkg in packages
+
+        if (!scheduleActive) {
+            if (block.waitTimerAdaptive) {
+                Prefs.clearScheduleWtState(blockId)
+            }
+            Prefs.setScheduleWtLastTick(blockId, 0L)
+            return
+        }
+
+        val blockingUntil = Prefs.getScheduleWtBlockingUntil(blockId)
+        if (blockingUntil > now) {
+            Prefs.setScheduleWtLastTick(blockId, 0L)
+            return
+        }
+
+        if (blockingUntil > 0L && blockingUntil <= now) {
+            Prefs.clearScheduleWtState(blockId)
+            return
+        }
+
+        val budgetMs = block.waitTimerUseMinutes * 60_000L
+        if (isUsingBlockedApp) {
+            val lastTick = Prefs.getScheduleWtLastTick(blockId)
+            var usedMs = Prefs.getScheduleWtUsedMs(blockId)
+            if (lastTick > 0L) {
+                val delta = (now - lastTick).coerceIn(0L, USAGE_POLL_INTERVAL_MS * 2)
+                usedMs = (usedMs + delta).coerceAtMost(budgetMs)
+            }
+            if (usedMs >= budgetMs) {
+                Prefs.setScheduleWtBlockingUntil(blockId, now + block.waitTimerWaitMinutes * 60_000L)
+                Prefs.setScheduleWtUsedMs(blockId, 0L)
+                Prefs.setScheduleWtLastTick(blockId, 0L)
+            } else {
+                Prefs.setScheduleWtUsedMs(blockId, usedMs)
+                Prefs.setScheduleWtLastTick(blockId, now)
+            }
+            return
+        }
+
+        val lastTick = Prefs.getScheduleWtLastTick(blockId)
+        if (block.waitTimerAdaptive) {
+            if (lastTick > 0L) {
+                val delta = (now - lastTick).coerceIn(0L, USAGE_POLL_INTERVAL_MS * 2)
+                val refillRate = if (block.waitTimerWaitMinutes > 0) {
+                    block.waitTimerUseMinutes.toDouble() / block.waitTimerWaitMinutes.toDouble()
+                } else {
+                    0.0
+                }
+                val refillMs = (delta * refillRate).toLong()
+                val usedMs = (Prefs.getScheduleWtUsedMs(blockId) - refillMs).coerceAtLeast(0L)
+                Prefs.setScheduleWtUsedMs(blockId, usedMs)
+            }
+            Prefs.setScheduleWtLastTick(blockId, now)
+        } else {
+            Prefs.setScheduleWtLastTick(blockId, 0L)
+        }
+    }
+
+    private fun trackScheduledAllowanceState(
+        block: AppBlock,
+        foregroundPkg: String?,
+        scheduleActive: Boolean,
+        timeBlocks: List<TimeBlock>
+    ) {
+        val blockId = block.id
+        val now = System.currentTimeMillis()
+
+        if (!scheduleActive) {
+            Prefs.setSchedAllowanceLastTick(blockId, 0L)
+            return
+        }
+
+        val currentWindowStart = if (timeBlocks.isEmpty()) {
+            UnlockMethodUtils.computeLegacyScheduleWindowStartMs(block, now)
+        } else {
+            UnlockMethodUtils.computeCurrentWindowStartMs(timeBlocks, now)
+        } ?: return
+        val savedWindowStart = Prefs.getSchedAllowanceWindowStart(blockId)
+        val maxAllowanceMs = block.scheduledAllowanceMinutes * 60_000L
+
+        if (savedWindowStart != currentWindowStart || Prefs.getSchedAllowanceRemaining(blockId) < 0L) {
+            Prefs.setSchedAllowanceRemaining(blockId, maxAllowanceMs)
+            Prefs.setSchedAllowanceWindowStart(blockId, currentWindowStart)
+            Prefs.setSchedAllowanceLastTick(blockId, 0L)
+        }
+
+        val remaining = Prefs.getSchedAllowanceRemaining(blockId)
+        if (remaining <= 0L) {
+            Prefs.setSchedAllowanceLastTick(blockId, 0L)
+            return
+        }
+
+        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        val isUsingBlockedApp = foregroundPkg != null && foregroundPkg in packages
+        if (isUsingBlockedApp) {
+            val lastTick = Prefs.getSchedAllowanceLastTick(blockId)
+            if (lastTick > 0L) {
+                val delta = (now - lastTick).coerceIn(0L, USAGE_POLL_INTERVAL_MS * 2)
+                val newRemaining = (remaining - delta).coerceAtLeast(0L)
+                Prefs.setSchedAllowanceRemaining(blockId, newRemaining)
+                Prefs.setSchedAllowanceLastTick(blockId, if (newRemaining > 0L) now else 0L)
+            } else {
+                Prefs.setSchedAllowanceLastTick(blockId, now)
+            }
+        } else {
+            Prefs.setSchedAllowanceLastTick(blockId, 0L)
+        }
+    }
+
+    private fun pauseScheduleBreakUsageTracking(blocks: List<AppBlock>) {
+        for (block in blocks) {
+            if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) continue
+            when (block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE }) {
+                UnlockMethodUtils.BREAK_WAIT_TIMER -> Prefs.setScheduleWtLastTick(block.id, 0L)
+                UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE -> Prefs.setSchedAllowanceLastTick(block.id, 0L)
+            }
+        }
+    }
+
     private fun buildNotification(): Notification {
         val channel = NotificationChannel(
             NOTIF_CHANNEL_ID,
@@ -567,6 +748,11 @@ class BackgroundService : Service() {
             pkg in dialerPackages
     }
 
+    private fun isPackageTrackedByBlock(block: AppBlock, pkg: String): Boolean {
+        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        return pkg in packages
+    }
+
     private fun isDeviceLocked(): Boolean {
         val keyguardManager = getSystemService(KeyguardManager::class.java) ?: return false
         return keyguardManager.isKeyguardLocked
@@ -603,6 +789,7 @@ class BackgroundService : Service() {
             overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
             pauseUsageTimers(allCandidates)
+            pauseScheduleBreakUsageTracking(allCandidates)
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
             return
@@ -611,15 +798,16 @@ class BackgroundService : Service() {
             overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
             pauseUsageTimers(allCandidates)
+            pauseScheduleBreakUsageTracking(allCandidates)
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
             return
         }
 
         val pkg = getForegroundPackage()
+        trackScheduleBreakState(allCandidates, pkg)
         if (pkg == null) {
-            overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
-            waitTimerOverlay?.hide()
+            updateTimerOverlays(allCandidates, null)
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
@@ -686,39 +874,29 @@ class BackgroundService : Service() {
 
         updateTimerOverlays(allCandidates, pkg)
         if (!isAccessibilityEnabled) {
-            val hasWaitTimerBlock = allCandidates.any { block ->
-                block.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER &&
-                    block.isEnabled && !block.isArchived
+            val accessibilityMessage = when {
+                allCandidates.any { block ->
+                    block.blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE &&
+                        block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE } == UnlockMethodUtils.BREAK_WAIT_TIMER &&
+                        isPackageTrackedByBlock(block, pkg) &&
+                        isScheduleActive(block)
+                } -> getString(R.string.accessibility_block_wait_timer)
+                allCandidates.any { block ->
+                    block.blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE &&
+                        block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE } == UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE &&
+                        isPackageTrackedByBlock(block, pkg) &&
+                        isScheduleActive(block)
+                } -> getString(R.string.accessibility_block_scheduled_allowance)
+                allCandidates.any { block ->
+                    block.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER &&
+                        isPackageTrackedByBlock(block, pkg)
+                } -> getString(R.string.accessibility_block_wait_timer)
+                else -> null
             }
-            if (hasWaitTimerBlock) {
-                val waitTimerBlocked = allCandidates
-                    .filter {
-                        it.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER &&
-                            it.isEnabled && !it.isArchived && !it.isAllowlistMode
-                    }
-                    .any { block ->
-                        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                        pkg in packages
-                    }
-                if (waitTimerBlocked) {
-                    accessibilityBlockOverlay?.show()
-                    sendToHome()
-                    return
-                }
-                val waitTimerAllowlistBlocked = allCandidates
-                    .filter {
-                        it.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER &&
-                            it.isEnabled && !it.isArchived && it.isAllowlistMode
-                    }
-                    .any { block ->
-                        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-                        pkg in packages
-                    }
-                if (waitTimerAllowlistBlocked) {
-                    accessibilityBlockOverlay?.show()
-                    sendToHome()
-                    return
-                }
+            if (accessibilityMessage != null) {
+                accessibilityBlockOverlay?.show(accessibilityMessage)
+                sendToHome()
+                return
             }
         } else {
             accessibilityBlockOverlay?.hide()
@@ -857,8 +1035,9 @@ class BackgroundService : Service() {
         }
     }
 
-    private fun updateTimerOverlays(blocks: List<AppBlock>, foregroundPkg: String?) {
+    private suspend fun updateTimerOverlays(blocks: List<AppBlock>, foregroundPkg: String?) {
         val kv = MMKV.defaultMMKV()
+        val now = System.currentTimeMillis()
         val entries = mutableListOf<WaitTimerOverlay.TimerEntry>()
 
         for (block in blocks) {
@@ -869,6 +1048,16 @@ class BackgroundService : Service() {
                 if (remaining > 0L) {
                     entries.add(WaitTimerOverlay.TimerEntry(block.id, block.title, remaining))
                 }
+            }
+        }
+
+        for (block in blocks) {
+            if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) continue
+            if (block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE } != UnlockMethodUtils.BREAK_WAIT_TIMER) continue
+            if (!block.showTimer) continue
+            val blockingUntil = Prefs.getScheduleWtBlockingUntil(block.id)
+            if (blockingUntil > now) {
+                entries.add(WaitTimerOverlay.TimerEntry(block.id, block.title, blockingUntil - now))
             }
         }
 
@@ -885,6 +1074,18 @@ class BackgroundService : Service() {
                     if (remaining > 0L) {
                         entries.add(WaitTimerOverlay.TimerEntry(block.id, block.title, remaining))
                     }
+                }
+            }
+
+            for (block in blocks) {
+                if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) continue
+                if (block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE } != UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE) continue
+                if (!block.showTimer) continue
+                if (!isPackageTrackedByBlock(block, foregroundPkg)) continue
+                if (!isScheduleActive(block)) continue
+                val remaining = Prefs.getSchedAllowanceRemaining(block.id)
+                if (remaining > 0L) {
+                    entries.add(WaitTimerOverlay.TimerEntry(block.id, block.title, remaining))
                 }
             }
         }

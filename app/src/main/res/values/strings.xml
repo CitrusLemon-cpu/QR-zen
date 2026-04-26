@@ -176,5 +176,7 @@ Session ends at %4$s</string>
     <string name="pomodoro_end_early">End early</string>
     <string name="accessibility_block_title">Accessibility Service Required</string>
     <string name="accessibility_block_message">Wait timer relies on the accessibility service to track app usage and enforce time limits. Please re-enable it to use this app.</string>
+    <string name="accessibility_block_wait_timer">QR Zen needs accessibility service to track your usage time. Enable it to continue.</string>
+    <string name="accessibility_block_scheduled_allowance">QR Zen needs accessibility service to track your schedule allowance. Enable it to continue.</string>
     <string name="accessibility_block_button">Re-enable Accessibility</string>
 </resources>

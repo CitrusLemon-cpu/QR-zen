@@ -63,6 +63,66 @@ object Prefs {
         kv.removeValueForKey("${KEY_USAGE_LAST_FG_PREFIX}$blockId")
     }
 
+    fun getScheduleWtUsedMs(blockId: Int): Long {
+        return kv.decodeLong("sched_wt_used_$blockId", 0L)
+    }
+
+    fun setScheduleWtUsedMs(blockId: Int, ms: Long) {
+        kv.encode("sched_wt_used_$blockId", ms)
+    }
+
+    fun getScheduleWtBlockingUntil(blockId: Int): Long {
+        return kv.decodeLong("sched_wt_blocking_$blockId", 0L)
+    }
+
+    fun setScheduleWtBlockingUntil(blockId: Int, until: Long) {
+        kv.encode("sched_wt_blocking_$blockId", until)
+    }
+
+    fun getScheduleWtLastTick(blockId: Int): Long {
+        return kv.decodeLong("sched_wt_last_tick_$blockId", 0L)
+    }
+
+    fun setScheduleWtLastTick(blockId: Int, ms: Long) {
+        kv.encode("sched_wt_last_tick_$blockId", ms)
+    }
+
+    fun clearScheduleWtState(blockId: Int) {
+        kv.removeValueForKey("sched_wt_used_$blockId")
+        kv.removeValueForKey("sched_wt_blocking_$blockId")
+        kv.removeValueForKey("sched_wt_last_tick_$blockId")
+    }
+
+    fun getSchedAllowanceRemaining(blockId: Int): Long {
+        return kv.decodeLong("sched_allow_remaining_$blockId", -1L)
+    }
+
+    fun setSchedAllowanceRemaining(blockId: Int, ms: Long) {
+        kv.encode("sched_allow_remaining_$blockId", ms)
+    }
+
+    fun getSchedAllowanceWindowStart(blockId: Int): Long {
+        return kv.decodeLong("sched_allow_window_$blockId", 0L)
+    }
+
+    fun setSchedAllowanceWindowStart(blockId: Int, ms: Long) {
+        kv.encode("sched_allow_window_$blockId", ms)
+    }
+
+    fun getSchedAllowanceLastTick(blockId: Int): Long {
+        return kv.decodeLong("sched_allow_tick_$blockId", 0L)
+    }
+
+    fun setSchedAllowanceLastTick(blockId: Int, ms: Long) {
+        kv.encode("sched_allow_tick_$blockId", ms)
+    }
+
+    fun clearSchedAllowanceState(blockId: Int) {
+        kv.removeValueForKey("sched_allow_remaining_$blockId")
+        kv.removeValueForKey("sched_allow_window_$blockId")
+        kv.removeValueForKey("sched_allow_tick_$blockId")
+    }
+
     fun getAppTimerRemaining(blockId: Int, packageName: String): Long {
         return kv.decodeLong("${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_$packageName", -1L)
     }
