@@ -34,6 +34,7 @@ class BlockAccessibilityService : AccessibilityService() {
     companion object {
         private const val TAG = "QrZenAccessibility"
         @Volatile var isRunning: Boolean = false
+        @Volatile var currentForegroundPackage: String? = null
 
         private val SYSTEM_EXEMPT_PACKAGES = setOf(
             "com.android.systemui",
@@ -108,6 +109,8 @@ class BlockAccessibilityService : AccessibilityService() {
         if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         val pkg = event.packageName?.toString() ?: return
         if (pkg == packageName) return
+
+        currentForegroundPackage = pkg
 
         scope.launch {
             val dao = entryPoint.appBlockDao()
@@ -297,6 +300,7 @@ class BlockAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         isRunning = false
+        currentForegroundPackage = null
         super.onDestroy()
         scope.cancel()
     }
