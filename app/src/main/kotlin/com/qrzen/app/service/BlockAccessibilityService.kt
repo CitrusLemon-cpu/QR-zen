@@ -110,7 +110,9 @@ class BlockAccessibilityService : AccessibilityService() {
         val pkg = event.packageName?.toString() ?: return
         if (pkg == packageName) return
 
-        if (!isExemptFromAllowlist(pkg)) {
+        // Only filter genuinely transient windows (system UI, keyboards).
+        // Launchers and dialers represent real navigation away from an app.
+        if (pkg !in SYSTEM_EXEMPT_PACKAGES && pkg !in imePackages) {
             currentForegroundPackage = pkg
         }
 
