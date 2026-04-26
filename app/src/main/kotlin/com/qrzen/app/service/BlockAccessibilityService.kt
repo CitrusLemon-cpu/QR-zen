@@ -167,6 +167,10 @@ class BlockAccessibilityService : AccessibilityService() {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
         return when (block.blockingStyle) {
             UnlockMethodUtils.STYLE_MANUAL -> true
+            UnlockMethodUtils.STYLE_POMODORO -> {
+                val state = UnlockMethodUtils.computePomodoroState(block)
+                state.isInFocus
+            }
             UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
             UnlockMethodUtils.STYLE_USAGE_LIMIT -> isUsageLimitExceeded(block)
             UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block)
