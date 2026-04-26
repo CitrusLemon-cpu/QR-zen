@@ -177,7 +177,11 @@ class BackgroundService : Service() {
         if (shouldRefresh) WidgetRefresh.refresh(applicationContext)
 
         val hasActiveBlocks = currentlyActiveIds.isNotEmpty()
-        val needsPolling = hasActiveBlocks
+        val hasWaitTimerBlocks = allBlocks.any {
+            it.isEnabled && !it.isArchived && it.pausedUntil <= now &&
+                it.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER
+        }
+        val needsPolling = hasActiveBlocks || hasWaitTimerBlocks
         if (needsPolling) {
             startUsagePolling()
         } else {
