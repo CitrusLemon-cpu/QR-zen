@@ -28,6 +28,7 @@ import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
 import com.qrzen.app.ui.lock.LockScreenActivity
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.widget.WidgetRefresh
+import com.tencent.mmkv.MMKV
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,6 +54,7 @@ class BackgroundService : Service() {
     private var lastBlockedPkg: String? = null
     private var lastBlockedTime = 0L
     private var wakeLock: PowerManager.WakeLock? = null
+    private var waitTimerOverlay: WaitTimerOverlay? = null
 
     private val systemExemptPackages = setOf(
         "com.android.systemui",
@@ -126,6 +128,9 @@ class BackgroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         startForeground(NOTIF_ID, buildNotification())
+        if (waitTimerOverlay == null) {
+            waitTimerOverlay = WaitTimerOverlay(this)
+        }
         acquireWakeLock()
         AlarmKeepaliveReceiver.schedule(applicationContext)
         handler.removeCallbacks(checkRunnable)
@@ -284,7 +289,7 @@ class BackgroundService : Service() {
         val dayIndex = (cal.get(Calendar.DAY_OF_WEEK) + 5) % 7
         if (block.activeDays.getOrNull(dayIndex) != '1') return false
 
-        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
+        val kv = MMKV.defaultMMKV()
         val now = System.currentTimeMillis()
         val blockingUntilKey = "wait_timer_blocking_${block.id}"
         val remainingKey = "wait_timer_remaining_${block.id}"
@@ -403,13 +408,28 @@ class BackgroundService : Service() {
     }
 
     private suspend fun checkForegroundApp() {
-        if (isDeviceLocked()) return
+        if (isDeviceLocked()) {
+            waitTimerOverlay?.hide()
+            return
+        }
         val now = System.currentTimeMillis()
-        if (Prefs.pauseAllUntil > now) return
+        if (Prefs.pauseAllUntil > now) {
+            waitTimerOverlay?.hide()
+            return
+        }
 
-        val pkg = getForegroundPackage() ?: return
-        if (isExemptPackage(pkg)) return
-        if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) return
+        val pkg = getForegroundPackage() ?: run {
+            waitTimerOverlay?.hide()
+            return
+        }
+        if (isExemptPackage(pkg)) {
+            waitTimerOverlay?.hide()
+            return
+        }
+        if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
+            waitTimerOverlay?.hide()
+            return
+        }
 
         val allCandidates = dao.getAll().filter {
             it.isEnabled && !it.isArchived && now > it.pausedUntil
@@ -427,6 +447,7 @@ class BackgroundService : Service() {
         if (blocklistBlock != null) {
             lastBlockedPkg = pkg
             lastBlockedTime = now
+            waitTimerOverlay?.hide()
             launchLockScreen(pkg, blocklistBlock)
             return
         }
@@ -444,8 +465,32 @@ class BackgroundService : Service() {
             if (!intersection.contains(pkg)) {
                 lastBlockedPkg = pkg
                 lastBlockedTime = now
+                waitTimerOverlay?.hide()
                 launchAllowlistOverlay(pkg, allowlistBlocks)
             }
+        }
+
+        updateWaitTimerOverlay(allCandidates)
+    }
+
+    private fun updateWaitTimerOverlay(blocks: List<AppBlock>) {
+        val kv = MMKV.defaultMMKV()
+        var showRemaining: Long? = null
+
+        for (block in blocks) {
+            if (block.blockingStyle != UnlockMethodUtils.STYLE_WAIT_TIMER) continue
+            if (kv.decodeBool("wait_timer_in_app_${block.id}", false)) {
+                val remaining = kv.decodeLong("wait_timer_remaining_${block.id}", -1L)
+                if (remaining > 0L) {
+                    showRemaining = if (showRemaining == null) remaining else minOf(showRemaining, remaining)
+                }
+            }
+        }
+
+        if (showRemaining != null) {
+            waitTimerOverlay?.show(showRemaining)
+        } else {
+            waitTimerOverlay?.hide()
         }
     }
 
@@ -483,6 +528,7 @@ class BackgroundService : Service() {
         usagePollingActive = false
         usageHandler.removeCallbacks(usageCheckRunnable)
         lastBlockedPkg = null
+        waitTimerOverlay?.hide()
     }
 
     private fun acquireWakeLock() {
@@ -497,6 +543,8 @@ class BackgroundService : Service() {
     }
 
     override fun onDestroy() {
+        waitTimerOverlay?.destroy()
+        waitTimerOverlay = null
         scope.cancel()
         stopUsagePolling()
         wakeLock?.let {
