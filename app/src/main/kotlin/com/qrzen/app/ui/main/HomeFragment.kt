@@ -68,9 +68,9 @@ class HomeFragment : Fragment() {
         adapter = BlockAdapter(
             onToggle = { block, enabled ->
                 if (enabled) {
-                    val isManualNoMethod = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
-                        UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
-                    if (isManualNoMethod && block.isAllowlistMode) {
+                    val isManualAllowlist = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
+                        block.isAllowlistMode
+                    if (isManualAllowlist) {
                         showAllowlistDurationPicker(block)
                         false
                     } else {
