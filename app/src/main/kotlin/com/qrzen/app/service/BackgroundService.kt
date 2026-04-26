@@ -418,14 +418,8 @@ class BackgroundService : Service() {
             return
         }
 
-        val pkg = getForegroundPackage() ?: run {
-            waitTimerOverlay?.hide()
-            return
-        }
-        if (isExemptPackage(pkg)) {
-            waitTimerOverlay?.hide()
-            return
-        }
+        val pkg = getForegroundPackage() ?: return
+        if (isExemptPackage(pkg)) return
         if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
             waitTimerOverlay?.hide()
             return
