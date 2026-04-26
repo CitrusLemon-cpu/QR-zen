@@ -145,4 +145,11 @@
     <string name="blocking_style_manual_desc_new">Toggle on to activate blocking.</string>
     <string name="pomodoro_lock_editing_label">Lock editing during active sessions</string>
     <string name="pomodoro_timer_incompatible">Timer unlock is not available with Pomodoro mode. You can lock editing when starting a session instead.</string>
+    <string name="pomodoro_rounds_label">How many rounds?</string>
+    <string name="pomodoro_activation_title">Start Pomodoro: %1$s</string>
+    <string name="pomodoro_confirm_title">Confirm Pomodoro Session</string>
+    <string name="pomodoro_confirm_message">%1$d rounds × %2$d min focus + %3$d min break
+Session ends at %4$s</string>
+    <string name="pomodoro_start">Start</string>
+    <string name="pomodoro_end_early">End early</string>
 </resources>

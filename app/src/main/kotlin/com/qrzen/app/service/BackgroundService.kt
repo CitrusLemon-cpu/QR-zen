@@ -56,6 +56,8 @@ class BackgroundService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var waitTimerOverlay: WaitTimerOverlay? = null
     private var overlayHideCounter = 0
+    private val pomodoroNotifIds = mutableMapOf<Int, Int>()
+    private var nextPomodoroNotifId = 3000
 
     private val systemExemptPackages = setOf(
         "com.android.systemui",
@@ -211,6 +213,33 @@ class BackgroundService : Service() {
                 )
                 shouldRefresh = true
             }
+        allBlocks
+            .filter { block ->
+                block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO &&
+                    block.isEnabled &&
+                    block.pomodoroRoundsTotal > 0
+            }
+            .forEach { block ->
+                val state = UnlockMethodUtils.computePomodoroState(block, now)
+                if (!state.isSessionActive) {
+                    dao.update(
+                        block.copy(
+                            isEnabled = false,
+                            pomodoroRoundsTotal = 0,
+                            pomodoroSessionStartMillis = 0L,
+                            toggleLockUntil = 0L,
+                            autoDisableOnToggleLockExpiry = false,
+                            activeUntil = 0L
+                        )
+                    )
+                    cancelPomodoroBreakNotification(block.id)
+                    shouldRefresh = true
+                } else if (state.isInBreak) {
+                    showPomodoroBreakNotification(block, state)
+                } else {
+                    cancelPomodoroBreakNotification(block.id)
+                }
+            }
         val currentlyActiveIds = mutableSetOf<Int>()
         allBlocks
             .filter { it.isEnabled && !it.isArchived && it.pausedUntil <= now }
@@ -231,7 +260,12 @@ class BackgroundService : Service() {
             it.isEnabled && !it.isArchived && it.pausedUntil <= now &&
                 it.blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER
         }
-        val needsPolling = hasActiveBlocks || hasWaitTimerBlocks
+        val hasPomodoroBlocks = allBlocks.any {
+            it.isEnabled && !it.isArchived && it.pausedUntil <= now &&
+                it.blockingStyle == UnlockMethodUtils.STYLE_POMODORO &&
+                it.pomodoroRoundsTotal > 0
+        }
+        val needsPolling = hasActiveBlocks || hasWaitTimerBlocks || hasPomodoroBlocks
         if (needsPolling) {
             startUsagePolling()
         } else {
@@ -244,6 +278,10 @@ class BackgroundService : Service() {
 
         return when (block.blockingStyle) {
             UnlockMethodUtils.STYLE_MANUAL -> true
+            UnlockMethodUtils.STYLE_POMODORO -> {
+                val state = UnlockMethodUtils.computePomodoroState(block)
+                state.isInFocus
+            }
             UnlockMethodUtils.STYLE_SCHEDULE -> isScheduleActive(block)
             UnlockMethodUtils.STYLE_USAGE_LIMIT -> isUsageLimitExceeded(block)
             UnlockMethodUtils.STYLE_WAIT_TIMER -> isWaitTimerBlocking(block, foregroundPkg)
@@ -411,6 +449,44 @@ class BackgroundService : Service() {
             .setPriority(NotificationCompat.PRIORITY_MIN)
             .setOngoing(true)
             .build()
+    }
+
+    private fun showPomodoroBreakNotification(
+        block: AppBlock,
+        state: UnlockMethodUtils.PomodoroState
+    ) {
+        val nm = getSystemService(NotificationManager::class.java)
+        val channelId = "qrzen_pomodoro_break"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                channelId,
+                "Pomodoro Breaks",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply { setShowBadge(false) }
+            nm.createNotificationChannel(channel)
+        }
+        val notifId = pomodoroNotifIds.getOrPut(block.id) { nextPomodoroNotifId++ }
+        val breakEndMs = System.currentTimeMillis() + state.periodRemainingMs
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("☕ Break – ${block.title}")
+            .setContentText(
+                "Round ${state.currentRound}/${state.totalRounds} complete. Next round in ${
+                    UnlockMethodUtils.formatCountdown(state.periodRemainingMs)
+                }"
+            )
+            .setWhen(breakEndMs)
+            .setUsesChronometer(true)
+            .setChronometerCountDown(true)
+            .setOngoing(true)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .build()
+        nm.notify(notifId, notification)
+    }
+
+    private fun cancelPomodoroBreakNotification(blockId: Int) {
+        val notifId = pomodoroNotifIds.remove(blockId) ?: return
+        getSystemService(NotificationManager::class.java).cancel(notifId)
     }
 
     private fun isExemptPackage(pkg: String): Boolean {
@@ -612,6 +688,9 @@ class BackgroundService : Service() {
     }
 
     override fun onDestroy() {
+        val nm = getSystemService(NotificationManager::class.java)
+        pomodoroNotifIds.values.forEach { nm.cancel(it) }
+        pomodoroNotifIds.clear()
         waitTimerOverlay?.destroy()
         waitTimerOverlay = null
         scope.cancel()
