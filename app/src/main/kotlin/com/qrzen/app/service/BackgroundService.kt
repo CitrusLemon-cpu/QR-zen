@@ -382,9 +382,14 @@ class BackgroundService : Service() {
     }
 
     private fun getForegroundPackage(): String? {
+        val accessibilityPkg = BlockAccessibilityService.currentForegroundPackage
+        if (accessibilityPkg != null && BlockAccessibilityService.isRunning) {
+            return accessibilityPkg
+        }
+
         val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return null
         val endTime = System.currentTimeMillis()
-        val startTime = endTime - 5_000
+        val startTime = endTime - 60_000
         val events = usageStatsManager.queryEvents(startTime, endTime)
         var lastPkg: String? = null
         val event = UsageEvents.Event()
@@ -393,16 +398,6 @@ class BackgroundService : Service() {
             if (event.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) {
                 lastPkg = event.packageName
             }
-        }
-        if (lastPkg == null) {
-            lastPkg = usageStatsManager.queryUsageStats(
-                UsageStatsManager.INTERVAL_DAILY,
-                endTime - 10_000,
-                endTime
-            )
-                ?.filter { it.totalTimeInForeground > 0 }
-                ?.maxByOrNull { it.lastTimeUsed }
-                ?.packageName
         }
         return lastPkg
     }
@@ -418,7 +413,11 @@ class BackgroundService : Service() {
             return
         }
 
-        val pkg = getForegroundPackage() ?: return
+        val pkg = getForegroundPackage()
+        if (pkg == null) {
+            waitTimerOverlay?.hide()
+            return
+        }
         if (isExemptPackage(pkg)) return
         if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
             waitTimerOverlay?.hide()
