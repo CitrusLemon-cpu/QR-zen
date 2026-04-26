@@ -669,7 +669,7 @@ class BackgroundService : Service() {
                 block.appPackages.split(",")
                     .map { it.trim() }
                     .filter { it.isNotEmpty() }
-                    .filterNot { Prefs.isAppTimerExpired(it) }
+                    .filterNot { Prefs.isAppTimerExpired(block.id, it) }
                     .toSet()
             }
             val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }
@@ -743,7 +743,7 @@ class BackgroundService : Service() {
             if (remaining <= 0L) continue
 
             val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-            val isInAllowedApp = foregroundPkg in packages && !Prefs.isAppTimerExpired(foregroundPkg)
+            val isInAllowedApp = foregroundPkg in packages && !Prefs.isAppTimerExpired(block.id, foregroundPkg)
 
             if (isInAllowedApp) {
                 val lastFg = Prefs.getAllowlistUsageLastFg(block.id)
@@ -777,33 +777,28 @@ class BackgroundService : Service() {
     }
 
     private fun trackPerAppTimers(blocks: List<AppBlock>, foregroundPkg: String) {
-        val allAllowlistPkgs = mutableSetOf<String>()
+        val now = System.currentTimeMillis()
         for (block in blocks) {
             if (!block.isAllowlistMode || !block.isEnabled || block.isArchived) continue
-            block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.forEach {
-                allAllowlistPkgs.add(it)
-            }
-        }
+            for (pkg in block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }) {
+                val remaining = Prefs.getAppTimerRemaining(block.id, pkg)
+                if (remaining <= 0L) continue
 
-        val now = System.currentTimeMillis()
-        for (pkg in allAllowlistPkgs) {
-            val remaining = Prefs.getAppTimerRemaining(pkg)
-            if (remaining <= 0L) continue
-
-            if (pkg == foregroundPkg) {
-                val lastFg = Prefs.getAppTimerLastFg(pkg)
-                if (lastFg > 0L) {
-                    val elapsed = (now - lastFg).coerceAtLeast(0L).coerceAtMost(5_000L)
-                    val newRemaining = (remaining - elapsed).coerceAtLeast(0L)
-                    Prefs.setAppTimerRemaining(pkg, newRemaining)
-                    if (newRemaining <= 0L) {
-                        Prefs.setAppTimerLastFg(pkg, 0L)
-                        continue
+                if (pkg == foregroundPkg) {
+                    val lastFg = Prefs.getAppTimerLastFg(block.id, pkg)
+                    if (lastFg > 0L) {
+                        val elapsed = (now - lastFg).coerceAtLeast(0L).coerceAtMost(5_000L)
+                        val newRemaining = (remaining - elapsed).coerceAtLeast(0L)
+                        Prefs.setAppTimerRemaining(block.id, pkg, newRemaining)
+                        if (newRemaining <= 0L) {
+                            Prefs.setAppTimerLastFg(block.id, pkg, 0L)
+                            continue
+                        }
                     }
+                    Prefs.setAppTimerLastFg(block.id, pkg, now)
+                } else {
+                    Prefs.setAppTimerLastFg(block.id, pkg, 0L)
                 }
-                Prefs.setAppTimerLastFg(pkg, now)
-            } else {
-                Prefs.setAppTimerLastFg(pkg, 0L)
             }
         }
     }
@@ -815,7 +810,14 @@ class BackgroundService : Service() {
         }
 
         val entries = mutableListOf<AppTimerOverlay.TimerEntry>()
-        val perAppRemaining = Prefs.getAppTimerRemaining(foregroundPkg)
+        var perAppRemaining = -1L
+        for (block in blocks) {
+            if (!block.isAllowlistMode || !block.isEnabled || block.isArchived) continue
+            val remaining = Prefs.getAppTimerRemaining(block.id, foregroundPkg)
+            if (remaining > 0L) {
+                perAppRemaining = if (perAppRemaining < 0L) remaining else minOf(perAppRemaining, remaining)
+            }
+        }
         if (perAppRemaining > 0L) {
             val icon = getOrLoadIcon(foregroundPkg)
             if (icon != null) {

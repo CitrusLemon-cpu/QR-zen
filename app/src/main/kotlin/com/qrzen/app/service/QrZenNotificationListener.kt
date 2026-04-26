@@ -20,6 +20,7 @@ class QrZenNotificationListener : NotificationListenerService() {
     @Volatile private var cachedPackages: Set<String> = emptySet()
     @Volatile private var cachedAllowedPackages: Set<String> = emptySet()
     @Volatile private var cachedHasAllowlist: Boolean = false
+    @Volatile private var cachedAllowlistBlockIds: List<Int> = emptyList()
     @Volatile private var lastFetchTime = 0L
     private val fmt = DateTimeFormatter.ofPattern("HH:mm")
 
@@ -40,6 +41,7 @@ class QrZenNotificationListener : NotificationListenerService() {
             .toSet()
         val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
         cachedHasAllowlist = allowlistBlocks.isNotEmpty()
+        cachedAllowlistBlockIds = allowlistBlocks.map { it.id }
         cachedAllowedPackages = if (allowlistBlocks.isEmpty()) {
             emptySet()
         } else {
@@ -49,7 +51,7 @@ class QrZenNotificationListener : NotificationListenerService() {
                         .split(",")
                         .map(String::trim)
                         .filter(String::isNotEmpty)
-                        .filterNot(Prefs::isAppTimerExpired)
+                        .filterNot { Prefs.isAppTimerExpired(block.id, it) }
                         .toSet()
                 }
                 .reduce { acc, allowed -> acc.intersect(allowed) }
@@ -76,7 +78,10 @@ class QrZenNotificationListener : NotificationListenerService() {
                 cancelNotification(notification.key)
                 return@launch
             }
-            if (hasAllowlist && Prefs.isAppTimerExpired(pkg) && pkg !in SYSTEM_EXEMPT_PACKAGES) {
+            if (hasAllowlist &&
+                cachedAllowlistBlockIds.any { blockId -> Prefs.isAppTimerExpired(blockId, pkg) } &&
+                pkg !in SYSTEM_EXEMPT_PACKAGES
+            ) {
                 cancelNotification(notification.key)
             }
         }

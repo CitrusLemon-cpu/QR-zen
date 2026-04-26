@@ -63,6 +63,53 @@ object Prefs {
         kv.removeValueForKey("${KEY_USAGE_LAST_FG_PREFIX}$blockId")
     }
 
+    fun getAppTimerRemaining(blockId: Int, packageName: String): Long {
+        return kv.decodeLong("${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_$packageName", -1L)
+    }
+
+    fun setAppTimerRemaining(blockId: Int, packageName: String, remainingMs: Long) {
+        kv.encode("${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_$packageName", remainingMs)
+    }
+
+    fun getAppTimerLastFg(blockId: Int, packageName: String): Long {
+        return kv.decodeLong("${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_$packageName", 0L)
+    }
+
+    fun setAppTimerLastFg(blockId: Int, packageName: String, timestamp: Long) {
+        kv.encode("${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_$packageName", timestamp)
+    }
+
+    fun isAppTimerExpired(blockId: Int, packageName: String): Boolean {
+        val remaining = getAppTimerRemaining(blockId, packageName)
+        return remaining == 0L
+    }
+
+    fun getAppTimerExpiry(blockId: Int, packageName: String): Long {
+        val remaining = getAppTimerRemaining(blockId, packageName)
+        if (remaining > 0L) return System.currentTimeMillis() + remaining
+        if (remaining == 0L) return 1L
+        return 0L
+    }
+
+    fun setAppTimerExpiry(blockId: Int, packageName: String, expiryMillis: Long) {
+        if (expiryMillis <= 0L) {
+            kv.removeValueForKey("${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_$packageName")
+            kv.removeValueForKey("${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_$packageName")
+        } else {
+            val remaining = (expiryMillis - System.currentTimeMillis()).coerceAtLeast(0L)
+            kv.encode("${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_$packageName", remaining)
+            kv.encode("${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_$packageName", 0L)
+        }
+    }
+
+    fun clearAppTimersForBlock(blockId: Int) {
+        val allKeys = kv.allKeys() ?: return
+        allKeys.filter {
+            it.startsWith("${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_") ||
+                it.startsWith("${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_")
+        }.forEach { kv.removeValueForKey(it) }
+    }
+
     fun getAppTimerExpiry(packageName: String): Long {
         val now = System.currentTimeMillis()
         val remaining = getAppTimerRemaining(packageName)
