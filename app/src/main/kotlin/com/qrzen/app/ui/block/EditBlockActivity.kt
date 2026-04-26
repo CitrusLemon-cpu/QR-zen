@@ -154,13 +154,19 @@ class EditBlockActivity : AppCompatActivity() {
         }
 
     private val scheduleBreakTypes: List<Pair<String, String>>
-        get() = listOf(
-            UnlockMethodUtils.BREAK_NONE to getString(R.string.schedule_break_type_none_option),
-            UnlockMethodUtils.BREAK_POMODORO to getString(R.string.schedule_break_type_pomodoro_option),
-            UnlockMethodUtils.BREAK_WAIT_TIMER to getString(R.string.schedule_break_type_wait_timer_option),
-            UnlockMethodUtils.BREAK_USAGE_LIMIT to getString(R.string.schedule_break_type_usage_limit_option),
-            UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE to getString(R.string.schedule_break_type_allowance_option)
-        )
+        get() {
+            val all = listOf(
+                UnlockMethodUtils.BREAK_NONE to getString(R.string.schedule_break_type_none_option),
+                UnlockMethodUtils.BREAK_POMODORO to getString(R.string.schedule_break_type_pomodoro_option),
+                UnlockMethodUtils.BREAK_WAIT_TIMER to getString(R.string.schedule_break_type_wait_timer_option),
+                UnlockMethodUtils.BREAK_USAGE_LIMIT to getString(R.string.schedule_break_type_usage_limit_option),
+                UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE to getString(R.string.schedule_break_type_allowance_option)
+            )
+            if (isAllowlistMode) {
+                return all.filter { it.first == UnlockMethodUtils.BREAK_NONE || it.first == UnlockMethodUtils.BREAK_POMODORO }
+            }
+            return all
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
