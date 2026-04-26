@@ -59,7 +59,30 @@ class HomeViewModel @Inject constructor(
                 isEnabled = false,
                 activeUntil = 0L,
                 toggleLockUntil = 0L,
-                autoDisableOnToggleLockExpiry = false
+                autoDisableOnToggleLockExpiry = false,
+                pomodoroRoundsTotal = 0,
+                pomodoroSessionStartMillis = 0L
+            )
+        )
+        WidgetRefresh.refresh(ctx)
+    }
+
+    fun startPomodoroSession(block: AppBlock, rounds: Int, lockEditing: Boolean) = viewModelScope.launch {
+        val now = System.currentTimeMillis()
+        val focusMs = block.pomodoroDurationMin * 60_000L
+        val breakMs = block.pomodoroBreakMin * 60_000L
+        val totalSessionMs = focusMs * rounds + breakMs * (rounds - 1)
+        val sessionEnd = now + totalSessionMs
+        dao.update(
+            block.copy(
+                isEnabled = true,
+                pausedUntil = 0L,
+                pomodoroRoundsTotal = rounds,
+                pomodoroSessionStartMillis = now,
+                pomodoroLockEditing = lockEditing,
+                toggleLockUntil = if (lockEditing) sessionEnd else 0L,
+                autoDisableOnToggleLockExpiry = if (lockEditing) true else false,
+                activeUntil = if (block.isAllowlistMode) sessionEnd else 0L
             )
         )
         WidgetRefresh.refresh(ctx)

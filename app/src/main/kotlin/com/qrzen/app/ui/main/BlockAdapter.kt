@@ -68,6 +68,7 @@ class BlockAdapter(
         private var blockNowTimer: CountDownTimer? = null
         private var lockTimer: CountDownTimer? = null
         private var activeTimer: CountDownTimer? = null
+        private var pomodoroTimer: CountDownTimer? = null
         private var usageStatusTimer: CountDownTimer? = null
         private var iconLoadJob: Job? = null
         private var usageQueryJob: Job? = null
@@ -82,6 +83,8 @@ class BlockAdapter(
             lockTimer = null
             activeTimer?.cancel()
             activeTimer = null
+            pomodoroTimer?.cancel()
+            pomodoroTimer = null
             usageStatusTimer?.cancel()
             usageStatusTimer = null
             iconLoadJob?.cancel()
@@ -139,6 +142,19 @@ class BlockAdapter(
                             }
                         }
                 }
+                UnlockMethodUtils.STYLE_POMODORO -> {
+                    val state = UnlockMethodUtils.computePomodoroState(block)
+                    if (state.isSessionActive) {
+                        if (state.isInFocus) {
+                            binding.tvTimeRange.text = "🎯 Focus ${state.currentRound}/${state.totalRounds}"
+                        } else {
+                            binding.tvTimeRange.text = "☕ Break ${state.currentRound}/${state.totalRounds}"
+                        }
+                    } else {
+                        binding.tvTimeRange.text = "${block.pomodoroDurationMin}m focus / ${block.pomodoroBreakMin}m break"
+                    }
+                    binding.tvDays.text = modePrefix
+                }
                 else -> {
                     binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
                     binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
@@ -161,6 +177,7 @@ class BlockAdapter(
             setupBlockNowTimer(block)
             setupLockTimer(block)
             setupActiveTimer(block)
+            setupPomodoroTimer(block)
 
             val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             boundPackages = packages
@@ -301,6 +318,31 @@ class BlockAdapter(
             }
         }
 
+        private fun setupPomodoroTimer(block: AppBlock) {
+            if (block.blockingStyle != UnlockMethodUtils.STYLE_POMODORO) {
+                return
+            }
+            val state = UnlockMethodUtils.computePomodoroState(block)
+            if (!state.isSessionActive) {
+                if (block.blockNowUntil <= System.currentTimeMillis()) {
+                    binding.tvBlockNowTimer.visibility = View.GONE
+                }
+                return
+            }
+            binding.tvBlockNowTimer.visibility = View.VISIBLE
+            val label = if (state.isInFocus) "🎯" else "☕"
+            binding.tvBlockNowTimer.text = "$label ${formatDuration(state.periodRemainingMs)} remaining"
+            pomodoroTimer = object : CountDownTimer(state.periodRemainingMs, 1000L) {
+                override fun onTick(ms: Long) {
+                    binding.tvBlockNowTimer.text = "$label ${formatDuration(ms)} remaining"
+                }
+
+                override fun onFinish() {
+                    binding.tvBlockNowTimer.visibility = View.GONE
+                }
+            }.start()
+        }
+
         private fun showPopupMenu(anchor: View, block: AppBlock) {
             val popup = PopupMenu(anchor.context, anchor)
             popup.menuInflater.inflate(R.menu.menu_block_overflow, popup.menu)
@@ -357,6 +399,8 @@ class BlockAdapter(
             lockTimer = null
             activeTimer?.cancel()
             activeTimer = null
+            pomodoroTimer?.cancel()
+            pomodoroTimer = null
             usageStatusTimer?.cancel()
             usageStatusTimer = null
             iconLoadJob?.cancel()

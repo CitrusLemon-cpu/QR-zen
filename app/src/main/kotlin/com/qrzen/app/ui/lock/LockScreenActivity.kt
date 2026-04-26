@@ -25,6 +25,7 @@ import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityLockScreenBinding
 import com.qrzen.app.databinding.BottomSheetPauseDurationBinding
 import com.qrzen.app.ui.unlock.UnlockChallengeRenderer
+import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.util.SilentModeHelper
 import com.qrzen.app.util.BruteForceGuard
 import com.qrzen.app.util.PasswordHasher
@@ -149,22 +150,58 @@ class LockScreenActivity : AppCompatActivity() {
             return
         }
         pauseSheetShown = true
+
+        val isPomodoroActive = block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO &&
+            block.pomodoroRoundsTotal > 0
+        val pomodoroState = if (isPomodoroActive) UnlockMethodUtils.computePomodoroState(block) else null
+        val sessionRemainingMs = pomodoroState?.sessionRemainingMs ?: Long.MAX_VALUE
+
         val sheet = BottomSheetDialog(this)
         val sb = BottomSheetPauseDurationBinding.inflate(LayoutInflater.from(this))
         sheet.setContentView(sb.root)
+
         sb.btn15min.setOnClickListener { applyPause(block, 15 * 60_000L); sheet.dismiss() }
         sb.btn30min.setOnClickListener { applyPause(block, 30 * 60_000L); sheet.dismiss() }
         sb.btn1hr.setOnClickListener { applyPause(block, 60 * 60_000L); sheet.dismiss() }
         sb.btn2hr.setOnClickListener { applyPause(block, 2 * 60 * 60_000L); sheet.dismiss() }
-        sb.btnRestOfDay.setOnClickListener { applyPause(block, millisUntilMidnight()); sheet.dismiss() }
-        sb.btnIndefinitely.setOnClickListener {
-            lifecycleScope.launch {
-                dao.update(block.copy(isEnabled = false, pausedUntil = 0L))
-                WidgetRefresh.refresh(applicationContext)
-                SilentModeHelper.restoreRinger(this@LockScreenActivity)
-                finish()
+
+        sb.btn15min.visibility = if (15 * 60_000L <= sessionRemainingMs) View.VISIBLE else View.GONE
+        sb.btn30min.visibility = if (30 * 60_000L <= sessionRemainingMs) View.VISIBLE else View.GONE
+        sb.btn1hr.visibility = if (60 * 60_000L <= sessionRemainingMs) View.VISIBLE else View.GONE
+        sb.btn2hr.visibility = if (2 * 60 * 60_000L <= sessionRemainingMs) View.VISIBLE else View.GONE
+
+        if (isPomodoroActive) {
+            sb.btnRestOfDay.text = getString(R.string.pomodoro_end_early)
+            sb.btnRestOfDay.setOnClickListener {
+                lifecycleScope.launch {
+                    dao.update(
+                        block.copy(
+                            isEnabled = false,
+                            pomodoroRoundsTotal = 0,
+                            pomodoroSessionStartMillis = 0L,
+                            toggleLockUntil = 0L,
+                            autoDisableOnToggleLockExpiry = false,
+                            activeUntil = 0L
+                        )
+                    )
+                    WidgetRefresh.refresh(applicationContext)
+                    SilentModeHelper.restoreRinger(this@LockScreenActivity)
+                    finish()
+                }
+                sheet.dismiss()
             }
-            sheet.dismiss()
+            sb.btnIndefinitely.visibility = View.GONE
+        } else {
+            sb.btnRestOfDay.setOnClickListener { applyPause(block, millisUntilMidnight()); sheet.dismiss() }
+            sb.btnIndefinitely.setOnClickListener {
+                lifecycleScope.launch {
+                    dao.update(block.copy(isEnabled = false, pausedUntil = 0L))
+                    WidgetRefresh.refresh(applicationContext)
+                    SilentModeHelper.restoreRinger(this@LockScreenActivity)
+                    finish()
+                }
+                sheet.dismiss()
+            }
         }
         sheet.show()
     }

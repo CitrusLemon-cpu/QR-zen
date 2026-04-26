@@ -12,6 +12,7 @@ import android.view.ViewGroup
 import android.view.accessibility.AccessibilityManager
 import android.widget.CheckBox
 import android.widget.LinearLayout
+import android.widget.NumberPicker
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -68,15 +69,20 @@ class HomeFragment : Fragment() {
         adapter = BlockAdapter(
             onToggle = { block, enabled ->
                 if (enabled) {
-                    val isManualAllowlist = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
-                        block.isAllowlistMode
-                    if (isManualAllowlist) {
-                        showAllowlistDurationPicker(block)
+                    if (block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO) {
+                        showPomodoroActivationDialog(block)
                         false
                     } else {
-                        viewModel.setEnabled(block, true)
-                        goToHomeIfBlockActive(block)
-                        true
+                        val isManualAllowlist = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
+                            block.isAllowlistMode
+                        if (isManualAllowlist) {
+                            showAllowlistDurationPicker(block)
+                            false
+                        } else {
+                            viewModel.setEnabled(block, true)
+                            goToHomeIfBlockActive(block)
+                            true
+                        }
                     }
                 } else {
                     if (block.toggleLockUntil > System.currentTimeMillis()) {
@@ -233,25 +239,101 @@ class HomeFragment : Fragment() {
     }
 
     private fun showPauseDurationPicker(block: AppBlock) {
-        val options = arrayOf("15 minutes", "30 minutes", "1 hour", "2 hours", "Rest of day", "Indefinitely")
+        val isPomodoroActive = block.blockingStyle == UnlockMethodUtils.STYLE_POMODORO &&
+            block.pomodoroRoundsTotal > 0
+        val pomodoroState = if (isPomodoroActive) UnlockMethodUtils.computePomodoroState(block) else null
+        val sessionRemainingMs = pomodoroState?.sessionRemainingMs ?: Long.MAX_VALUE
+
+        val durations = mutableListOf<Pair<String, Long>>()
+        val candidates = listOf(
+            "15 minutes" to 15 * 60_000L,
+            "30 minutes" to 30 * 60_000L,
+            "1 hour" to 60 * 60_000L,
+            "2 hours" to 2 * 60 * 60_000L
+        )
+        for ((label, ms) in candidates) {
+            if (ms <= sessionRemainingMs) durations.add(label to ms)
+        }
+        if (!isPomodoroActive) {
+            durations.add("Rest of day" to millisUntilMidnight())
+            durations.add("Indefinitely" to -1L)
+        } else {
+            durations.add(getString(R.string.pomodoro_end_early) to -2L)
+        }
+
+        val options = durations.map { it.first }.toTypedArray()
         AlertDialog.Builder(requireContext())
             .setTitle("Pause '${block.title}'")
             .setItems(options) { _, which ->
-                if (which == 5) {
-                    viewModel.setEnabled(block, false)
-                    return@setItems
+                val (_, durationMs) = durations[which]
+                when (durationMs) {
+                    -1L -> viewModel.setEnabled(block, false)
+                    -2L -> viewModel.disableAndClearTimers(block)
+                    else -> if (durationMs > 0L) viewModel.pause(block, durationMs)
                 }
-                val durationMs = when (which) {
-                    0 -> 15 * 60_000L
-                    1 -> 30 * 60_000L
-                    2 -> 60 * 60_000L
-                    3 -> 2 * 60 * 60_000L
-                    4 -> millisUntilMidnight()
-                    else -> 0L
-                }
-                if (durationMs > 0L) viewModel.pause(block, durationMs)
             }
             .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showPomodoroActivationDialog(block: AppBlock) {
+        val dialogView = LinearLayout(requireContext()).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 24, 48, 0)
+        }
+
+        val roundsLabel = android.widget.TextView(requireContext()).apply {
+            text = getString(R.string.pomodoro_rounds_label)
+            textSize = 14f
+        }
+        dialogView.addView(roundsLabel)
+
+        val roundsPicker = NumberPicker(requireContext()).apply {
+            minValue = 1
+            maxValue = 20
+            value = 4
+        }
+        dialogView.addView(roundsPicker)
+
+        val lockCheckBox = CheckBox(requireContext()).apply {
+            text = getString(R.string.pomodoro_lock_editing_label)
+            isChecked = block.pomodoroLockEditing
+        }
+        dialogView.addView(lockCheckBox)
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.pomodoro_activation_title, block.title))
+            .setView(dialogView)
+            .setPositiveButton(android.R.string.ok) { _, _ ->
+                val rounds = roundsPicker.value
+                val lockEditing = lockCheckBox.isChecked
+                val focusMs = block.pomodoroDurationMin * 60_000L
+                val breakMs = block.pomodoroBreakMin * 60_000L
+                val totalMs = focusMs * rounds + breakMs * (rounds - 1)
+                val endTime = UnlockMethodUtils.formatDateTime(System.currentTimeMillis() + totalMs)
+
+                AlertDialog.Builder(requireContext())
+                    .setTitle(getString(R.string.pomodoro_confirm_title))
+                    .setMessage(
+                        getString(
+                            R.string.pomodoro_confirm_message,
+                            rounds,
+                            block.pomodoroDurationMin,
+                            block.pomodoroBreakMin,
+                            endTime
+                        )
+                    )
+                    .setPositiveButton(getString(R.string.pomodoro_start)) { _, _ ->
+                        viewModel.startPomodoroSession(block, rounds, lockEditing)
+                        startActivity(Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_HOME)
+                            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                        })
+                    }
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
