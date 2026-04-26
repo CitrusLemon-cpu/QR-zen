@@ -110,7 +110,9 @@ class BlockAccessibilityService : AccessibilityService() {
         val pkg = event.packageName?.toString() ?: return
         if (pkg == packageName) return
 
-        currentForegroundPackage = pkg
+        if (!isExemptFromAllowlist(pkg)) {
+            currentForegroundPackage = pkg
+        }
 
         scope.launch {
             val dao = entryPoint.appBlockDao()
