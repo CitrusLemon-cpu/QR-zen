@@ -1257,13 +1257,6 @@ class EditBlockActivity : AppCompatActivity() {
                 timeBlockDao.insertAll(blocksToSave)
             }
 
-            val savedBlock = block.copy(id = savedId)
-            if (savedBlock.isEnabled && savedBlock.pausedUntil <= System.currentTimeMillis() && isBlockCurrentlyActive(savedBlock)) {
-                startActivity(Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_HOME)
-                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                })
-            }
             finish()
         }
     }
