@@ -199,6 +199,7 @@ class HomeFragment : Fragment() {
         if (action == UnlockChallengeActivity.ACTION_TOGGLE && toggleEnabledState == true) return true
         if (!block.isEnabled && action == UnlockChallengeActivity.ACTION_EDIT) return true
         if (!block.isEnabled && (action == UnlockChallengeActivity.ACTION_ARCHIVE || action == UnlockChallengeActivity.ACTION_DELETE)) return true
+        if (block.toggleLockUntil > System.currentTimeMillis()) return false
         val method = UnlockMethodUtils.getNormalizedMethod(block)
         if (method == UnlockMethodUtils.METHOD_WHILE_ACTIVE) return false
         if (method == UnlockMethodUtils.METHOD_TIMER && UnlockMethodUtils.isTimerExpired(block)) return true

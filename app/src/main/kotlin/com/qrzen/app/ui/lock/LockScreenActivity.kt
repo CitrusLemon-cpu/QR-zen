@@ -111,6 +111,21 @@ class LockScreenActivity : AppCompatActivity() {
                 }
             }.start()
         }
+        if (block.toggleLockUntil > System.currentTimeMillis() && block.toggleLockUntil != Long.MAX_VALUE) {
+            val remaining = block.toggleLockUntil - System.currentTimeMillis()
+            binding.tvBlockMessage.text = "Locked for ${formatCountdown(remaining)}"
+            waitTimerCountdown?.cancel()
+            waitTimerCountdown = object : CountDownTimer(remaining, 1_000L) {
+                override fun onTick(ms: Long) {
+                    binding.tvBlockMessage.text = "Locked for ${formatCountdown(ms)}"
+                }
+
+                override fun onFinish() {
+                    binding.tvBlockMessage.text = "Lock expired"
+                    finish()
+                }
+            }.start()
+        }
         unlockRenderer.render(
             block = block,
             timeBlocks = timeBlocks,
