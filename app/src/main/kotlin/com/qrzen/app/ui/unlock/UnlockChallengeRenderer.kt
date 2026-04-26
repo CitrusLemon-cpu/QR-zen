@@ -41,7 +41,13 @@ class UnlockChallengeRenderer(
         clear()
         hideError()
         when (UnlockMethodUtils.getNormalizedMethod(block)) {
-            UnlockMethodUtils.METHOD_NONE -> showNoneChallenge(onUnlocked)
+            UnlockMethodUtils.METHOD_NONE -> {
+                if (block.toggleLockUntil > System.currentTimeMillis()) {
+                    showToggleLockTimerInfo(block, showGoBackButton, onGoBack)
+                } else {
+                    showNoneChallenge(onUnlocked)
+                }
+            }
             UnlockMethodUtils.METHOD_DELAY -> showDelay(block, onUnlocked)
             UnlockMethodUtils.METHOD_PASSWORD -> showPassword(block, onUnlocked)
             UnlockMethodUtils.METHOD_TYPE_OVER_TEXT -> showTypeOverText(block, onUnlocked)
@@ -241,6 +247,40 @@ class UnlockChallengeRenderer(
         timer = object : CountDownTimer(remainingMillis, 1_000L) {
             override fun onTick(millisUntilFinished: Long) {
                 updateTimerMessage(binding, millisUntilFinished)
+            }
+
+            override fun onFinish() {
+                binding.tvChallengeSecondary.text = activity.getString(
+                    R.string.challenge_timer_remaining,
+                    UnlockMethodUtils.formatCountdown(0L)
+                )
+            }
+        }.start()
+    }
+
+    private fun showToggleLockTimerInfo(block: AppBlock, showGoBackButton: Boolean, onGoBack: (() -> Unit)?) {
+        val binding = ViewUnlockInfoBinding.inflate(LayoutInflater.from(activity), container, false)
+        container.addView(binding.root)
+        binding.tvChallengeTitle.text = activity.getString(R.string.unlock_method_timer)
+        binding.tvChallengeBody.text = activity.getString(
+            R.string.challenge_timer_locked,
+            UnlockMethodUtils.formatDateTime(block.toggleLockUntil)
+        )
+        binding.btnGoBack.visibility = if (showGoBackButton) View.VISIBLE else View.GONE
+        binding.btnGoBack.setOnClickListener { onGoBack?.invoke() }
+        val remainingMillis = (block.toggleLockUntil - System.currentTimeMillis()).coerceAtLeast(0L)
+        binding.tvChallengeSecondary.visibility = View.VISIBLE
+        binding.tvChallengeSecondary.text = activity.getString(
+            R.string.challenge_timer_remaining,
+            UnlockMethodUtils.formatCountdown(remainingMillis)
+        )
+        if (remainingMillis <= 0L) return
+        timer = object : CountDownTimer(remainingMillis, 1_000L) {
+            override fun onTick(millisUntilFinished: Long) {
+                binding.tvChallengeSecondary.text = activity.getString(
+                    R.string.challenge_timer_remaining,
+                    UnlockMethodUtils.formatCountdown(millisUntilFinished)
+                )
             }
 
             override fun onFinish() {
