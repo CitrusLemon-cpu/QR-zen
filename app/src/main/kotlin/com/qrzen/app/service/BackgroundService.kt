@@ -987,6 +987,18 @@ class BackgroundService : Service() {
             }
         }
 
+        for (block in blocks) {
+            if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) continue
+            if (block.scheduleBreakType.ifBlank { UnlockMethodUtils.BREAK_NONE } != UnlockMethodUtils.BREAK_POMODORO) continue
+            if (!block.showTimer) continue
+            val timeBlocks = timeBlockDao.getByBlockId(block.id)
+            val phase = UnlockMethodUtils.computeSchedulePomodoroPhase(block, timeBlocks, now)
+            if (phase.isActive && phase.phaseRemainingMs > 0L) {
+                val phaseLabel = if (phase.isInFocus) "\uD83C\uDFAF ${block.title}" else "\u2615 ${block.title}"
+                entries.add(WaitTimerOverlay.TimerEntry(block.id, phaseLabel, phase.phaseRemainingMs))
+            }
+        }
+
         if (foregroundPkg != null) {
             for (block in blocks) {
                 if (block.blockingStyle != UnlockMethodUtils.STYLE_USAGE_LIMIT) continue
