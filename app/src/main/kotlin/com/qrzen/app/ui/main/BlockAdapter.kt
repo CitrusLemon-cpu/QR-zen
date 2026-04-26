@@ -302,9 +302,15 @@ class BlockAdapter(
         private fun setupActiveTimer(block: AppBlock) {
             val now = System.currentTimeMillis()
             val usageRemaining = Prefs.getAllowlistUsageRemaining(block.id)
+            val wallClockRemaining = if (block.activeUntil > now) block.activeUntil - now else Long.MAX_VALUE
             if (usageRemaining > 0L) {
+                val displayRemaining = if (wallClockRemaining < Long.MAX_VALUE) {
+                    minOf(usageRemaining, wallClockRemaining)
+                } else {
+                    usageRemaining
+                }
                 binding.tvActiveTimer.visibility = View.VISIBLE
-                binding.tvActiveTimer.text = "⏱ ${formatDuration(usageRemaining)} usage left"
+                binding.tvActiveTimer.text = "⏱ ${formatDuration(displayRemaining)} usage left"
                 activeTimer = null
                 return
             }
