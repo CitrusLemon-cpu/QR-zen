@@ -27,6 +27,7 @@ object UnlockMethodUtils {
     const val STYLE_SCHEDULE = "SCHEDULE"
     const val STYLE_USAGE_LIMIT = "USAGE_LIMIT"
     const val STYLE_WAIT_TIMER = "WAIT_TIMER"
+    const val STYLE_POMODORO = "POMODORO"
 
     private val displayDateTimeFormatter = SimpleDateFormat("EEE, MMM d, yyyy HH:mm", Locale.getDefault())
     private val challengeWords = listOf(
@@ -112,6 +113,10 @@ object UnlockMethodUtils {
     fun isBlockCurrentlyActive(block: AppBlock, timeBlocks: List<TimeBlock>): Boolean {
         if (block.blockNowUntil > System.currentTimeMillis()) return true
         if (block.blockingStyle == STYLE_MANUAL) return true
+        if (block.blockingStyle == STYLE_POMODORO) {
+            val state = computePomodoroState(block)
+            return state.isInFocus
+        }
         if (block.blockingStyle != STYLE_SCHEDULE) return true
 
         val now = LocalTime.now()
@@ -186,5 +191,79 @@ object UnlockMethodUtils {
 
     private fun parseTime(value: String, fallback: LocalTime): LocalTime {
         return runCatching { LocalTime.parse(value) }.getOrDefault(fallback)
+    }
+
+    data class PomodoroState(
+        val isSessionActive: Boolean,
+        val isInFocus: Boolean,
+        val isInBreak: Boolean,
+        val currentRound: Int,
+        val totalRounds: Int,
+        val periodRemainingMs: Long,
+        val sessionRemainingMs: Long,
+        val sessionEndMillis: Long
+    )
+
+    fun computePomodoroState(block: AppBlock, nowMillis: Long = System.currentTimeMillis()): PomodoroState {
+        val rounds = block.pomodoroRoundsTotal
+        val sessionStart = block.pomodoroSessionStartMillis
+        if (rounds <= 0 || sessionStart <= 0L) {
+            return PomodoroState(false, false, false, 0, 0, 0L, 0L, 0L)
+        }
+        val focusMs = block.pomodoroDurationMin * 60_000L
+        val breakMs = block.pomodoroBreakMin * 60_000L
+        val totalSessionMs = focusMs * rounds + breakMs * (rounds - 1)
+        val sessionEnd = sessionStart + totalSessionMs
+        val elapsed = nowMillis - sessionStart
+
+        if (elapsed < 0L || elapsed >= totalSessionMs) {
+            return PomodoroState(false, false, false, rounds, rounds, 0L, 0L, sessionEnd)
+        }
+
+        val roundCycleMs = focusMs + breakMs
+        val currentCycle = (elapsed / roundCycleMs).toInt()
+        val timeInCycle = elapsed % roundCycleMs
+
+        if (currentCycle >= rounds - 1) {
+            val elapsedInLastRound = elapsed - (rounds - 1).toLong() * roundCycleMs
+            return if (elapsedInLastRound < focusMs) {
+                PomodoroState(
+                    isSessionActive = true,
+                    isInFocus = true,
+                    isInBreak = false,
+                    currentRound = rounds,
+                    totalRounds = rounds,
+                    periodRemainingMs = focusMs - elapsedInLastRound,
+                    sessionRemainingMs = totalSessionMs - elapsed,
+                    sessionEndMillis = sessionEnd
+                )
+            } else {
+                PomodoroState(false, false, false, rounds, rounds, 0L, 0L, sessionEnd)
+            }
+        }
+
+        return if (timeInCycle < focusMs) {
+            PomodoroState(
+                isSessionActive = true,
+                isInFocus = true,
+                isInBreak = false,
+                currentRound = currentCycle + 1,
+                totalRounds = rounds,
+                periodRemainingMs = focusMs - timeInCycle,
+                sessionRemainingMs = totalSessionMs - elapsed,
+                sessionEndMillis = sessionEnd
+            )
+        } else {
+            PomodoroState(
+                isSessionActive = true,
+                isInFocus = false,
+                isInBreak = true,
+                currentRound = currentCycle + 1,
+                totalRounds = rounds,
+                periodRemainingMs = roundCycleMs - timeInCycle,
+                sessionRemainingMs = totalSessionMs - elapsed,
+                sessionEndMillis = sessionEnd
+            )
+        }
     }
 }

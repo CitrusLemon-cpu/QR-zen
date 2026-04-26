@@ -1011,15 +1011,8 @@
                     android:textSize="13sp" />
             </LinearLayout>
 
-            <com.google.android.material.checkbox.MaterialCheckBox
-                android:id="@+id/cbPomodoro"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="8dp"
-                android:text="@string/edit_block_pomodoro_toggle" />
-
             <LinearLayout
-                android:id="@+id/llPomodoro"
+                android:id="@+id/llPomodoroSection"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="16dp"
@@ -1051,7 +1044,14 @@
                 <NumberPicker
                     android:id="@+id/npPomodoroBreak"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content" />
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp" />
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cbPomodoroLockEditing"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="@string/pomodoro_lock_editing_label" />
             </LinearLayout>
 
             <com.google.android.material.button.MaterialButton

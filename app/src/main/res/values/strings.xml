@@ -37,7 +37,6 @@
     <string name="edit_block_share_qr">Share QR Code</string>
     <string name="edit_block_save_qr">Save to Downloads</string>
     <string name="edit_block_master_pwd_toggle">Enable master password fallback</string>
-    <string name="edit_block_pomodoro_toggle">Pomodoro mode</string>
     <string name="edit_block_save">Save Block</string>
     <string name="app_picker_title">Select Apps to Block</string>
     <string name="app_picker_search_hint">Search apps</string>
@@ -120,6 +119,8 @@
     <string name="blocking_style_usage_limit_desc">Limit how long you can use these apps.</string>
     <string name="blocking_style_wait_timer">Wait Timer</string>
     <string name="blocking_style_wait_timer_desc">Wait before using apps again after a usage period.</string>
+    <string name="blocking_style_pomodoro">Pomodoro</string>
+    <string name="blocking_style_pomodoro_desc">Focus and break cycles. Toggle on to start a session.</string>
     <string name="add_time_block_title">Set time to block apps</string>
     <string name="add_time_block_days_label">Blocked on days</string>
     <string name="add_time_block_from">From</string>
@@ -142,4 +143,6 @@
     <string name="lock_timer_locked">Toggle is locked until %1$s</string>
     <string name="allowlist_duration_title">How long should “%1$s” be active?</string>
     <string name="blocking_style_manual_desc_new">Toggle on to activate blocking.</string>
+    <string name="pomodoro_lock_editing_label">Lock editing during active sessions</string>
+    <string name="pomodoro_timer_incompatible">Timer unlock is not available with Pomodoro mode. You can lock editing when starting a session instead.</string>
 </resources>

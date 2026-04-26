@@ -81,5 +81,11 @@ data class AppBlock(
     /** If true, auto-set isEnabled=false when toggleLockUntil expires */
     val autoDisableOnToggleLockExpiry: Boolean = false,
     /** Epoch millis until which this block auto-expires (for allowlist mandatory timer). 0 = no auto-expiry. */
-    val activeUntil: Long = 0L
+    val activeUntil: Long = 0L,
+    /** Total rounds for current pomodoro session. 0 = no active session. */
+    val pomodoroRoundsTotal: Int = 0,
+    /** Epoch millis when the current pomodoro session started. 0 = no session. */
+    val pomodoroSessionStartMillis: Long = 0L,
+    /** Default setting: lock editing during pomodoro sessions */
+    val pomodoroLockEditing: Boolean = false
 )
