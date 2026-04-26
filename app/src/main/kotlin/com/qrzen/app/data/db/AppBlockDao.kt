@@ -6,13 +6,13 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface AppBlockDao {
-    @Query("SELECT * FROM app_blocks WHERE isArchived = 0 ORDER BY id ASC")
+    @Query("SELECT * FROM app_blocks WHERE isArchived = 0 ORDER BY title COLLATE NOCASE ASC")
     fun observeAll(): Flow<List<AppBlock>>
 
     @Query("SELECT * FROM app_blocks WHERE isEnabled = 1 AND isArchived = 0")
     fun observeActive(): Flow<List<AppBlock>>
 
-    @Query("SELECT * FROM app_blocks WHERE isArchived = 1 ORDER BY id ASC")
+    @Query("SELECT * FROM app_blocks WHERE isArchived = 1 ORDER BY title COLLATE NOCASE ASC")
     fun observeArchived(): Flow<List<AppBlock>>
 
     @Query("SELECT * FROM app_blocks WHERE id = :id")
