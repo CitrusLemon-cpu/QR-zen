@@ -248,7 +248,7 @@ class BackgroundService : Service() {
     }
 
     private fun computeUsageLimitRemainingMs(block: AppBlock): Long {
-        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return 0L
+        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return block.usageLimitMinutes * 60_000L
         val now = System.currentTimeMillis()
         val startTime = when (block.usageLimitPeriod) {
             "HOURLY" -> now - 3_600_000L
