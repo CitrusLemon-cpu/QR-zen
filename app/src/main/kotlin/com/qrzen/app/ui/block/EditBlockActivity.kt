@@ -217,6 +217,10 @@ class EditBlockActivity : AppCompatActivity() {
         selectedBlockStartButton.setOnClickListener { editSelectedTimeBlock(isStart = true) }
         selectedBlockEndButton.setOnClickListener { editSelectedTimeBlock(isStart = false) }
         selectedBlockDeleteButton.setOnClickListener { deleteSelectedTimeBlock() }
+        val dayOrder = listOf(6, 0, 1, 2, 3, 4, 5)
+        selectedDayViews.forEachIndexed { viewIndex, textView ->
+            textView.setOnClickListener { toggleSelectedBlockDay(dayOrder[viewIndex]) }
+        }
 
         binding.rvSelectedApps.layoutManager = GridLayoutManager(this, 5)
         binding.actUnlockMethod.keyListener = null
@@ -972,6 +976,24 @@ class EditBlockActivity : AppCompatActivity() {
         binding.weeklyGrid.setTimeBlocks(currentTimeBlocks)
         binding.weeklyGrid.setSelectedBlockId(null)
         hideSelectedBlockDetail()
+    }
+
+    private fun toggleSelectedBlockDay(dayIndex: Int) {
+        val selectedBlock = getSelectedTimeBlock() ?: return
+        val days = selectedBlock.activeDays.padEnd(7, '0').toCharArray()
+        days[dayIndex] = if (days[dayIndex] == '1') '0' else '1'
+        val newDays = String(days)
+        if ('1' !in newDays) {
+            Toast.makeText(this, getString(R.string.add_time_block_days_label), Toast.LENGTH_SHORT).show()
+            return
+        }
+        val updated = selectedBlock.copy(activeDays = newDays)
+        if (hasTimeBlockOverlap(updated.startTime, updated.endTime, updated.activeDays, updated.id)) {
+            Toast.makeText(this, getString(R.string.add_time_block_overlap_error), Toast.LENGTH_SHORT).show()
+            return
+        }
+        replaceTimeBlock(updated)
+        showSelectedBlockDetail(updated)
     }
 
     private fun highlightSelectedDays(activeDays: String) {
