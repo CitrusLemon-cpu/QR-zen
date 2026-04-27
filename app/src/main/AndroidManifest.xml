@@ -211,16 +211,6 @@
             android:exported="false" />
 
         <receiver
-            android:name=".receiver.PackageInstallReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.PACKAGE_ADDED" />
-                <data android:scheme="package" />
-            </intent-filter>
-        </receiver>
-
-        <receiver
             android:name=".admin.QrZenDeviceAdmin"
             android:enabled="true"
             android:exported="true"
