@@ -91,5 +91,7 @@ data class AppBlock(
     /** Epoch millis when the current pomodoro session started. 0 = no session. */
     val pomodoroSessionStartMillis: Long = 0L,
     /** Default setting: lock editing during pomodoro sessions */
-    val pomodoroLockEditing: Boolean = false
+    val pomodoroLockEditing: Boolean = false,
+    /** If true, newly installed apps are automatically added to this block's appPackages list */
+    val autoAddNewApps: Boolean = false
 )

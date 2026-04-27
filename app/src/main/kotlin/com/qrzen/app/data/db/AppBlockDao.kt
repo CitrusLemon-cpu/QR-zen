@@ -38,4 +38,7 @@ interface AppBlockDao {
 
     @Query("SELECT * FROM app_blocks WHERE isArchived = 0")
     suspend fun getAll(): List<AppBlock>
+
+    @Query("SELECT * FROM app_blocks WHERE autoAddNewApps = 1 AND isArchived = 0")
+    suspend fun getAutoAddNewAppsBlocks(): List<AppBlock>
 }

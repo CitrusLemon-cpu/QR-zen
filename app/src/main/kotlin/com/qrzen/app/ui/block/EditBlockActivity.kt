@@ -99,6 +99,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var timerBreakMinutes: Int = 0
     private var showTimer: Boolean = false
     private var lockUntil: Long = 0L
+    private var autoAddNewApps: Boolean = false
     private var pomodoroLockEditing: Boolean = false
     private var currentTimeBlocks: MutableList<TimeBlock> = mutableListOf()
     private var nextTempId: Int = -1
@@ -337,6 +338,9 @@ class EditBlockActivity : AppCompatActivity() {
         binding.cbPomodoroLockEditing.setOnCheckedChangeListener { _, isChecked ->
             pomodoroLockEditing = isChecked
         }
+        binding.switchAutoAddNewApps.setOnCheckedChangeListener { _, isChecked ->
+            autoAddNewApps = isChecked
+        }
 
         setupBlockingStyleDropdown()
         setupUnlockMethodDropdown()
@@ -515,6 +519,7 @@ class EditBlockActivity : AppCompatActivity() {
         showTimer = block.showTimer
         timerBreakMinutes = block.timerBreakMinutes
         lockUntil = block.lockUntil
+        autoAddNewApps = block.autoAddNewApps
         pomodoroLockEditing = block.pomodoroLockEditing
 
         binding.etTitle.setText(block.title)
@@ -557,6 +562,12 @@ class EditBlockActivity : AppCompatActivity() {
         syncScheduledAllowanceUi()
         binding.cbShowTimer.isChecked = showTimer
         binding.cbPomodoroLockEditing.isChecked = pomodoroLockEditing
+        binding.switchAutoAddNewApps.isChecked = autoAddNewApps
+        binding.switchAutoAddNewApps.text = if (isAllowlistMode) {
+            getString(R.string.edit_block_auto_add_new_apps_allow_desc)
+        } else {
+            getString(R.string.edit_block_auto_add_new_apps_block_desc)
+        }
         binding.etTypeOverText.setText(typeOverText)
         binding.switchTypeOverRandom.isChecked = typeOverIsRandom
         setToggleStates(usageLimitDayToggles(), activeDays)
@@ -1260,7 +1271,8 @@ class EditBlockActivity : AppCompatActivity() {
             activeUntil = existingBlock?.activeUntil ?: 0L,
             pomodoroRoundsTotal = existingBlock?.pomodoroRoundsTotal ?: 0,
             pomodoroSessionStartMillis = existingBlock?.pomodoroSessionStartMillis ?: 0L,
-            pomodoroLockEditing = pomodoroLockEditing
+            pomodoroLockEditing = pomodoroLockEditing,
+            autoAddNewApps = autoAddNewApps
         )
 
         lifecycleScope.launch {

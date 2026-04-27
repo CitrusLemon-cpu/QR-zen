@@ -36,6 +36,9 @@
     <string name="edit_block_generate_qr">Show QR Code</string>
     <string name="edit_block_share_qr">Share QR Code</string>
     <string name="edit_block_save_qr">Save to Downloads</string>
+    <string name="edit_block_auto_add_new_apps">Auto-add newly installed apps</string>
+    <string name="edit_block_auto_add_new_apps_block_desc">Newly installed apps will be automatically added to this block</string>
+    <string name="edit_block_auto_add_new_apps_allow_desc">Newly installed apps will be automatically added to this allowlist</string>
     <string name="edit_block_master_pwd_toggle">Enable master password fallback</string>
     <string name="edit_block_save">Save Block</string>
     <string name="app_picker_title">Select Apps to Block</string>
