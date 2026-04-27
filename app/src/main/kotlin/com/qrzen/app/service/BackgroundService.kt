@@ -9,6 +9,7 @@ import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -25,6 +26,7 @@ import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.TimeBlock
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.receiver.AlarmKeepaliveReceiver
+import com.qrzen.app.receiver.PackageInstallReceiver
 import com.qrzen.app.ui.allowlist.AllowlistOverlayActivity
 import com.qrzen.app.ui.lock.LockScreenActivity
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
@@ -58,6 +60,7 @@ class BackgroundService : Service() {
     private var accessibilityObserver: android.database.ContentObserver? = null
     @Volatile private var isAccessibilityEnabled = false
     private var accessibilityBlockOverlay: AccessibilityBlockOverlay? = null
+    private var packageInstallReceiver: PackageInstallReceiver? = null
     private var overlayHideCounter = 0
     private val pomodoroNotifIds = mutableMapOf<Int, Int>()
     private var nextPomodoroNotifId = 3000
@@ -166,6 +169,14 @@ class BackgroundService : Service() {
                 false,
                 observer
             )
+        }
+        if (packageInstallReceiver == null) {
+            val receiver = PackageInstallReceiver()
+            val filter = IntentFilter(Intent.ACTION_PACKAGE_ADDED).apply {
+                addDataScheme("package")
+            }
+            registerReceiver(receiver, filter)
+            packageInstallReceiver = receiver
         }
         acquireWakeLock()
         AlarmKeepaliveReceiver.schedule(applicationContext)
@@ -1102,6 +1113,10 @@ class BackgroundService : Service() {
         appTimerOverlay = null
         accessibilityBlockOverlay?.destroy()
         accessibilityBlockOverlay = null
+        packageInstallReceiver?.let {
+            try { unregisterReceiver(it) } catch (_: Exception) {}
+            packageInstallReceiver = null
+        }
         iconCache.clear()
         scope.cancel()
         stopUsagePolling()
