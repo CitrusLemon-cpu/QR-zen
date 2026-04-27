@@ -67,6 +67,13 @@
                 android:textColor="?attr/colorOnSurfaceVariant"
                 android:textSize="13sp" />
 
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchAutoAddNewApps"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:text="@string/edit_block_auto_add_new_apps" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
