@@ -748,6 +748,24 @@ class BackgroundService : Service() {
         return keyguardManager.isKeyguardLocked
     }
 
+    private fun getAppLabel(pkg: String): String {
+        return try {
+            packageManager.getApplicationLabel(
+                packageManager.getApplicationInfo(pkg, 0)
+            ).toString()
+        } catch (_: Exception) {
+            pkg
+        }
+    }
+
+    private fun getFreshImePackages(): Set<String> {
+        return getSystemService(InputMethodManager::class.java)
+            ?.enabledInputMethodList
+            ?.map { it.packageName }
+            ?.toSet()
+            ?: emptySet()
+    }
+
     private fun getForegroundPackage(): String? {
         val accessibilityPkg = BlockAccessibilityService.currentForegroundPackage
         if (accessibilityPkg != null && BlockAccessibilityService.isRunning) {
@@ -782,6 +800,7 @@ class BackgroundService : Service() {
             pauseScheduleBreakUsageTracking(allCandidates)
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
+            DiagnosticNotifier.cancelPollState(applicationContext)
             return
         }
         if (Prefs.pauseAllUntil > now) {
@@ -791,6 +810,7 @@ class BackgroundService : Service() {
             pauseScheduleBreakUsageTracking(allCandidates)
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
+            DiagnosticNotifier.cancelPollState(applicationContext)
             return
         }
 
@@ -801,6 +821,7 @@ class BackgroundService : Service() {
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
+            DiagnosticNotifier.cancelPollState(applicationContext)
             return
         }
         if (isExemptPackage(pkg)) {
@@ -808,6 +829,7 @@ class BackgroundService : Service() {
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
+            DiagnosticNotifier.cancelPollState(applicationContext)
             return
         }
         if (pkg == lastBlockedPkg && now - lastBlockedTime < BLOCK_COOLDOWN_MS) {
@@ -816,6 +838,7 @@ class BackgroundService : Service() {
             pauseUsageTimers(allCandidates)
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
+            DiagnosticNotifier.cancelPollState(applicationContext)
             return
         }
         val activeBlocks = mutableListOf<AppBlock>()
@@ -828,17 +851,6 @@ class BackgroundService : Service() {
             .firstOrNull { block ->
                 block.appPackages.split(",").map { it.trim() }.contains(pkg)
             }
-        if (blocklistBlock != null) {
-            lastBlockedPkg = pkg
-            lastBlockedTime = now
-            overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
-            waitTimerOverlay?.hide()
-            pauseUsageTimers(allCandidates)
-            appTimerOverlay?.hide()
-            accessibilityBlockOverlay?.hide()
-            launchLockScreen(pkg, blocklistBlock)
-            return
-        }
 
         val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
         var allowedForegroundPkg: String? = pkg
@@ -858,8 +870,74 @@ class BackgroundService : Service() {
                 waitTimerOverlay?.hide()
                 allowedForegroundPkg = null
                 accessibilityBlockOverlay?.hide()
-                launchAllowlistOverlay(pkg, allowlistBlocks)
             }
+        }
+
+        val freshImePackages = getFreshImePackages()
+        val exemptReason = when {
+            pkg == packageName -> "self"
+            pkg in systemExemptPackages -> "system"
+            pkg in launcherPackages -> "launcher"
+            pkg in imePackages -> "keyboard/IME"
+            pkg in dialerPackages -> "dialer"
+            else -> null
+        }
+        DiagnosticNotifier.notifyPollState(
+            context = applicationContext,
+            source = if (isAccessibilityEnabled) "Accessibility" else "UsageStats",
+            detectedPkg = pkg,
+            appLabel = getAppLabel(pkg),
+            cachedImePackages = imePackages,
+            freshImePackages = freshImePackages,
+            isExempt = isExemptPackage(pkg),
+            exemptReason = exemptReason,
+            activeBlockCount = activeBlocks.size,
+            blocklistMatchName = blocklistBlock?.title,
+            allowlistResult = if (allowlistBlocks.isNotEmpty()) {
+                if (allowedForegroundPkg != null) "allowed" else "BLOCKED"
+            } else {
+                null
+            }
+        )
+
+        if (blocklistBlock != null) {
+            lastBlockedPkg = pkg
+            lastBlockedTime = now
+            overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
+            waitTimerOverlay?.hide()
+            pauseUsageTimers(allCandidates)
+            appTimerOverlay?.hide()
+            accessibilityBlockOverlay?.hide()
+            launchLockScreen(pkg, blocklistBlock)
+            DiagnosticNotifier.notifyBlockTriggered(
+                context = applicationContext,
+                source = "UsageStats",
+                detectedPkg = pkg,
+                appLabel = getAppLabel(pkg),
+                triggerType = "Blocklist",
+                matchedBlocks = listOf(blocklistBlock),
+                cachedImePackages = imePackages,
+                freshImePackages = freshImePackages,
+                exemptReason = null,
+                extraInfo = null
+            )
+            return
+        }
+
+        if (allowedForegroundPkg == null) {
+            launchAllowlistOverlay(pkg, allowlistBlocks)
+            DiagnosticNotifier.notifyBlockTriggered(
+                context = applicationContext,
+                source = "UsageStats",
+                detectedPkg = pkg,
+                appLabel = getAppLabel(pkg),
+                triggerType = "Allowlist",
+                matchedBlocks = allowlistBlocks,
+                cachedImePackages = imePackages,
+                freshImePackages = freshImePackages,
+                exemptReason = null,
+                extraInfo = "Pkg not in allowlist intersection"
+            )
         }
 
         updateTimerOverlays(allCandidates, pkg)
@@ -1088,6 +1166,7 @@ class BackgroundService : Service() {
         waitTimerOverlay?.hide()
         appTimerOverlay?.hide()
         accessibilityBlockOverlay?.hide()
+        DiagnosticNotifier.cancelPollState(applicationContext)
     }
 
     private fun acquireWakeLock() {

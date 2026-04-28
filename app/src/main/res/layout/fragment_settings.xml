@@ -68,6 +68,21 @@
         <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swSilentMode"
             android:layout_width="match_parent" android:layout_height="wrap_content"
             android:text="Silent mode during blocks" android:layout_marginBottom="24dp" />
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Diagnostics" android:textSize="14sp" android:textStyle="bold"
+            android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
+        <TextView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Show a notification with debug info each time a block triggers or the poll runs. Useful for diagnosing false blocks from keyboards, system settings, etc."
+            android:textSize="13sp" android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="8dp" />
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/swDiagnosticNotif"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="Enable block diagnostic notifications"
+            android:layout_marginBottom="16dp" />
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="QR Zen v1.0.0" android:textSize="13sp" android:textColor="?attr/colorOnSurfaceVariant" android:layout_gravity="center_horizontal" />
