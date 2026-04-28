@@ -873,32 +873,34 @@ class BackgroundService : Service() {
             }
         }
 
-        val freshImePackages = getFreshImePackages()
-        val exemptReason = when {
-            pkg == packageName -> "self"
-            pkg in systemExemptPackages -> "system"
-            pkg in launcherPackages -> "launcher"
-            pkg in imePackages -> "keyboard/IME"
-            pkg in dialerPackages -> "dialer"
-            else -> null
-        }
-        DiagnosticNotifier.notifyPollState(
-            context = applicationContext,
-            source = if (isAccessibilityEnabled) "Accessibility" else "UsageStats",
-            detectedPkg = pkg,
-            appLabel = getAppLabel(pkg),
-            cachedImePackages = imePackages,
-            freshImePackages = freshImePackages,
-            isExempt = isExemptPackage(pkg),
-            exemptReason = exemptReason,
-            activeBlockCount = activeBlocks.size,
-            blocklistMatchName = blocklistBlock?.title,
-            allowlistResult = if (allowlistBlocks.isNotEmpty()) {
-                if (allowedForegroundPkg != null) "allowed" else "BLOCKED"
-            } else {
-                null
+        if (Prefs.diagnosticNotifications) {
+            val freshImePackages = getFreshImePackages()
+            val exemptReason = when {
+                pkg == packageName -> "self"
+                pkg in systemExemptPackages -> "system"
+                pkg in launcherPackages -> "launcher"
+                pkg in imePackages -> "keyboard/IME"
+                pkg in dialerPackages -> "dialer"
+                else -> null
             }
-        )
+            DiagnosticNotifier.notifyPollState(
+                context = applicationContext,
+                source = if (isAccessibilityEnabled) "Accessibility" else "UsageStats",
+                detectedPkg = pkg,
+                appLabel = getAppLabel(pkg),
+                cachedImePackages = imePackages,
+                freshImePackages = freshImePackages,
+                isExempt = isExemptPackage(pkg),
+                exemptReason = exemptReason,
+                activeBlockCount = activeBlocks.size,
+                blocklistMatchName = blocklistBlock?.title,
+                allowlistResult = if (allowlistBlocks.isNotEmpty()) {
+                    if (allowedForegroundPkg != null) "allowed" else "BLOCKED"
+                } else {
+                    null
+                }
+            )
+        }
 
         if (blocklistBlock != null) {
             lastBlockedPkg = pkg
@@ -909,35 +911,39 @@ class BackgroundService : Service() {
             appTimerOverlay?.hide()
             accessibilityBlockOverlay?.hide()
             launchLockScreen(pkg, blocklistBlock)
-            DiagnosticNotifier.notifyBlockTriggered(
-                context = applicationContext,
-                source = "UsageStats",
-                detectedPkg = pkg,
-                appLabel = getAppLabel(pkg),
-                triggerType = "Blocklist",
-                matchedBlocks = listOf(blocklistBlock),
-                cachedImePackages = imePackages,
-                freshImePackages = freshImePackages,
-                exemptReason = null,
-                extraInfo = null
-            )
+            if (Prefs.diagnosticNotifications) {
+                DiagnosticNotifier.notifyBlockTriggered(
+                    context = applicationContext,
+                    source = "UsageStats",
+                    detectedPkg = pkg,
+                    appLabel = getAppLabel(pkg),
+                    triggerType = "Blocklist",
+                    matchedBlocks = listOf(blocklistBlock),
+                    cachedImePackages = imePackages,
+                    freshImePackages = getFreshImePackages(),
+                    exemptReason = null,
+                    extraInfo = null
+                )
+            }
             return
         }
 
         if (allowedForegroundPkg == null) {
             launchAllowlistOverlay(pkg, allowlistBlocks)
-            DiagnosticNotifier.notifyBlockTriggered(
-                context = applicationContext,
-                source = "UsageStats",
-                detectedPkg = pkg,
-                appLabel = getAppLabel(pkg),
-                triggerType = "Allowlist",
-                matchedBlocks = allowlistBlocks,
-                cachedImePackages = imePackages,
-                freshImePackages = freshImePackages,
-                exemptReason = null,
-                extraInfo = "Pkg not in allowlist intersection"
-            )
+            if (Prefs.diagnosticNotifications) {
+                DiagnosticNotifier.notifyBlockTriggered(
+                    context = applicationContext,
+                    source = "UsageStats",
+                    detectedPkg = pkg,
+                    appLabel = getAppLabel(pkg),
+                    triggerType = "Allowlist",
+                    matchedBlocks = allowlistBlocks,
+                    cachedImePackages = imePackages,
+                    freshImePackages = getFreshImePackages(),
+                    exemptReason = null,
+                    extraInfo = "Pkg not in allowlist intersection"
+                )
+            }
         }
 
         updateTimerOverlays(allCandidates, pkg)

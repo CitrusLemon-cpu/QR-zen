@@ -179,18 +179,20 @@ class BlockAccessibilityService : AccessibilityService() {
                 }
             if (blocklistMatch != null) {
                 launchLockScreen(pkg, blocklistMatch)
-                DiagnosticNotifier.notifyBlockTriggered(
-                    context = applicationContext,
-                    source = "Accessibility",
-                    detectedPkg = pkg,
-                    appLabel = getAppLabel(pkg),
-                    triggerType = "Blocklist",
-                    matchedBlocks = listOf(blocklistMatch),
-                    cachedImePackages = imePackages,
-                    freshImePackages = getFreshImePackages(),
-                    exemptReason = null,
-                    extraInfo = null
-                )
+                if (Prefs.diagnosticNotifications) {
+                    DiagnosticNotifier.notifyBlockTriggered(
+                        context = applicationContext,
+                        source = "Accessibility",
+                        detectedPkg = pkg,
+                        appLabel = getAppLabel(pkg),
+                        triggerType = "Blocklist",
+                        matchedBlocks = listOf(blocklistMatch),
+                        cachedImePackages = imePackages,
+                        freshImePackages = getFreshImePackages(),
+                        exemptReason = null,
+                        extraInfo = null
+                    )
+                }
                 return@launch
             }
 
@@ -208,18 +210,20 @@ class BlockAccessibilityService : AccessibilityService() {
                 val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }
                 if (!intersection.contains(pkg)) {
                     launchAllowlistOverlay(pkg, allowlistBlocks)
-                    DiagnosticNotifier.notifyBlockTriggered(
-                        context = applicationContext,
-                        source = "Accessibility",
-                        detectedPkg = pkg,
-                        appLabel = getAppLabel(pkg),
-                        triggerType = "Allowlist",
-                        matchedBlocks = allowlistBlocks,
-                        cachedImePackages = imePackages,
-                        freshImePackages = getFreshImePackages(),
-                        exemptReason = null,
-                        extraInfo = "Pkg not in intersection of allowed sets"
-                    )
+                    if (Prefs.diagnosticNotifications) {
+                        DiagnosticNotifier.notifyBlockTriggered(
+                            context = applicationContext,
+                            source = "Accessibility",
+                            detectedPkg = pkg,
+                            appLabel = getAppLabel(pkg),
+                            triggerType = "Allowlist",
+                            matchedBlocks = allowlistBlocks,
+                            cachedImePackages = imePackages,
+                            freshImePackages = getFreshImePackages(),
+                            exemptReason = null,
+                            extraInfo = "Pkg not in intersection of allowed sets"
+                        )
+                    }
                 }
             }
         }
