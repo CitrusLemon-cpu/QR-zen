@@ -725,6 +725,7 @@ class EditBlockActivity : AppCompatActivity() {
                     if (blockId != null) {
                         val expiry = System.currentTimeMillis() + totalMinutes * 60_000L
                         Prefs.setAppTimerExpiry(blockId, appItem.packageName, expiry)
+                        Prefs.setAppTimerOriginal(blockId, appItem.packageName, totalMinutes * 60_000L)
                     } else {
                         pendingAppTimers[appItem.packageName] = totalMinutes * 60_000L
                     }
@@ -735,6 +736,7 @@ class EditBlockActivity : AppCompatActivity() {
                 val blockId = existingBlock?.id
                 if (blockId != null) {
                     Prefs.setAppTimerExpiry(blockId, appItem.packageName, 0L)
+                    Prefs.setAppTimerOriginal(blockId, appItem.packageName, 0L)
                 } else {
                     pendingAppTimers.remove(appItem.packageName)
                 }
@@ -1287,6 +1289,7 @@ class EditBlockActivity : AppCompatActivity() {
                 for ((pkg, remainingMs) in pendingAppTimers) {
                     Prefs.setAppTimerRemaining(savedId, pkg, remainingMs)
                     Prefs.setAppTimerLastFg(savedId, pkg, 0L)
+                    Prefs.setAppTimerOriginal(savedId, pkg, remainingMs)
                 }
                 pendingAppTimers.clear()
             }

@@ -467,6 +467,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             sb.btnRestOfDay.setOnClickListener {
                 lifecycleScope.launch {
                     Prefs.clearAllowlistUsageTimer(block.id)
+                    Prefs.clearAppTimersForBlock(block.id)
                     dao.update(
                         block.copy(
                             isEnabled = false,
@@ -489,6 +490,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
             sb.btnIndefinitely.setOnClickListener {
                 lifecycleScope.launch {
                     Prefs.clearAllowlistUsageTimer(block.id)
+                    Prefs.clearAppTimersForBlock(block.id)
                     dao.update(block.copy(isEnabled = false, pausedUntil = 0L))
                     WidgetRefresh.refresh(applicationContext)
                     SilentModeHelper.restoreRinger(this@AllowlistOverlayActivity)

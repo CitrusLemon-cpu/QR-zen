@@ -135,6 +135,18 @@ object Prefs {
         kv.encode("${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_$packageName", remainingMs)
     }
 
+    fun getAppTimerOriginal(blockId: Int, packageName: String): Long {
+        return kv.decodeLong("${KEY_APP_TIMER_ORIGINAL_PREFIX}${blockId}_$packageName", -1L)
+    }
+
+    fun setAppTimerOriginal(blockId: Int, packageName: String, durationMs: Long) {
+        if (durationMs <= 0L) {
+            kv.removeValueForKey("${KEY_APP_TIMER_ORIGINAL_PREFIX}${blockId}_$packageName")
+        } else {
+            kv.encode("${KEY_APP_TIMER_ORIGINAL_PREFIX}${blockId}_$packageName", durationMs)
+        }
+    }
+
     fun getAppTimerLastFg(blockId: Int, packageName: String): Long {
         return kv.decodeLong("${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_$packageName", 0L)
     }
@@ -166,12 +178,35 @@ object Prefs {
         }
     }
 
+    fun getAppTimerWindowStart(blockId: Int): Long {
+        return kv.decodeLong("${KEY_APP_TIMER_WINDOW_PREFIX}$blockId", 0L)
+    }
+
+    fun setAppTimerWindowStart(blockId: Int, ms: Long) {
+        kv.encode("${KEY_APP_TIMER_WINDOW_PREFIX}$blockId", ms)
+    }
+
+    fun resetAppTimersForBlock(blockId: Int) {
+        val allKeys = kv.allKeys() ?: return
+        val prefix = "${KEY_APP_TIMER_ORIGINAL_PREFIX}${blockId}_"
+        allKeys.filter { it.startsWith(prefix) }.forEach { key ->
+            val packageName = key.removePrefix(prefix)
+            val originalDuration = kv.decodeLong(key, -1L)
+            if (originalDuration > 0L) {
+                setAppTimerRemaining(blockId, packageName, originalDuration)
+                setAppTimerLastFg(blockId, packageName, 0L)
+            }
+        }
+    }
+
     fun clearAppTimersForBlock(blockId: Int) {
         val allKeys = kv.allKeys() ?: return
         allKeys.filter {
             it.startsWith("${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_") ||
-                it.startsWith("${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_")
+                it.startsWith("${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_") ||
+                it.startsWith("${KEY_APP_TIMER_ORIGINAL_PREFIX}${blockId}_")
         }.forEach { kv.removeValueForKey(it) }
+        kv.removeValueForKey("${KEY_APP_TIMER_WINDOW_PREFIX}$blockId")
     }
 
     fun getAppTimerExpiry(packageName: String): Long {
@@ -232,7 +267,9 @@ object Prefs {
             .filter {
                 it.startsWith(KEY_APP_TIMER_PREFIX) ||
                     it.startsWith(KEY_APP_TIMER_REMAINING_PREFIX) ||
-                    it.startsWith(KEY_APP_TIMER_LAST_FG_PREFIX)
+                    it.startsWith(KEY_APP_TIMER_LAST_FG_PREFIX) ||
+                    it.startsWith(KEY_APP_TIMER_ORIGINAL_PREFIX) ||
+                    it.startsWith(KEY_APP_TIMER_WINDOW_PREFIX)
             }
             .forEach { kv.removeValueForKey(it) }
     }
@@ -247,6 +284,8 @@ object Prefs {
     private const val KEY_APP_TIMER_PREFIX = "qrzen_app_timer_"
     private const val KEY_APP_TIMER_REMAINING_PREFIX = "qrzen_app_timer_remaining_"
     private const val KEY_APP_TIMER_LAST_FG_PREFIX = "qrzen_app_timer_last_fg_"
+    private const val KEY_APP_TIMER_ORIGINAL_PREFIX = "qrzen_app_timer_original_"
+    private const val KEY_APP_TIMER_WINDOW_PREFIX = "app_timer_window_"
     private const val KEY_USAGE_REMAINING_PREFIX = "allowlist_usage_remaining_"
     private const val KEY_USAGE_LAST_FG_PREFIX = "allowlist_usage_last_fg_"
 }
