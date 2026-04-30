@@ -116,7 +116,7 @@ class BlockAccessibilityService : AccessibilityService() {
         imm?.enabledInputMethodList?.map { it.packageName }?.toSet() ?: emptySet()
     }
 
-    private val systemNonLauncherCache = mutableMapOf<String, Boolean>()
+    private val systemNonLauncherCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
     private fun isSystemNonLauncherApp(pkg: String): Boolean {
         systemNonLauncherCache[pkg]?.let { return it }

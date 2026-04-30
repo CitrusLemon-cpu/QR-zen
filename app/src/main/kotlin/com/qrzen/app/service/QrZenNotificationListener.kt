@@ -23,7 +23,7 @@ class QrZenNotificationListener : NotificationListenerService() {
     @Volatile private var cachedAllowlistBlockIds: List<Int> = emptyList()
     @Volatile private var lastFetchTime = 0L
     private val fmt = DateTimeFormatter.ofPattern("HH:mm")
-    private val systemNonLauncherCache = mutableMapOf<String, Boolean>()
+    private val systemNonLauncherCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
     private fun isSystemNonLauncherApp(pkg: String): Boolean {
         systemNonLauncherCache[pkg]?.let { return it }

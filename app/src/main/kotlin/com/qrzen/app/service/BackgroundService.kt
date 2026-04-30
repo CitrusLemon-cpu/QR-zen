@@ -130,7 +130,7 @@ class BackgroundService : Service() {
             .toSet()
     }
 
-    private val systemNonLauncherCache = mutableMapOf<String, Boolean>()
+    private val systemNonLauncherCache = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
     private fun isSystemNonLauncherApp(pkg: String): Boolean {
         systemNonLauncherCache[pkg]?.let { return it }
