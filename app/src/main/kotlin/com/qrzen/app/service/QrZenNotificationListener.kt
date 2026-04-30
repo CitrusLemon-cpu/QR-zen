@@ -108,8 +108,17 @@ class QrZenNotificationListener : NotificationListenerService() {
         private const val CACHE_TTL_MS = 5_000L
 
         private val SYSTEM_EXEMPT_PACKAGES = setOf(
+            "android",
             "com.android.systemui",
             "com.android.settings",
+            "com.android.intentresolver",
+            "com.android.documentsui",
+            "com.google.android.documentsui",
+            "com.miui.securitycenter",
+            "com.miui.securitycore",
+            "com.miui.guardprovider",
+            "com.miui.systemui.plugin",
+            "com.miui.mishare",
             "com.android.permissioncontroller",
             "com.google.android.permissioncontroller",
             "com.android.packageinstaller",
@@ -120,6 +129,7 @@ class QrZenNotificationListener : NotificationListenerService() {
             "com.google.android.dialer",
             "com.samsung.android.dialer",
             "com.samsung.android.incallui",
+            "com.samsung.android.app.sharelive",
             "com.android.emergency"
         )
     }
