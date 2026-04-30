@@ -261,6 +261,9 @@ class BackgroundService : Service() {
             .forEach { block ->
                 if (block.autoDisableOnToggleLockExpiry || block.isAllowlistMode) {
                     Prefs.clearAllowlistUsageTimer(block.id)
+                    if (block.isAllowlistMode) {
+                        Prefs.clearAppTimersForBlock(block.id)
+                    }
                     dao.update(
                         block.copy(
                             isEnabled = false,
@@ -287,6 +290,9 @@ class BackgroundService : Service() {
             }
             .forEach { block ->
                 Prefs.clearAllowlistUsageTimer(block.id)
+                if (block.isAllowlistMode) {
+                    Prefs.clearAppTimersForBlock(block.id)
+                }
                 dao.update(
                     block.copy(
                         isEnabled = false,
@@ -338,6 +344,7 @@ class BackgroundService : Service() {
             shouldRefresh = true
         }
         if (shouldRefresh) WidgetRefresh.refresh(applicationContext)
+        resetAppTimersOnWindowChange(allBlocks)
 
         val hasActiveBlocks = currentlyActiveIds.isNotEmpty()
         val hasWaitTimerBlocks = allBlocks.any {
@@ -688,6 +695,32 @@ class BackgroundService : Service() {
             }
         } else {
             Prefs.setSchedAllowanceLastTick(blockId, 0L)
+        }
+    }
+
+    private suspend fun resetAppTimersOnWindowChange(blocks: List<AppBlock>) {
+        val now = System.currentTimeMillis()
+        for (block in blocks) {
+            if (!block.isAllowlistMode || !block.isEnabled || block.isArchived) continue
+            if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) continue
+
+            val timeBlocks = timeBlockDao.getByBlockId(block.id)
+            val currentWindowStart = if (timeBlocks.isEmpty()) {
+                UnlockMethodUtils.computeLegacyScheduleWindowStartMs(block, now)
+            } else {
+                UnlockMethodUtils.computeCurrentWindowStartMs(timeBlocks, now)
+            }
+
+            if (currentWindowStart == null) {
+                Prefs.setAppTimerWindowStart(block.id, 0L)
+                continue
+            }
+
+            val savedWindowStart = Prefs.getAppTimerWindowStart(block.id)
+            if (savedWindowStart != currentWindowStart) {
+                Prefs.resetAppTimersForBlock(block.id)
+                Prefs.setAppTimerWindowStart(block.id, currentWindowStart)
+            }
         }
     }
 

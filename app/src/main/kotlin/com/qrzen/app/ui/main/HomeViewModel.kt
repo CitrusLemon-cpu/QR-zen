@@ -35,7 +35,12 @@ class HomeViewModel @Inject constructor(
     }
 
     fun setEnabled(block: AppBlock, enabled: Boolean) = viewModelScope.launch {
-        if (!enabled) Prefs.clearAllowlistUsageTimer(block.id)
+        if (!enabled) {
+            Prefs.clearAllowlistUsageTimer(block.id)
+            if (block.isAllowlistMode) {
+                Prefs.clearAppTimersForBlock(block.id)
+            }
+        }
         dao.update(block.copy(isEnabled = enabled))
         WidgetRefresh.refresh(ctx)
     }
@@ -102,6 +107,9 @@ class HomeViewModel @Inject constructor(
     }
 
     fun unpause(block: AppBlock) = viewModelScope.launch {
+        if (block.isAllowlistMode) {
+            Prefs.resetAppTimersForBlock(block.id)
+        }
         dao.setPausedUntil(block.id, 0L)
         WidgetRefresh.refresh(ctx)
     }
