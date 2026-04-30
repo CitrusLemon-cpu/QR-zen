@@ -67,10 +67,17 @@ class BackgroundService : Service() {
     private val iconCache = mutableMapOf<String, android.graphics.drawable.Drawable>()
 
     private val systemExemptPackages = setOf(
+        "android",
         "com.android.systemui",
         "com.android.settings",
+        "com.android.intentresolver",
+        "com.android.documentsui",
+        "com.google.android.documentsui",
         "com.miui.securitycenter",
+        "com.miui.securitycore",
         "com.miui.guardprovider",
+        "com.miui.systemui.plugin",
+        "com.miui.mishare",
         "com.android.permissioncontroller",
         "com.google.android.permissioncontroller",
         "com.android.packageinstaller",
@@ -81,6 +88,7 @@ class BackgroundService : Service() {
         "com.google.android.dialer",
         "com.samsung.android.dialer",
         "com.samsung.android.incallui",
+        "com.samsung.android.app.sharelive",
         "com.android.emergency"
     )
 
@@ -100,6 +108,23 @@ class BackgroundService : Service() {
         val dialIntent = Intent(Intent.ACTION_DIAL).apply { data = Uri.parse("tel:") }
         packageManager.queryIntentActivities(dialIntent, PackageManager.MATCH_DEFAULT_ONLY)
             .mapNotNull { it.activityInfo?.packageName }
+            .toSet()
+    }
+
+    private val shareHandlerPackages: Set<String> by lazy {
+        val sendIntent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+        }
+        packageManager.queryIntentActivities(sendIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { it.activityInfo?.packageName }
+            .filter { pkg ->
+                try {
+                    val appInfo = packageManager.getApplicationInfo(pkg, 0)
+                    (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+                } catch (_: Exception) {
+                    false
+                }
+            }
             .toSet()
     }
 
@@ -735,7 +760,8 @@ class BackgroundService : Service() {
             pkg in systemExemptPackages ||
             pkg in launcherPackages ||
             pkg in imePackages ||
-            pkg in dialerPackages
+            pkg in dialerPackages ||
+            pkg in shareHandlerPackages
     }
 
     private fun isPackageTrackedByBlock(block: AppBlock, pkg: String): Boolean {
