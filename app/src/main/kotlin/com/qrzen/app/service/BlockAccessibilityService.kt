@@ -93,6 +93,24 @@ class BlockAccessibilityService : AccessibilityService() {
         return pkg in SYSTEM_EXEMPT_PACKAGES || pkg in launcherPackages || pkg in dialerPackages || pkg in imePackages
     }
 
+    private fun getAppLabel(pkg: String): String {
+        return try {
+            packageManager.getApplicationLabel(
+                packageManager.getApplicationInfo(pkg, 0)
+            ).toString()
+        } catch (_: Exception) {
+            pkg
+        }
+    }
+
+    private fun getFreshImePackages(): Set<String> {
+        return getSystemService(InputMethodManager::class.java)
+            ?.enabledInputMethodList
+            ?.map { it.packageName }
+            ?.toSet()
+            ?: emptySet()
+    }
+
     private fun isDeviceLocked(): Boolean {
         val km = getSystemService(KeyguardManager::class.java) ?: return false
         return km.isKeyguardLocked
@@ -161,6 +179,20 @@ class BlockAccessibilityService : AccessibilityService() {
                 }
             if (blocklistMatch != null) {
                 launchLockScreen(pkg, blocklistMatch)
+                if (Prefs.diagnosticNotifications) {
+                    DiagnosticNotifier.notifyBlockTriggered(
+                        context = applicationContext,
+                        source = "Accessibility",
+                        detectedPkg = pkg,
+                        appLabel = getAppLabel(pkg),
+                        triggerType = "Blocklist",
+                        matchedBlocks = listOf(blocklistMatch),
+                        cachedImePackages = imePackages,
+                        freshImePackages = getFreshImePackages(),
+                        exemptReason = null,
+                        extraInfo = null
+                    )
+                }
                 return@launch
             }
 
@@ -178,6 +210,20 @@ class BlockAccessibilityService : AccessibilityService() {
                 val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }
                 if (!intersection.contains(pkg)) {
                     launchAllowlistOverlay(pkg, allowlistBlocks)
+                    if (Prefs.diagnosticNotifications) {
+                        DiagnosticNotifier.notifyBlockTriggered(
+                            context = applicationContext,
+                            source = "Accessibility",
+                            detectedPkg = pkg,
+                            appLabel = getAppLabel(pkg),
+                            triggerType = "Allowlist",
+                            matchedBlocks = allowlistBlocks,
+                            cachedImePackages = imePackages,
+                            freshImePackages = getFreshImePackages(),
+                            exemptReason = null,
+                            extraInfo = "Pkg not in intersection of allowed sets"
+                        )
+                    }
                 }
             }
         }

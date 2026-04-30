@@ -31,6 +31,10 @@ object Prefs {
         get() = kv.decodeBool(KEY_SILENT, false)
         set(v) { kv.encode(KEY_SILENT, v) }
 
+    var diagnosticNotifications: Boolean
+        get() = kv.decodeBool(KEY_DIAGNOSTIC_NOTIF, false)
+        set(v) { kv.encode(KEY_DIAGNOSTIC_NOTIF, v) }
+
     fun migrateMasterPasswordIfNeeded() {
         val current = masterPassword
         if (current.isNotEmpty() && !PasswordHasher.isHashed(current)) {
@@ -239,6 +243,7 @@ object Prefs {
     private const val KEY_ONBOARDING_DONE = "qrzen_onboarding_done"
     private const val KEY_REMOVE_NOTIF = "qrzen_remove_notif"
     private const val KEY_SILENT = "qrzen_silent"
+    private const val KEY_DIAGNOSTIC_NOTIF = "qrzen_diagnostic_notif"
     private const val KEY_APP_TIMER_PREFIX = "qrzen_app_timer_"
     private const val KEY_APP_TIMER_REMAINING_PREFIX = "qrzen_app_timer_remaining_"
     private const val KEY_APP_TIMER_LAST_FG_PREFIX = "qrzen_app_timer_last_fg_"

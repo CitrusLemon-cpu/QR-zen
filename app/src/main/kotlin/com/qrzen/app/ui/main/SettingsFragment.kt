@@ -15,6 +15,7 @@ import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.FragmentSettingsBinding
+import com.qrzen.app.service.DiagnosticNotifier
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.util.BruteForceGuard
 import com.qrzen.app.util.PasswordHasher
@@ -108,6 +109,16 @@ class SettingsFragment : Fragment() {
 
         binding.swRemoveNotif.setOnCheckedChangeListener { _, checked ->
             Prefs.removeNotifications = checked
+        }
+
+        binding.swDiagnosticNotif.isChecked = Prefs.diagnosticNotifications
+        binding.swDiagnosticNotif.setOnCheckedChangeListener { _, checked ->
+            Prefs.diagnosticNotifications = checked
+            if (checked) {
+                DiagnosticNotifier.ensureChannel(requireContext())
+            } else {
+                DiagnosticNotifier.cancelPollState(requireContext())
+            }
         }
 
         binding.swSilentMode.setOnCheckedChangeListener { _, isChecked ->
