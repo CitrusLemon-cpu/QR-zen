@@ -78,6 +78,8 @@ class BackgroundService : Service() {
         "com.miui.guardprovider",
         "com.miui.systemui.plugin",
         "com.miui.mishare",
+        "com.miui.volume",
+        "com.miui.securityinputmethod",
         "com.android.permissioncontroller",
         "com.google.android.permissioncontroller",
         "com.android.packageinstaller",
@@ -126,6 +128,21 @@ class BackgroundService : Service() {
                 }
             }
             .toSet()
+    }
+
+    private val systemNonLauncherCache = mutableMapOf<String, Boolean>()
+
+    private fun isSystemNonLauncherApp(pkg: String): Boolean {
+        systemNonLauncherCache[pkg]?.let { return it }
+        val result = try {
+            val appInfo = packageManager.getApplicationInfo(pkg, 0)
+            val isSystem = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+            isSystem && packageManager.getLaunchIntentForPackage(pkg) == null
+        } catch (_: Exception) {
+            false
+        }
+        systemNonLauncherCache[pkg] = result
+        return result
     }
 
     private val checkRunnable = object : Runnable {
@@ -794,7 +811,8 @@ class BackgroundService : Service() {
             pkg in launcherPackages ||
             pkg in imePackages ||
             pkg in dialerPackages ||
-            pkg in shareHandlerPackages
+            pkg in shareHandlerPackages ||
+            isSystemNonLauncherApp(pkg)
     }
 
     private fun isPackageTrackedByBlock(block: AppBlock, pkg: String): Boolean {
@@ -934,12 +952,15 @@ class BackgroundService : Service() {
 
         if (Prefs.diagnosticNotifications) {
             val freshImePackages = getFreshImePackages()
+            val isSystemNonLauncher = isSystemNonLauncherApp(pkg)
             val exemptReason = when {
                 pkg == packageName -> "self"
                 pkg in systemExemptPackages -> "system"
                 pkg in launcherPackages -> "launcher"
                 pkg in imePackages -> "keyboard/IME"
                 pkg in dialerPackages -> "dialer"
+                pkg in shareHandlerPackages -> "share handler"
+                isSystemNonLauncher -> "system non-launcher"
                 else -> null
             }
             DiagnosticNotifier.notifyPollState(
@@ -949,6 +970,7 @@ class BackgroundService : Service() {
                 appLabel = getAppLabel(pkg),
                 cachedImePackages = imePackages,
                 freshImePackages = freshImePackages,
+                isSystemNonLauncher = isSystemNonLauncher,
                 isExempt = isExemptPackage(pkg),
                 exemptReason = exemptReason,
                 activeBlockCount = activeBlocks.size,
@@ -971,6 +993,7 @@ class BackgroundService : Service() {
             accessibilityBlockOverlay?.hide()
             launchLockScreen(pkg, blocklistBlock)
             if (Prefs.diagnosticNotifications) {
+                val isSystemNonLauncher = isSystemNonLauncherApp(pkg)
                 DiagnosticNotifier.notifyBlockTriggered(
                     context = applicationContext,
                     source = "UsageStats",
@@ -980,6 +1003,7 @@ class BackgroundService : Service() {
                     matchedBlocks = listOf(blocklistBlock),
                     cachedImePackages = imePackages,
                     freshImePackages = getFreshImePackages(),
+                    isSystemNonLauncher = isSystemNonLauncher,
                     exemptReason = null,
                     extraInfo = null
                 )
@@ -990,6 +1014,7 @@ class BackgroundService : Service() {
         if (allowedForegroundPkg == null) {
             launchAllowlistOverlay(pkg, allowlistBlocks)
             if (Prefs.diagnosticNotifications) {
+                val isSystemNonLauncher = isSystemNonLauncherApp(pkg)
                 DiagnosticNotifier.notifyBlockTriggered(
                     context = applicationContext,
                     source = "UsageStats",
@@ -999,6 +1024,7 @@ class BackgroundService : Service() {
                     matchedBlocks = allowlistBlocks,
                     cachedImePackages = imePackages,
                     freshImePackages = getFreshImePackages(),
+                    isSystemNonLauncher = isSystemNonLauncher,
                     exemptReason = null,
                     extraInfo = "Pkg not in allowlist intersection"
                 )

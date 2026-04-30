@@ -23,6 +23,20 @@ class QrZenNotificationListener : NotificationListenerService() {
     @Volatile private var cachedAllowlistBlockIds: List<Int> = emptyList()
     @Volatile private var lastFetchTime = 0L
     private val fmt = DateTimeFormatter.ofPattern("HH:mm")
+    private val systemNonLauncherCache = mutableMapOf<String, Boolean>()
+
+    private fun isSystemNonLauncherApp(pkg: String): Boolean {
+        systemNonLauncherCache[pkg]?.let { return it }
+        val result = try {
+            val appInfo = applicationContext.packageManager.getApplicationInfo(pkg, 0)
+            val isSystem = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+            isSystem && applicationContext.packageManager.getLaunchIntentForPackage(pkg) == null
+        } catch (_: Exception) {
+            false
+        }
+        systemNonLauncherCache[pkg] = result
+        return result
+    }
 
     private suspend fun refreshCacheIfNeeded() {
         val now = System.currentTimeMillis()
@@ -74,13 +88,18 @@ class QrZenNotificationListener : NotificationListenerService() {
                 cancelNotification(notification.key)
                 return@launch
             }
-            if (hasAllowlist && pkg !in allowed && pkg !in SYSTEM_EXEMPT_PACKAGES) {
+            if (hasAllowlist &&
+                pkg !in allowed &&
+                pkg !in SYSTEM_EXEMPT_PACKAGES &&
+                !isSystemNonLauncherApp(pkg)
+            ) {
                 cancelNotification(notification.key)
                 return@launch
             }
             if (hasAllowlist &&
                 cachedAllowlistBlockIds.any { blockId -> Prefs.isAppTimerExpired(blockId, pkg) } &&
-                pkg !in SYSTEM_EXEMPT_PACKAGES
+                pkg !in SYSTEM_EXEMPT_PACKAGES &&
+                !isSystemNonLauncherApp(pkg)
             ) {
                 cancelNotification(notification.key)
             }
@@ -119,6 +138,8 @@ class QrZenNotificationListener : NotificationListenerService() {
             "com.miui.guardprovider",
             "com.miui.systemui.plugin",
             "com.miui.mishare",
+            "com.miui.volume",
+            "com.miui.securityinputmethod",
             "com.android.permissioncontroller",
             "com.google.android.permissioncontroller",
             "com.android.packageinstaller",

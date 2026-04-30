@@ -37,6 +37,7 @@ object DiagnosticNotifier {
         matchedBlocks: List<AppBlock>,
         cachedImePackages: Set<String>,
         freshImePackages: Set<String>,
+        isSystemNonLauncher: Boolean,
         exemptReason: String?,
         extraInfo: String?
     ) {
@@ -52,6 +53,7 @@ object DiagnosticNotifier {
             add("Source: $source | Type: $triggerType")
             add("Matched: $blockNames")
             add("Is IME/keyboard: $isIme")
+            add("System non-launcher: $isSystemNonLauncher")
             add("Cached IMEs: ${cachedImePackages.joinToString(", ")}")
             add("Fresh IMEs: ${freshImePackages.joinToString(", ")}")
             add("IME mismatch: ${if (cachedImePackages != freshImePackages) "YES" else "NO"}")
@@ -80,6 +82,7 @@ object DiagnosticNotifier {
         appLabel: String?,
         cachedImePackages: Set<String>,
         freshImePackages: Set<String>,
+        isSystemNonLauncher: Boolean,
         isExempt: Boolean,
         exemptReason: String?,
         activeBlockCount: Int,
@@ -94,6 +97,7 @@ object DiagnosticNotifier {
             add("Source: $source | Exempt: $isExempt${if (exemptReason != null) " ($exemptReason)" else ""}")
             add("Active blocks: $activeBlockCount")
             add("Is IME: ${detectedPkg != null && (detectedPkg in cachedImePackages || detectedPkg in freshImePackages)}")
+            add("System non-launcher: $isSystemNonLauncher")
             add("Cached IMEs: ${cachedImePackages.joinToString(", ")}")
             add("Fresh IMEs: ${freshImePackages.joinToString(", ")}")
             add("IME mismatch: ${if (cachedImePackages != freshImePackages) "YES" else "NO"}")

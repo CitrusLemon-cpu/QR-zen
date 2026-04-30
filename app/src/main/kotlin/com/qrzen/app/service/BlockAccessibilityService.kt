@@ -46,6 +46,8 @@ class BlockAccessibilityService : AccessibilityService() {
             "com.miui.guardprovider",
             "com.miui.systemui.plugin",
             "com.miui.mishare",
+            "com.miui.volume",
+            "com.miui.securityinputmethod",
             "com.android.permissioncontroller",
             "com.google.android.permissioncontroller",
             "com.android.packageinstaller",
@@ -114,12 +116,28 @@ class BlockAccessibilityService : AccessibilityService() {
         imm?.enabledInputMethodList?.map { it.packageName }?.toSet() ?: emptySet()
     }
 
+    private val systemNonLauncherCache = mutableMapOf<String, Boolean>()
+
+    private fun isSystemNonLauncherApp(pkg: String): Boolean {
+        systemNonLauncherCache[pkg]?.let { return it }
+        val result = try {
+            val appInfo = packageManager.getApplicationInfo(pkg, 0)
+            val isSystem = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
+            isSystem && packageManager.getLaunchIntentForPackage(pkg) == null
+        } catch (_: Exception) {
+            false
+        }
+        systemNonLauncherCache[pkg] = result
+        return result
+    }
+
     private fun isExemptFromAllowlist(pkg: String): Boolean {
         return pkg in SYSTEM_EXEMPT_PACKAGES ||
             pkg in launcherPackages ||
             pkg in dialerPackages ||
             pkg in imePackages ||
-            pkg in shareHandlerPackages
+            pkg in shareHandlerPackages ||
+            isSystemNonLauncherApp(pkg)
     }
 
     private fun getAppLabel(pkg: String): String {
@@ -186,7 +204,11 @@ class BlockAccessibilityService : AccessibilityService() {
 
         // Only filter genuinely transient windows (system UI, keyboards).
         // Launchers and dialers represent real navigation away from an app.
-        if (pkg !in SYSTEM_EXEMPT_PACKAGES && pkg !in imePackages && pkg !in shareHandlerPackages) {
+        if (pkg !in SYSTEM_EXEMPT_PACKAGES &&
+            pkg !in imePackages &&
+            pkg !in shareHandlerPackages &&
+            !isSystemNonLauncherApp(pkg)
+        ) {
             currentForegroundPackage = pkg
         }
 
@@ -209,6 +231,7 @@ class BlockAccessibilityService : AccessibilityService() {
             if (blocklistMatch != null) {
                 launchLockScreen(pkg, blocklistMatch)
                 if (Prefs.diagnosticNotifications) {
+                    val isSystemNonLauncher = isSystemNonLauncherApp(pkg)
                     DiagnosticNotifier.notifyBlockTriggered(
                         context = applicationContext,
                         source = "Accessibility",
@@ -218,6 +241,7 @@ class BlockAccessibilityService : AccessibilityService() {
                         matchedBlocks = listOf(blocklistMatch),
                         cachedImePackages = imePackages,
                         freshImePackages = getFreshImePackages(),
+                        isSystemNonLauncher = isSystemNonLauncher,
                         exemptReason = null,
                         extraInfo = null
                     )
@@ -240,6 +264,7 @@ class BlockAccessibilityService : AccessibilityService() {
                 if (!intersection.contains(pkg)) {
                     launchAllowlistOverlay(pkg, allowlistBlocks)
                     if (Prefs.diagnosticNotifications) {
+                        val isSystemNonLauncher = isSystemNonLauncherApp(pkg)
                         DiagnosticNotifier.notifyBlockTriggered(
                             context = applicationContext,
                             source = "Accessibility",
@@ -249,6 +274,7 @@ class BlockAccessibilityService : AccessibilityService() {
                             matchedBlocks = allowlistBlocks,
                             cachedImePackages = imePackages,
                             freshImePackages = getFreshImePackages(),
+                            isSystemNonLauncher = isSystemNonLauncher,
                             exemptReason = null,
                             extraInfo = "Pkg not in intersection of allowed sets"
                         )
