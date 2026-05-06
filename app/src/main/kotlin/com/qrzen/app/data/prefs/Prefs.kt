@@ -188,13 +188,29 @@ object Prefs {
 
     fun resetAppTimersForBlock(blockId: Int) {
         val allKeys = kv.allKeys() ?: return
-        val prefix = "${KEY_APP_TIMER_ORIGINAL_PREFIX}${blockId}_"
-        allKeys.filter { it.startsWith(prefix) }.forEach { key ->
-            val packageName = key.removePrefix(prefix)
+        val originalPrefix = "${KEY_APP_TIMER_ORIGINAL_PREFIX}${blockId}_"
+        val remainingPrefix = "${KEY_APP_TIMER_REMAINING_PREFIX}${blockId}_"
+        val lastFgPrefix = "${KEY_APP_TIMER_LAST_FG_PREFIX}${blockId}_"
+
+        val resetPackages = mutableSetOf<String>()
+        allKeys.filter { it.startsWith(originalPrefix) }.forEach { key ->
+            val packageName = key.removePrefix(originalPrefix)
             val originalDuration = kv.decodeLong(key, -1L)
             if (originalDuration > 0L) {
                 setAppTimerRemaining(blockId, packageName, originalDuration)
                 setAppTimerLastFg(blockId, packageName, 0L)
+                resetPackages.add(packageName)
+            }
+        }
+
+        allKeys.filter { it.startsWith(remainingPrefix) }.forEach { key ->
+            val packageName = key.removePrefix(remainingPrefix)
+            if (packageName !in resetPackages) {
+                val remaining = kv.decodeLong(key, -1L)
+                if (remaining == 0L) {
+                    kv.removeValueForKey(key)
+                    kv.removeValueForKey("${lastFgPrefix}$packageName")
+                }
             }
         }
     }
