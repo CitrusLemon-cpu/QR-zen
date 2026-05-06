@@ -748,7 +748,7 @@ class BackgroundService : Service() {
                     }
                 }
 
-                else -> {
+                UnlockMethodUtils.STYLE_MANUAL -> {
                     val savedWindowStart = Prefs.getAppTimerWindowStart(block.id)
                     if (savedWindowStart != todayStartMs) {
                         Prefs.resetAppTimersForBlock(block.id)
