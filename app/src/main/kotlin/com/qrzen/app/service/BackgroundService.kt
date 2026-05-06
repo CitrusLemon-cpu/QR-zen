@@ -717,26 +717,44 @@ class BackgroundService : Service() {
 
     private suspend fun resetAppTimersOnWindowChange(blocks: List<AppBlock>) {
         val now = System.currentTimeMillis()
+        val todayStartMs = java.util.Calendar.getInstance().apply {
+            set(java.util.Calendar.HOUR_OF_DAY, 0)
+            set(java.util.Calendar.MINUTE, 0)
+            set(java.util.Calendar.SECOND, 0)
+            set(java.util.Calendar.MILLISECOND, 0)
+        }.timeInMillis
+
         for (block in blocks) {
             if (!block.isAllowlistMode || !block.isEnabled || block.isArchived) continue
-            if (block.blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) continue
 
-            val timeBlocks = timeBlockDao.getByBlockId(block.id)
-            val currentWindowStart = if (timeBlocks.isEmpty()) {
-                UnlockMethodUtils.computeLegacyScheduleWindowStartMs(block, now)
-            } else {
-                UnlockMethodUtils.computeCurrentWindowStartMs(timeBlocks, now)
-            }
+            when (block.blockingStyle) {
+                UnlockMethodUtils.STYLE_SCHEDULE -> {
+                    val timeBlocks = timeBlockDao.getByBlockId(block.id)
+                    val currentWindowStart = if (timeBlocks.isEmpty()) {
+                        UnlockMethodUtils.computeLegacyScheduleWindowStartMs(block, now)
+                    } else {
+                        UnlockMethodUtils.computeCurrentWindowStartMs(timeBlocks, now)
+                    }
 
-            if (currentWindowStart == null) {
-                Prefs.setAppTimerWindowStart(block.id, 0L)
-                continue
-            }
+                    if (currentWindowStart == null) {
+                        Prefs.setAppTimerWindowStart(block.id, 0L)
+                        continue
+                    }
 
-            val savedWindowStart = Prefs.getAppTimerWindowStart(block.id)
-            if (savedWindowStart != currentWindowStart) {
-                Prefs.resetAppTimersForBlock(block.id)
-                Prefs.setAppTimerWindowStart(block.id, currentWindowStart)
+                    val savedWindowStart = Prefs.getAppTimerWindowStart(block.id)
+                    if (savedWindowStart != currentWindowStart) {
+                        Prefs.resetAppTimersForBlock(block.id)
+                        Prefs.setAppTimerWindowStart(block.id, currentWindowStart)
+                    }
+                }
+
+                else -> {
+                    val savedWindowStart = Prefs.getAppTimerWindowStart(block.id)
+                    if (savedWindowStart != todayStartMs) {
+                        Prefs.resetAppTimersForBlock(block.id)
+                        Prefs.setAppTimerWindowStart(block.id, todayStartMs)
+                    }
+                }
             }
         }
     }
@@ -1083,6 +1101,10 @@ class BackgroundService : Service() {
             for (pkg in block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }) {
                 val remaining = Prefs.getAppTimerRemaining(block.id, pkg)
                 if (remaining <= 0L) continue
+
+                if (Prefs.getAppTimerOriginal(block.id, pkg) <= 0L) {
+                    Prefs.setAppTimerOriginal(block.id, pkg, remaining)
+                }
 
                 if (pkg == foregroundPkg) {
                     val lastFg = Prefs.getAppTimerLastFg(block.id, pkg)
