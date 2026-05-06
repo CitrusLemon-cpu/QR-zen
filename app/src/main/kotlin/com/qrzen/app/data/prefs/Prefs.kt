@@ -97,6 +97,13 @@ object Prefs {
         kv.removeValueForKey("sched_wt_last_tick_$blockId")
     }
 
+    fun clearWaitTimerState(blockId: Int) {
+        kv.removeValueForKey("wait_timer_blocking_$blockId")
+        kv.removeValueForKey("wait_timer_remaining_$blockId")
+        kv.removeValueForKey("wait_timer_last_update_$blockId")
+        kv.removeValueForKey("wait_timer_in_app_$blockId")
+    }
+
     fun getSchedAllowanceRemaining(blockId: Int): Long {
         return kv.decodeLong("sched_allow_remaining_$blockId", -1L)
     }

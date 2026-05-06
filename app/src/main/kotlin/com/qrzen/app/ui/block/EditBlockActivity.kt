@@ -1282,6 +1282,8 @@ class EditBlockActivity : AppCompatActivity() {
                 dao.insert(block).toInt()
             } else {
                 dao.update(block)
+                Prefs.clearWaitTimerState(block.id)
+                Prefs.clearScheduleWtState(block.id)
                 block.id
             }
 

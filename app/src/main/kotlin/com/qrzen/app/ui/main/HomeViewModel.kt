@@ -30,6 +30,8 @@ class HomeViewModel @Inject constructor(
     fun delete(block: AppBlock) = viewModelScope.launch {
         Prefs.clearAllowlistUsageTimer(block.id)
         Prefs.clearAppTimersForBlock(block.id)
+        Prefs.clearWaitTimerState(block.id)
+        Prefs.clearScheduleWtState(block.id)
         dao.delete(block)
         WidgetRefresh.refresh(ctx)
     }
@@ -40,6 +42,8 @@ class HomeViewModel @Inject constructor(
             if (block.isAllowlistMode) {
                 Prefs.clearAppTimersForBlock(block.id)
             }
+            Prefs.clearWaitTimerState(block.id)
+            Prefs.clearScheduleWtState(block.id)
         }
         dao.update(block.copy(isEnabled = enabled))
         WidgetRefresh.refresh(ctx)
@@ -65,6 +69,8 @@ class HomeViewModel @Inject constructor(
     fun disableAndClearTimers(block: AppBlock) = viewModelScope.launch {
         Prefs.clearAllowlistUsageTimer(block.id)
         Prefs.clearAppTimersForBlock(block.id)
+        Prefs.clearWaitTimerState(block.id)
+        Prefs.clearScheduleWtState(block.id)
         dao.update(
             block.copy(
                 isEnabled = false,
