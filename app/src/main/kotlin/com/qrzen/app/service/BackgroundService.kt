@@ -281,6 +281,8 @@ class BackgroundService : Service() {
                     if (block.isAllowlistMode) {
                         Prefs.clearAppTimersForBlock(block.id)
                     }
+                    Prefs.clearWaitTimerState(block.id)
+                    Prefs.clearScheduleWtState(block.id)
                     dao.update(
                         block.copy(
                             isEnabled = false,
@@ -310,6 +312,8 @@ class BackgroundService : Service() {
                 if (block.isAllowlistMode) {
                     Prefs.clearAppTimersForBlock(block.id)
                 }
+                Prefs.clearWaitTimerState(block.id)
+                Prefs.clearScheduleWtState(block.id)
                 dao.update(
                     block.copy(
                         isEnabled = false,
