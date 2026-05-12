@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.AppDatabase
 import com.qrzen.app.data.db.BlockEventDao
+import com.qrzen.app.data.db.BlockFolderDao
 import com.qrzen.app.data.db.TimeBlockDao
 import dagger.Module
 import dagger.Provides
@@ -29,7 +30,8 @@ object AppModule {
                 AppDatabase.MIGRATION_10_11,
                 AppDatabase.MIGRATION_11_12,
                 AppDatabase.MIGRATION_12_13,
-                AppDatabase.MIGRATION_13_14
+                AppDatabase.MIGRATION_13_14,
+                AppDatabase.MIGRATION_14_15
             )
             .fallbackToDestructiveMigration().build()
 
@@ -38,6 +40,9 @@ object AppModule {
 
     @Provides @Singleton
     fun provideBlockEventDao(db: AppDatabase): BlockEventDao = db.blockEventDao()
+
+    @Provides @Singleton
+    fun provideBlockFolderDao(db: AppDatabase): BlockFolderDao = db.blockFolderDao()
 
     @Provides @Singleton
     fun provideTimeBlockDao(db: AppDatabase): TimeBlockDao = db.timeBlockDao()

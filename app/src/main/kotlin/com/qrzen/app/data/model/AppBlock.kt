@@ -93,5 +93,7 @@ data class AppBlock(
     /** Default setting: lock editing during pomodoro sessions */
     val pomodoroLockEditing: Boolean = false,
     /** If true, newly installed apps are automatically added to this block's appPackages list */
-    val autoAddNewApps: Boolean = false
+    val autoAddNewApps: Boolean = false,
+    /** ID of the folder this block belongs to, or null if at root level */
+    val folderId: Int? = null
 )
