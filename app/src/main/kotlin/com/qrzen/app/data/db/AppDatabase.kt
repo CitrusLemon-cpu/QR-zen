@@ -9,7 +9,7 @@ import com.qrzen.app.data.model.BlockEvent
 import com.qrzen.app.data.model.BlockFolder
 import com.qrzen.app.data.model.TimeBlock
 
-@Database(entities = [AppBlock::class, BlockEvent::class, BlockFolder::class, TimeBlock::class], version = 15, exportSchema = false)
+@Database(entities = [AppBlock::class, BlockEvent::class, BlockFolder::class, TimeBlock::class], version = 16, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appBlockDao(): AppBlockDao
     abstract fun blockEventDao(): BlockEventDao
@@ -141,6 +141,13 @@ abstract class AppDatabase : RoomDatabase() {
                     """.trimIndent()
                 )
                 db.execSQL("ALTER TABLE app_blocks ADD COLUMN folderId INTEGER DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE app_blocks ADD COLUMN ignoreMasterPassword INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE block_folders ADD COLUMN ignoreMasterPassword INTEGER NOT NULL DEFAULT 0")
             }
         }
     }
