@@ -30,7 +30,6 @@ import com.qrzen.app.data.model.TimeBlock
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.ActivityEditBlockBinding
 import com.qrzen.app.databinding.ItemEditAppGridBinding
-import com.qrzen.app.ui.unlock.UnlockChallengeActivity
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
@@ -101,14 +100,12 @@ class EditBlockActivity : AppCompatActivity() {
     private var showTimer: Boolean = false
     private var lockUntil: Long = 0L
     private var autoAddNewApps: Boolean = false
-    private var ignoreMasterPassword: Boolean = false
     private var pomodoroLockEditing: Boolean = false
     private var currentTimeBlocks: MutableList<TimeBlock> = mutableListOf()
     private var nextTempId: Int = -1
     private var selectedTimeBlockId: Int? = null
     private var selectedAppsLoadJob: Job? = null
     private var isUpdatingTimerBreakPresets = false
-    private var isUpdatingIgnoreMasterPasswordSwitch = false
     private val pendingAppTimers = mutableMapOf<String, Long>()
     private val timeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     private val qrScanForSetLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -120,12 +117,6 @@ class EditBlockActivity : AppCompatActivity() {
             }
         }
     }
-    private val ignoreMasterPasswordUnlockLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            setIgnoreMasterPasswordChecked(false)
-        }
-    }
-
     private val blockingStyles: List<Pair<String, String>>
         get() {
             val base = listOf(
@@ -349,24 +340,6 @@ class EditBlockActivity : AppCompatActivity() {
         binding.switchAutoAddNewApps.setOnCheckedChangeListener { _, isChecked ->
             autoAddNewApps = isChecked
         }
-        binding.switchIgnoreMasterPassword.setOnCheckedChangeListener { _, isChecked ->
-            if (isUpdatingIgnoreMasterPasswordSwitch) return@setOnCheckedChangeListener
-            if (isChecked) {
-                ignoreMasterPassword = true
-                return@setOnCheckedChangeListener
-            }
-            if (!ignoreMasterPassword) return@setOnCheckedChangeListener
-            if (shouldRequireIgnoreMasterPasswordUnlock()) {
-                setIgnoreMasterPasswordChecked(true)
-                existingBlock?.let {
-                    ignoreMasterPasswordUnlockLauncher.launch(
-                        UnlockChallengeActivity.createIntent(this, it.id, UnlockChallengeActivity.ACTION_EDIT)
-                    )
-                }
-            } else {
-                ignoreMasterPassword = false
-            }
-        }
 
         setupBlockingStyleDropdown()
         setupUnlockMethodDropdown()
@@ -546,7 +519,6 @@ class EditBlockActivity : AppCompatActivity() {
         timerBreakMinutes = block.timerBreakMinutes
         lockUntil = block.lockUntil
         autoAddNewApps = block.autoAddNewApps
-        ignoreMasterPassword = block.ignoreMasterPassword
         pomodoroLockEditing = block.pomodoroLockEditing
 
         binding.etTitle.setText(block.title)
@@ -590,7 +562,6 @@ class EditBlockActivity : AppCompatActivity() {
         binding.cbShowTimer.isChecked = showTimer
         binding.cbPomodoroLockEditing.isChecked = pomodoroLockEditing
         binding.switchAutoAddNewApps.isChecked = autoAddNewApps
-        setIgnoreMasterPasswordChecked(ignoreMasterPassword)
         binding.switchAutoAddNewApps.text = if (isAllowlistMode) {
             getString(R.string.edit_block_auto_add_new_apps_allow_desc)
         } else {
@@ -1302,8 +1273,8 @@ class EditBlockActivity : AppCompatActivity() {
             pomodoroRoundsTotal = existingBlock?.pomodoroRoundsTotal ?: 0,
             pomodoroSessionStartMillis = existingBlock?.pomodoroSessionStartMillis ?: 0L,
             pomodoroLockEditing = pomodoroLockEditing,
-            autoAddNewApps = autoAddNewApps,
-            ignoreMasterPassword = ignoreMasterPassword,
+            autoAddNewApps = autoAddNewApps
+        ).copy(
             folderId = existingBlock?.folderId
         )
 
@@ -1338,19 +1309,6 @@ class EditBlockActivity : AppCompatActivity() {
 
     private fun isBlockCurrentlyActive(block: AppBlock): Boolean {
         return UnlockMethodUtils.isBlockCurrentlyActive(block, currentTimeBlocks)
-    }
-
-    private fun setIgnoreMasterPasswordChecked(checked: Boolean) {
-        ignoreMasterPassword = checked
-        if (binding.switchIgnoreMasterPassword.isChecked == checked) return
-        isUpdatingIgnoreMasterPasswordSwitch = true
-        binding.switchIgnoreMasterPassword.isChecked = checked
-        isUpdatingIgnoreMasterPasswordSwitch = false
-    }
-
-    private fun shouldRequireIgnoreMasterPasswordUnlock(): Boolean {
-        val block = existingBlock ?: return false
-        return UnlockMethodUtils.getNormalizedMethod(block) != UnlockMethodUtils.METHOD_NONE
     }
 
     private fun isTimeBlockCurrentlyActive(timeBlock: TimeBlock): Boolean {

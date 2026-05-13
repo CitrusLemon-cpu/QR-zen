@@ -40,9 +40,6 @@
     <string name="edit_block_auto_add_new_apps_block_desc">Newly installed apps will be automatically added to this block</string>
     <string name="edit_block_auto_add_new_apps_allow_desc">Newly installed apps will be automatically added to this allowlist</string>
     <string name="edit_block_master_pwd_toggle">Enable master password fallback</string>
-    <string name="ignore_master_password">Ignore Master Password</string>
-    <string name="ignore_master_password_desc">Master password cannot bypass this block</string>
-    <string name="ignore_master_password_folder_desc">Master password cannot bypass blocks in this folder</string>
     <string name="edit_block_save">Save Block</string>
     <string name="app_picker_title">Select Apps to Block</string>
     <string name="app_picker_search_hint">Search apps</string>
@@ -112,6 +109,14 @@
     <string name="settings_resume_all_confirm">All blocks resumed</string>
     <string name="settings_pause_all_duration">Pause duration</string>
     <string name="settings_master_pwd_required">Enter master password to continue</string>
+    <string name="override_mode_none">None</string>
+    <string name="override_mode_master_password">Master Password</string>
+    <string name="override_mode_strict">Strict</string>
+    <string name="override_mode_none_desc">No master password override. You can enable one at any time.</string>
+    <string name="override_mode_master_password_desc">Use your master password to bypass blocks that have it enabled.</string>
+    <string name="override_mode_strict_desc">Master password override is disabled. To turn off strict mode, you must first disable all blocks and folders.</string>
+    <string name="strict_cannot_disable">Disable all blocks and folders first to change this setting.</string>
+    <string name="lock_screen_strict_disabled">Strict mode active — master password override disabled</string>
     <string name="timer_dialog_title">Set usage timer for %1$s</string>
     <string name="timer_set">Set Timer</string>
     <string name="timer_clear">Clear Timer</string>

@@ -71,7 +71,6 @@ class BackgroundService : Service() {
     private val systemExemptPackages = setOf(
         "android",
         "com.android.systemui",
-        "com.android.settings",
         "com.android.intentresolver",
         "com.android.documentsui",
         "com.google.android.documentsui",

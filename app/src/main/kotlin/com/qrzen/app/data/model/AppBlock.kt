@@ -94,7 +94,7 @@ data class AppBlock(
     val pomodoroLockEditing: Boolean = false,
     /** If true, newly installed apps are automatically added to this block's appPackages list */
     val autoAddNewApps: Boolean = false,
-    /** When true, master password cannot bypass this block regardless of masterPasswordEnabled */
+    @Deprecated("Replaced by global Prefs.masterPasswordOverrideMode")
     val ignoreMasterPassword: Boolean = false,
     /** ID of the folder this block belongs to, or null if at root level */
     val folderId: Int? = null
