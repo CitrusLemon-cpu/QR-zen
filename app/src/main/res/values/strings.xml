@@ -52,6 +52,7 @@
     <string name="block_type_title">Block Type</string>
     <string name="block_type_blocklist">Block specific apps</string>
     <string name="block_type_allowlist">Allow only these apps (allowlist)</string>
+    <string name="home_new_folder">New Folder</string>
     <string name="qr_display_instructions">Print or save this QR code. You’ll need to scan it to unlock this block.</string>
     <string name="home_empty">No blocks yet. Tap + to add one.</string>
     <string name="allowlist_remaining">remaining</string>
@@ -183,4 +184,28 @@ Session ends at %4$s</string>
     <string name="accessibility_block_wait_timer">QR Zen needs accessibility service to track your usage time. Enable it to continue.</string>
     <string name="accessibility_block_scheduled_allowance">QR Zen needs accessibility service to track your schedule allowance. Enable it to continue.</string>
     <string name="accessibility_block_button">Re-enable Accessibility</string>
+    <string name="edit_folder_new_title">New Folder</string>
+    <string name="edit_folder_edit_title">Edit Folder</string>
+    <string name="edit_folder_title_hint">Folder name</string>
+    <string name="edit_folder_title_required">Folder name is required</string>
+    <string name="edit_folder_password_required">Password is required</string>
+    <string name="edit_folder_passwords_mismatch">Passwords do not match</string>
+    <string name="edit_folder_type_over_required">Challenge text is required</string>
+    <string name="edit_folder_lock_until_future">Lock until must be in the future</string>
+    <string name="edit_folder_save">Save</string>
+    <string name="edit_folder_unlock_none_desc">This folder can be freely edited.</string>
+    <string name="edit_folder_unlock_delay_desc">You must wait this long before you can edit this folder.</string>
+    <string name="edit_folder_unlock_password_desc">Enter this password to edit this folder.</string>
+    <string name="edit_folder_unlock_type_over_desc">Type the configured text exactly to edit this folder.</string>
+    <string name="edit_folder_unlock_qr_desc">Use this QR secret when configuring folder QR unlock.</string>
+    <string name="edit_folder_unlock_edit_window_desc">You can only edit this folder during the selected window.</string>
+    <string name="edit_folder_unlock_timer_desc">You cannot edit this folder until this time.</string>
+    <string name="folder_active_days">Active Days</string>
+    <string name="folder_pause_coming_soon">Pause coming soon</string>
+    <string name="folder_delete_title">Delete Folder</string>
+    <string name="folder_delete_message">Delete \u2018%1$s\u2019? Blocks inside will be returned to the root list.</string>
+    <string name="folder_delete_confirm">Delete</string>
+    <string name="folder_none_option">None</string>
+    <string name="move_to_folder_title">Move \u2018%1$s\u2019 to folder</string>
+    <string name="move_to_folder_confirm">Move</string>
 </resources>

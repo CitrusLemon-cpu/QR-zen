@@ -25,8 +25,10 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.qrzen.app.R
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.BlockFolder
 import com.qrzen.app.databinding.FragmentHomeBinding
 import com.qrzen.app.ui.block.EditBlockActivity
+import com.qrzen.app.ui.folder.EditFolderActivity
 import com.qrzen.app.ui.unlock.UnlockChallengeActivity
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import dagger.hilt.android.AndroidEntryPoint
@@ -43,18 +45,32 @@ class HomeFragment : Fragment() {
         val toggleEnabledState: Boolean? = null
     )
 
+    private data class PendingFolderUnlockAction(
+        val folder: BlockFolder,
+        val action: String
+    )
+
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
     private val viewModel: HomeViewModel by viewModels()
     @Inject lateinit var timeBlockDao: TimeBlockDao
-    private lateinit var adapter: BlockAdapter
+    private lateinit var adapter: HomeListAdapter
     private var pendingUnlockAction: PendingUnlockAction? = null
+    private var pendingFolderUnlockAction: PendingFolderUnlockAction? = null
 
     private val unlockChallengeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         val pending = pendingUnlockAction ?: return@registerForActivityResult
         pendingUnlockAction = null
         if (result.resultCode == Activity.RESULT_OK) {
             completePendingUnlockAction(pending)
+        }
+    }
+
+    private val folderUnlockChallengeLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val pending = pendingFolderUnlockAction ?: return@registerForActivityResult
+        pendingFolderUnlockAction = null
+        if (result.resultCode == Activity.RESULT_OK) {
+            completePendingFolderUnlockAction(pending)
         }
     }
 
@@ -69,7 +85,7 @@ class HomeFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        adapter = BlockAdapter(
+        adapter = HomeListAdapter(
             timeBlockDao = timeBlockDao,
             onToggle = { block, enabled ->
                 if (enabled) {
@@ -97,8 +113,11 @@ class HomeFragment : Fragment() {
                         ).show()
                         false
                     } else {
+                        val folderMethod = getFolderForBlock(block)?.unlockMethod
+                            ?.ifBlank { UnlockMethodUtils.METHOD_NONE }
                         val isManualNoMethod = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
-                            UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
+                            UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE &&
+                            folderMethod == UnlockMethodUtils.METHOD_NONE
                         if (isManualNoMethod) {
                             viewModel.disableAndClearTimers(block)
                             true
@@ -121,6 +140,9 @@ class HomeFragment : Fragment() {
             onDelete = { block ->
                 requestUnlock(block, UnlockChallengeActivity.ACTION_DELETE)
             },
+            onMoveToFolder = { block ->
+                requestUnlock(block, UnlockChallengeActivity.ACTION_MOVE_TO_FOLDER)
+            },
             onRestartFromPause = { block ->
                 AlertDialog.Builder(requireContext())
                     .setTitle("Restart Block")
@@ -132,32 +154,60 @@ class HomeFragment : Fragment() {
                     .setNegativeButton("Cancel", null)
                     .show()
             },
-            onLockWithTimer = { block -> showLockWithTimerDialog(block) }
+            onLockWithTimer = { block -> showLockWithTimerDialog(block) },
+            onFolderToggle = { folder, enabled ->
+                if (enabled) {
+                    viewModel.setFolderEnabled(folder, true)
+                    true
+                } else {
+                    requestFolderUnlock(folder, UnlockChallengeActivity.ACTION_FOLDER_TOGGLE)
+                }
+            },
+            onFolderExpandCollapse = { folder ->
+                viewModel.toggleFolderCollapsed(folder)
+            },
+            onFolderEdit = { folder ->
+                requestFolderUnlock(folder, UnlockChallengeActivity.ACTION_FOLDER_EDIT)
+            },
+            onFolderPause = { folder ->
+                requestFolderUnlock(folder, UnlockChallengeActivity.ACTION_FOLDER_PAUSE)
+            },
+            onFolderDelete = { folder ->
+                requestFolderUnlock(folder, UnlockChallengeActivity.ACTION_FOLDER_DELETE)
+            }
         )
         binding.rvBlocks.layoutManager = LinearLayoutManager(requireContext())
         binding.rvBlocks.adapter = adapter
 
         binding.fabAdd.setOnClickListener {
-            val options = arrayOf(getString(R.string.block_type_blocklist), getString(R.string.block_type_allowlist))
-            var selectedIndex = 0
+            val options = arrayOf(
+                getString(R.string.block_type_blocklist),
+                getString(R.string.block_type_allowlist),
+                getString(R.string.home_new_folder)
+            )
             AlertDialog.Builder(requireContext())
                 .setTitle(getString(R.string.block_type_title))
-                .setSingleChoiceItems(options, 0) { _, which -> selectedIndex = which }
-                .setPositiveButton(android.R.string.ok) { _, _ ->
-                    startActivity(Intent(requireContext(), EditBlockActivity::class.java).apply {
-                        putExtra(EditBlockActivity.EXTRA_IS_ALLOWLIST, selectedIndex == 1)
-                    })
+                .setItems(options) { _, which ->
+                    when (which) {
+                        0, 1 -> {
+                            startActivity(Intent(requireContext(), EditBlockActivity::class.java).apply {
+                                putExtra(EditBlockActivity.EXTRA_IS_ALLOWLIST, which == 1)
+                            })
+                        }
+                        2 -> {
+                            startActivity(Intent(requireContext(), EditFolderActivity::class.java))
+                        }
+                    }
                 }
-                .setNegativeButton(android.R.string.cancel, null)
                 .show()
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.blocks.collect { blocks ->
-                    adapter.submitList(blocks)
-                    binding.tvEmpty.visibility = if (blocks.isEmpty()) View.VISIBLE else View.GONE
-                    binding.rvBlocks.visibility = if (blocks.isEmpty()) View.GONE else View.VISIBLE
+                viewModel.homeItems.collect { items ->
+                    adapter.submitList(items)
+                    binding.tvEmpty.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
+                    binding.rvBlocks.visibility = if (items.isEmpty()) View.GONE else View.VISIBLE
                 }
             }
         }
@@ -175,10 +225,21 @@ class HomeFragment : Fragment() {
 
     private fun requestUnlock(block: AppBlock, action: String, toggleEnabledState: Boolean? = null): Boolean {
         val pending = PendingUnlockAction(block, action, toggleEnabledState)
-        if (shouldSkipUnlock(block, action, toggleEnabledState)) {
+        val folder = getFolderForBlock(block)
+        if (shouldSkipUnlock(block, folder, action, toggleEnabledState)) {
             completePendingUnlockAction(pending)
             return true
         }
+
+        val folderMethod = folder?.unlockMethod?.ifBlank { UnlockMethodUtils.METHOD_NONE }
+        if (folder != null && folderMethod != UnlockMethodUtils.METHOD_NONE) {
+            pendingUnlockAction = pending
+            unlockChallengeLauncher.launch(
+                UnlockChallengeActivity.createFolderIntent(requireContext(), folder.id, action)
+            )
+            return false
+        }
+
         val method = UnlockMethodUtils.getNormalizedMethod(block)
         if (method == UnlockMethodUtils.METHOD_WHILE_ACTIVE) {
             viewLifecycleOwner.lifecycleScope.launch {
@@ -199,15 +260,60 @@ class HomeFragment : Fragment() {
         return false
     }
 
-    private fun shouldSkipUnlock(block: AppBlock, action: String, toggleEnabledState: Boolean?): Boolean {
+    private fun requestFolderUnlock(folder: BlockFolder, action: String): Boolean {
+        val pending = PendingFolderUnlockAction(folder, action)
+        if (shouldSkipFolderUnlock(folder)) {
+            completePendingFolderUnlockAction(pending)
+            return true
+        }
+        pendingFolderUnlockAction = pending
+        folderUnlockChallengeLauncher.launch(
+            UnlockChallengeActivity.createFolderIntent(requireContext(), folder.id, action)
+        )
+        return false
+    }
+
+    private fun shouldSkipUnlock(
+        block: AppBlock,
+        folder: BlockFolder?,
+        action: String,
+        toggleEnabledState: Boolean?
+    ): Boolean {
         if (action == UnlockChallengeActivity.ACTION_TOGGLE && toggleEnabledState == true) return true
-        if (!block.isEnabled && action == UnlockChallengeActivity.ACTION_EDIT) return true
-        if (!block.isEnabled && (action == UnlockChallengeActivity.ACTION_ARCHIVE || action == UnlockChallengeActivity.ACTION_DELETE)) return true
         if (block.toggleLockUntil > System.currentTimeMillis()) return false
+
+        val folderMethod = folder?.unlockMethod?.ifBlank { UnlockMethodUtils.METHOD_NONE }
+        if (folder != null && folderMethod != UnlockMethodUtils.METHOD_NONE) {
+            if (folderMethod == UnlockMethodUtils.METHOD_TIMER && System.currentTimeMillis() >= folder.lockUntil) {
+                return true
+            }
+            return false
+        }
+
+        if (!block.isEnabled && action == UnlockChallengeActivity.ACTION_EDIT) return true
+        if (!block.isEnabled && action == UnlockChallengeActivity.ACTION_MOVE_TO_FOLDER) return true
+        if (!block.isEnabled && (action == UnlockChallengeActivity.ACTION_ARCHIVE || action == UnlockChallengeActivity.ACTION_DELETE)) return true
         val method = UnlockMethodUtils.getNormalizedMethod(block)
         if (method == UnlockMethodUtils.METHOD_WHILE_ACTIVE) return false
         if (method == UnlockMethodUtils.METHOD_TIMER && UnlockMethodUtils.isTimerExpired(block)) return true
         return method == UnlockMethodUtils.METHOD_NONE
+    }
+
+    private fun shouldSkipFolderUnlock(folder: BlockFolder): Boolean {
+        return when (folder.unlockMethod.ifBlank { UnlockMethodUtils.METHOD_NONE }) {
+            UnlockMethodUtils.METHOD_NONE -> true
+            UnlockMethodUtils.METHOD_TIMER -> System.currentTimeMillis() >= folder.lockUntil
+            else -> false
+        }
+    }
+
+    private fun getFolderForBlock(block: AppBlock): BlockFolder? {
+        val folderId = block.folderId ?: return null
+        return viewModel.folders.value.firstOrNull { it.id == folderId }
+    }
+
+    private fun getCurrentFolder(folderId: Int): BlockFolder? {
+        return viewModel.folders.value.firstOrNull { it.id == folderId }
     }
 
     private fun completePendingUnlockAction(pending: PendingUnlockAction) {
@@ -223,6 +329,7 @@ class HomeFragment : Fragment() {
                     viewModel.setEnabled(pending.block, enabled)
                 }
             }
+            UnlockChallengeActivity.ACTION_MOVE_TO_FOLDER -> showMoveToFolderDialog(pending.block)
             UnlockChallengeActivity.ACTION_ARCHIVE -> {
                 AlertDialog.Builder(requireContext())
                     .setTitle("Archive Block")
@@ -239,6 +346,26 @@ class HomeFragment : Fragment() {
                     .setNegativeButton("Cancel", null)
                     .show()
             }
+        }
+    }
+
+    private fun completePendingFolderUnlockAction(pending: PendingFolderUnlockAction) {
+        val folder = getCurrentFolder(pending.folder.id) ?: pending.folder
+        when (pending.action) {
+            UnlockChallengeActivity.ACTION_FOLDER_PAUSE -> {
+                if (folder.pausedUntil > System.currentTimeMillis() || folder.pausedUntil == Long.MAX_VALUE) {
+                    viewModel.unpauseFolder(folder)
+                } else {
+                    showFolderPauseDurationPicker(folder)
+                }
+            }
+            UnlockChallengeActivity.ACTION_FOLDER_EDIT -> {
+                startActivity(Intent(requireContext(), EditFolderActivity::class.java).apply {
+                    putExtra(EditFolderActivity.EXTRA_FOLDER_ID, folder.id)
+                })
+            }
+            UnlockChallengeActivity.ACTION_FOLDER_TOGGLE -> viewModel.setFolderEnabled(folder, false)
+            UnlockChallengeActivity.ACTION_FOLDER_DELETE -> showDeleteFolderDialog(folder)
         }
     }
 
@@ -275,6 +402,24 @@ class HomeFragment : Fragment() {
                     -2L -> viewModel.disableAndClearTimers(block)
                     else -> if (durationMs > 0L) viewModel.pause(block, durationMs)
                 }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+    }
+
+    private fun showFolderPauseDurationPicker(folder: BlockFolder) {
+        val durations = listOf(
+            "15 minutes" to 15 * 60_000L,
+            "30 minutes" to 30 * 60_000L,
+            "1 hour" to 60 * 60_000L,
+            "2 hours" to 2 * 60 * 60_000L,
+            "Rest of day" to millisUntilMidnight(),
+            "Indefinitely" to Long.MAX_VALUE
+        )
+        AlertDialog.Builder(requireContext())
+            .setTitle("Pause '${folder.title}'")
+            .setItems(durations.map { it.first }.toTypedArray()) { _, which ->
+                viewModel.pauseFolder(folder, durations[which].second)
             }
             .setNegativeButton("Cancel", null)
             .show()
@@ -336,6 +481,27 @@ class HomeFragment : Fragment() {
                     }
                     .setNegativeButton(android.R.string.cancel, null)
                     .show()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun showMoveToFolderDialog(block: AppBlock) {
+        val folders = viewModel.folders.value
+        val options = listOf(getString(R.string.folder_none_option)) + folders.map { it.title }
+        var selectedIndex = folders.indexOfFirst { it.id == block.folderId }
+            .takeIf { it >= 0 }
+            ?.plus(1)
+            ?: 0
+
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.move_to_folder_title, block.title))
+            .setSingleChoiceItems(options.toTypedArray(), selectedIndex) { _, which ->
+                selectedIndex = which
+            }
+            .setPositiveButton(R.string.move_to_folder_confirm) { _, _ ->
+                val folderId = if (selectedIndex == 0) null else folders.getOrNull(selectedIndex - 1)?.id
+                viewModel.moveBlockToFolder(block, folderId)
             }
             .setNegativeButton(android.R.string.cancel, null)
             .show()
@@ -469,6 +635,17 @@ class HomeFragment : Fragment() {
     private fun updateServiceWarning() {
         val enabled = isAccessibilityServiceEnabled()
         binding.cardServiceWarning.visibility = if (enabled) View.GONE else View.VISIBLE
+    }
+
+    private fun showDeleteFolderDialog(folder: BlockFolder) {
+        AlertDialog.Builder(requireContext())
+            .setTitle(getString(R.string.folder_delete_title))
+            .setMessage(getString(R.string.folder_delete_message, folder.title))
+            .setPositiveButton(R.string.folder_delete_confirm) { _, _ ->
+                viewModel.deleteFolder(folder)
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
     }
 
     override fun onDestroyView() {

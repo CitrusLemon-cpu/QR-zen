@@ -21,6 +21,7 @@ import android.view.inputmethod.InputMethodManager
 import androidx.core.app.NotificationCompat
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.BlockFolderDao
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.TimeBlock
@@ -45,6 +46,7 @@ import javax.inject.Inject
 class BackgroundService : Service() {
 
     @Inject lateinit var dao: AppBlockDao
+    @Inject lateinit var blockFolderDao: BlockFolderDao
     @Inject lateinit var timeBlockDao: TimeBlockDao
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -248,7 +250,7 @@ class BackgroundService : Service() {
             Prefs.pauseAllUntil = 0L
             shouldRefresh = true
         }
-        val allBlocks = dao.getAll()
+        var allBlocks = dao.getAll()
         allBlocks
             .filter { block ->
                 block.pausedUntil != 0L &&
@@ -259,6 +261,20 @@ class BackgroundService : Service() {
                 dao.setPausedUntil(block.id, 0L)
                 shouldRefresh = true
             }
+        blockFolderDao.getAll()
+            .filter { folder ->
+                folder.pausedUntil != 0L &&
+                    folder.pausedUntil != Long.MAX_VALUE &&
+                    now > folder.pausedUntil
+            }
+            .forEach { folder ->
+                blockFolderDao.setPausedUntil(folder.id, 0L)
+                dao.setPausedUntilByFolderId(folder.id, 0L)
+                shouldRefresh = true
+            }
+        if (shouldRefresh) {
+            allBlocks = dao.getAll()
+        }
         allBlocks
             .filter { block ->
                 block.blockNowUntil != 0L &&
