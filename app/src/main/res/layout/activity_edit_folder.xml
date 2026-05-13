@@ -225,6 +225,14 @@
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="12sp" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnScanQrToSet"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/edit_block_scan_custom_qr" />
+
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -418,6 +426,14 @@
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="13sp" />
             </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSave"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginBottom="16dp"
+                android:text="@string/edit_folder_save" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

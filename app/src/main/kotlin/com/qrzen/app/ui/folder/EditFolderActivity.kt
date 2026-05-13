@@ -1,5 +1,6 @@
 package com.qrzen.app.ui.folder
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.MenuItem
 import android.view.View
@@ -7,6 +8,7 @@ import android.widget.ArrayAdapter
 import android.widget.NumberPicker
 import android.widget.Toast
 import android.widget.ToggleButton
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.datepicker.MaterialDatePicker
@@ -36,6 +38,16 @@ class EditFolderActivity : AppCompatActivity() {
     @Inject lateinit var blockFolderDao: BlockFolderDao
 
     private lateinit var binding: ActivityEditFolderBinding
+
+    private val qrScanForSetLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val scanned = result.data?.getStringExtra(com.king.zxing.CameraScan.SCAN_RESULT)
+            if (!scanned.isNullOrBlank()) {
+                currentQrSecret = scanned
+                binding.tvQrSecret.text = scanned
+            }
+        }
+    }
 
     private var existingFolder: BlockFolder? = null
     private var currentQrSecret: String = ""
@@ -67,8 +79,6 @@ class EditFolderActivity : AppCompatActivity() {
         setSupportActionBar(binding.toolbar)
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         binding.toolbar.setNavigationOnClickListener { finish() }
-        binding.toolbar.inflateMenu(R.menu.menu_edit_folder)
-        binding.toolbar.setOnMenuItemClickListener(::onToolbarMenuItemSelected)
 
         setupUi()
 
@@ -90,23 +100,22 @@ class EditFolderActivity : AppCompatActivity() {
         }
     }
 
+    override fun onCreateOptionsMenu(menu: android.view.Menu): Boolean {
+        menuInflater.inflate(R.menu.menu_edit_folder, menu)
+        return true
+    }
+
     override fun onOptionsItemSelected(item: MenuItem): Boolean {
         return when (item.itemId) {
             android.R.id.home -> {
                 finish()
                 true
             }
-            else -> super.onOptionsItemSelected(item)
-        }
-    }
-
-    private fun onToolbarMenuItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
             R.id.action_save_folder -> {
                 saveFolder()
                 true
             }
-            else -> false
+            else -> super.onOptionsItemSelected(item)
         }
     }
 
@@ -140,6 +149,12 @@ class EditFolderActivity : AppCompatActivity() {
             }
         }
         binding.btnLockUntil.setOnClickListener { showLockUntilPicker() }
+
+        binding.btnScanQrToSet.setOnClickListener {
+            qrScanForSetLauncher.launch(Intent(this, com.qrzen.app.ui.lock.QrScanActivity::class.java))
+        }
+
+        binding.btnSave.setOnClickListener { saveFolder() }
     }
 
     private fun setupUnlockMethodDropdown() {
