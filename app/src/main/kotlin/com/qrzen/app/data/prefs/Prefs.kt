@@ -52,7 +52,8 @@ object Prefs {
 
     fun migrateMasterPasswordOverrideMode() {
         if (masterPasswordOverrideMode.isNotEmpty()) return
-        masterPasswordOverrideMode = if (masterPasswordEnabled && masterPassword.isNotEmpty()) {
+        val legacyEnabled = kv.decodeBool("qrzen_master_pwd_enabled", false)
+        masterPasswordOverrideMode = if (legacyEnabled && masterPassword.isNotEmpty()) {
             OVERRIDE_MASTER_PASSWORD
         } else {
             OVERRIDE_NONE
