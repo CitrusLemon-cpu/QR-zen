@@ -6,12 +6,14 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
+import com.qrzen.app.data.model.BlockFolder
 import com.qrzen.app.data.model.TimeBlock
 
-@Database(entities = [AppBlock::class, BlockEvent::class, TimeBlock::class], version = 14, exportSchema = false)
+@Database(entities = [AppBlock::class, BlockEvent::class, BlockFolder::class, TimeBlock::class], version = 15, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun appBlockDao(): AppBlockDao
     abstract fun blockEventDao(): BlockEventDao
+    abstract fun blockFolderDao(): BlockFolderDao
     abstract fun timeBlockDao(): TimeBlockDao
 
     companion object {
@@ -110,6 +112,35 @@ abstract class AppDatabase : RoomDatabase() {
         val MIGRATION_13_14 = object : Migration(13, 14) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE app_blocks ADD COLUMN autoAddNewApps INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS block_folders (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        title TEXT NOT NULL DEFAULT '',
+                        isEnabled INTEGER NOT NULL DEFAULT 1,
+                        pausedUntil INTEGER NOT NULL DEFAULT 0,
+                        isCollapsed INTEGER NOT NULL DEFAULT 0,
+                        sortOrder INTEGER NOT NULL DEFAULT 0,
+                        unlockMethod TEXT NOT NULL DEFAULT 'NONE',
+                        delayMinutes INTEGER NOT NULL DEFAULT 5,
+                        blockPassword TEXT NOT NULL DEFAULT '',
+                        typeOverText TEXT NOT NULL DEFAULT '',
+                        typeOverIsRandom INTEGER NOT NULL DEFAULT 0,
+                        editWindowStart TEXT NOT NULL DEFAULT '09:00',
+                        editWindowEnd TEXT NOT NULL DEFAULT '10:00',
+                        editWindowDays TEXT NOT NULL DEFAULT '1111111',
+                        lockUntil INTEGER NOT NULL DEFAULT 0,
+                        qrSecret TEXT NOT NULL DEFAULT '',
+                        masterPasswordEnabled INTEGER NOT NULL DEFAULT 0
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("ALTER TABLE app_blocks ADD COLUMN folderId INTEGER DEFAULT NULL")
             }
         }
     }
