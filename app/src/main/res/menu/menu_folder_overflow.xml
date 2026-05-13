@@ -1,0 +1,13 @@
+     1	<?xml version="1.0" encoding="utf-8"?>
+     2	<menu xmlns:android="http://schemas.android.com/apk/res/android">
+     3	    <item
+     4	        android:id="@+id/action_pause_folder"
+     5	        android:title="Pause" />
+     6	    <item
+     7	        android:id="@+id/action_edit_folder"
+     8	        android:title="Edit" />
+     9	    <item
+    10	        android:id="@+id/action_delete_folder"
+    11	        android:title="Delete" />
+    12	</menu>
+    13	

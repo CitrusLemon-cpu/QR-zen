@@ -1,0 +1,426 @@
+     1	<?xml version="1.0" encoding="utf-8"?>
+     2	<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+     3	    xmlns:app="http://schemas.android.com/apk/res-auto"
+     4	    android:layout_width="match_parent"
+     5	    android:layout_height="match_parent">
+     6	
+     7	    <com.google.android.material.appbar.AppBarLayout
+     8	        android:layout_width="match_parent"
+     9	        android:layout_height="wrap_content">
+    10	
+    11	        <com.google.android.material.appbar.MaterialToolbar
+    12	            android:id="@+id/toolbar"
+    13	            android:layout_width="match_parent"
+    14	            android:layout_height="?attr/actionBarSize" />
+    15	    </com.google.android.material.appbar.AppBarLayout>
+    16	
+    17	    <androidx.core.widget.NestedScrollView
+    18	        android:layout_width="match_parent"
+    19	        android:layout_height="match_parent"
+    20	        android:fillViewport="true"
+    21	        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+    22	
+    23	        <LinearLayout
+    24	            android:layout_width="match_parent"
+    25	            android:layout_height="wrap_content"
+    26	            android:orientation="vertical"
+    27	            android:padding="16dp">
+    28	
+    29	            <com.google.android.material.textfield.TextInputLayout
+    30	                android:id="@+id/tilTitle"
+    31	                style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+    32	                android:layout_width="match_parent"
+    33	                android:layout_height="wrap_content"
+    34	                android:layout_marginBottom="16dp"
+    35	                android:hint="@string/edit_folder_title_hint">
+    36	
+    37	                <com.google.android.material.textfield.TextInputEditText
+    38	                    android:id="@+id/etTitle"
+    39	                    android:layout_width="match_parent"
+    40	                    android:layout_height="wrap_content"
+    41	                    android:inputType="text"
+    42	                    android:maxLines="1" />
+    43	            </com.google.android.material.textfield.TextInputLayout>
+    44	
+    45	            <TextView
+    46	                android:layout_width="wrap_content"
+    47	                android:layout_height="wrap_content"
+    48	                android:layout_marginBottom="8dp"
+    49	                android:text="@string/unlock_method_section"
+    50	                android:textColor="?attr/colorPrimary"
+    51	                android:textSize="14sp"
+    52	                android:textStyle="bold" />
+    53	
+    54	            <com.google.android.material.textfield.TextInputLayout
+    55	                android:id="@+id/tilUnlockMethod"
+    56	                style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+    57	                android:layout_width="match_parent"
+    58	                android:layout_height="wrap_content"
+    59	                android:layout_marginBottom="12dp"
+    60	                android:hint="@string/unlock_method_section">
+    61	
+    62	                <com.google.android.material.textfield.MaterialAutoCompleteTextView
+    63	                    android:id="@+id/actUnlockMethod"
+    64	                    android:layout_width="match_parent"
+    65	                    android:layout_height="wrap_content"
+    66	                    android:inputType="none" />
+    67	            </com.google.android.material.textfield.TextInputLayout>
+    68	
+    69	            <LinearLayout
+    70	                android:id="@+id/llUnlockNone"
+    71	                android:layout_width="match_parent"
+    72	                android:layout_height="wrap_content"
+    73	                android:layout_marginBottom="16dp"
+    74	                android:orientation="vertical"
+    75	                android:visibility="gone">
+    76	
+    77	                <TextView
+    78	                    android:layout_width="match_parent"
+    79	                    android:layout_height="wrap_content"
+    80	                    android:text="@string/edit_folder_unlock_none_desc"
+    81	                    android:textColor="?attr/colorOnSurfaceVariant"
+    82	                    android:textSize="13sp" />
+    83	            </LinearLayout>
+    84	
+    85	            <LinearLayout
+    86	                android:id="@+id/llUnlockDelay"
+    87	                android:layout_width="match_parent"
+    88	                android:layout_height="wrap_content"
+    89	                android:layout_marginBottom="16dp"
+    90	                android:orientation="vertical"
+    91	                android:visibility="gone">
+    92	
+    93	                <TextView
+    94	                    android:layout_width="wrap_content"
+    95	                    android:layout_height="wrap_content"
+    96	                    android:layout_marginBottom="4dp"
+    97	                    android:text="@string/unlock_delay_label"
+    98	                    android:textColor="?attr/colorOnSurfaceVariant"
+    99	                    android:textSize="13sp" />
+   100	
+   101	                <NumberPicker
+   102	                    android:id="@+id/npDelayMinutes"
+   103	                    android:layout_width="wrap_content"
+   104	                    android:layout_height="wrap_content"
+   105	                    android:layout_marginBottom="8dp" />
+   106	
+   107	                <TextView
+   108	                    android:layout_width="match_parent"
+   109	                    android:layout_height="wrap_content"
+   110	                    android:text="@string/edit_folder_unlock_delay_desc"
+   111	                    android:textColor="?attr/colorOnSurfaceVariant"
+   112	                    android:textSize="13sp" />
+   113	            </LinearLayout>
+   114	
+   115	            <LinearLayout
+   116	                android:id="@+id/llUnlockPassword"
+   117	                android:layout_width="match_parent"
+   118	                android:layout_height="wrap_content"
+   119	                android:layout_marginBottom="16dp"
+   120	                android:orientation="vertical"
+   121	                android:visibility="gone">
+   122	
+   123	                <com.google.android.material.textfield.TextInputLayout
+   124	                    android:id="@+id/tilBlockPassword"
+   125	                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+   126	                    android:layout_width="match_parent"
+   127	                    android:layout_height="wrap_content"
+   128	                    android:layout_marginBottom="12dp"
+   129	                    android:hint="@string/unlock_password_hint">
+   130	
+   131	                    <com.google.android.material.textfield.TextInputEditText
+   132	                        android:id="@+id/etBlockPassword"
+   133	                        android:layout_width="match_parent"
+   134	                        android:layout_height="wrap_content"
+   135	                        android:inputType="textPassword" />
+   136	                </com.google.android.material.textfield.TextInputLayout>
+   137	
+   138	                <com.google.android.material.textfield.TextInputLayout
+   139	                    android:id="@+id/tilConfirmPassword"
+   140	                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+   141	                    android:layout_width="match_parent"
+   142	                    android:layout_height="wrap_content"
+   143	                    android:layout_marginBottom="8dp"
+   144	                    android:hint="@string/unlock_password_confirm_hint">
+   145	
+   146	                    <com.google.android.material.textfield.TextInputEditText
+   147	                        android:id="@+id/etConfirmPassword"
+   148	                        android:layout_width="match_parent"
+   149	                        android:layout_height="wrap_content"
+   150	                        android:inputType="textPassword" />
+   151	                </com.google.android.material.textfield.TextInputLayout>
+   152	
+   153	                <TextView
+   154	                    android:layout_width="match_parent"
+   155	                    android:layout_height="wrap_content"
+   156	                    android:text="@string/edit_folder_unlock_password_desc"
+   157	                    android:textColor="?attr/colorOnSurfaceVariant"
+   158	                    android:textSize="13sp" />
+   159	            </LinearLayout>
+   160	
+   161	            <LinearLayout
+   162	                android:id="@+id/llUnlockTypeOver"
+   163	                android:layout_width="match_parent"
+   164	                android:layout_height="wrap_content"
+   165	                android:layout_marginBottom="16dp"
+   166	                android:orientation="vertical"
+   167	                android:visibility="gone">
+   168	
+   169	                <com.google.android.material.materialswitch.MaterialSwitch
+   170	                    android:id="@+id/switchTypeOverRandom"
+   171	                    android:layout_width="match_parent"
+   172	                    android:layout_height="wrap_content"
+   173	                    android:layout_marginBottom="8dp"
+   174	                    android:text="@string/unlock_type_over_random_toggle" />
+   175	
+   176	                <TextView
+   177	                    android:id="@+id/tvTypeOverRandomInfo"
+   178	                    android:layout_width="match_parent"
+   179	                    android:layout_height="wrap_content"
+   180	                    android:layout_marginBottom="8dp"
+   181	                    android:text="A random paragraph will be generated each time."
+   182	                    android:textColor="?attr/colorOnSurfaceVariant"
+   183	                    android:textSize="13sp" />
+   184	
+   185	                <com.google.android.material.textfield.TextInputLayout
+   186	                    android:id="@+id/tilTypeOverText"
+   187	                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+   188	                    android:layout_width="match_parent"
+   189	                    android:layout_height="wrap_content"
+   190	                    android:layout_marginBottom="8dp"
+   191	                    android:hint="@string/unlock_type_over_custom_hint"
+   192	                    android:visibility="gone">
+   193	
+   194	                    <com.google.android.material.textfield.TextInputEditText
+   195	                        android:id="@+id/etTypeOverText"
+   196	                        android:layout_width="match_parent"
+   197	                        android:layout_height="wrap_content"
+   198	                        android:gravity="top|start"
+   199	                        android:inputType="textMultiLine"
+   200	                        android:minLines="3" />
+   201	                </com.google.android.material.textfield.TextInputLayout>
+   202	
+   203	                <TextView
+   204	                    android:layout_width="match_parent"
+   205	                    android:layout_height="wrap_content"
+   206	                    android:text="@string/edit_folder_unlock_type_over_desc"
+   207	                    android:textColor="?attr/colorOnSurfaceVariant"
+   208	                    android:textSize="13sp" />
+   209	            </LinearLayout>
+   210	
+   211	            <LinearLayout
+   212	                android:id="@+id/llUnlockQr"
+   213	                android:layout_width="match_parent"
+   214	                android:layout_height="wrap_content"
+   215	                android:layout_marginBottom="16dp"
+   216	                android:orientation="vertical"
+   217	                android:visibility="gone">
+   218	
+   219	                <TextView
+   220	                    android:id="@+id/tvQrSecret"
+   221	                    android:layout_width="match_parent"
+   222	                    android:layout_height="wrap_content"
+   223	                    android:layout_marginBottom="8dp"
+   224	                    android:fontFamily="monospace"
+   225	                    android:textColor="?attr/colorOnSurfaceVariant"
+   226	                    android:textSize="12sp" />
+   227	
+   228	                <TextView
+   229	                    android:layout_width="match_parent"
+   230	                    android:layout_height="wrap_content"
+   231	                    android:text="@string/edit_folder_unlock_qr_desc"
+   232	                    android:textColor="?attr/colorOnSurfaceVariant"
+   233	                    android:textSize="13sp" />
+   234	            </LinearLayout>
+   235	
+   236	            <LinearLayout
+   237	                android:id="@+id/llUnlockEditWindow"
+   238	                android:layout_width="match_parent"
+   239	                android:layout_height="wrap_content"
+   240	                android:layout_marginBottom="16dp"
+   241	                android:orientation="vertical"
+   242	                android:visibility="gone">
+   243	
+   244	                <LinearLayout
+   245	                    android:layout_width="match_parent"
+   246	                    android:layout_height="wrap_content"
+   247	                    android:layout_marginBottom="12dp"
+   248	                    android:orientation="horizontal">
+   249	
+   250	                    <com.google.android.material.button.MaterialButton
+   251	                        android:id="@+id/btnEditWindowStart"
+   252	                        style="@style/Widget.Material3.Button.OutlinedButton"
+   253	                        android:layout_width="0dp"
+   254	                        android:layout_height="wrap_content"
+   255	                        android:layout_marginEnd="8dp"
+   256	                        android:layout_weight="1"
+   257	                        android:text="@string/unlock_edit_window_start" />
+   258	
+   259	                    <com.google.android.material.button.MaterialButton
+   260	                        android:id="@+id/btnEditWindowEnd"
+   261	                        style="@style/Widget.Material3.Button.OutlinedButton"
+   262	                        android:layout_width="0dp"
+   263	                        android:layout_height="wrap_content"
+   264	                        android:layout_weight="1"
+   265	                        android:text="@string/unlock_edit_window_end" />
+   266	                </LinearLayout>
+   267	
+   268	                <TextView
+   269	                    android:layout_width="wrap_content"
+   270	                    android:layout_height="wrap_content"
+   271	                    android:layout_marginBottom="8dp"
+   272	                    android:text="@string/folder_active_days"
+   273	                    android:textColor="?attr/colorPrimary"
+   274	                    android:textSize="14sp"
+   275	                    android:textStyle="bold" />
+   276	
+   277	                <LinearLayout
+   278	                    android:layout_width="match_parent"
+   279	                    android:layout_height="wrap_content"
+   280	                    android:layout_marginBottom="8dp"
+   281	                    android:orientation="horizontal">
+   282	
+   283	                    <ToggleButton
+   284	                        android:id="@+id/toggleEditMon"
+   285	                        android:layout_width="0dp"
+   286	                        android:layout_height="wrap_content"
+   287	                        android:layout_margin="2dp"
+   288	                        android:layout_weight="1"
+   289	                        android:background="@drawable/bg_day_toggle"
+   290	                        android:checked="true"
+   291	                        android:minHeight="40dp"
+   292	                        android:minWidth="0dp"
+   293	                        android:textColor="@color/day_toggle_text"
+   294	                        android:textOff="M"
+   295	                        android:textOn="M" />
+   296	
+   297	                    <ToggleButton
+   298	                        android:id="@+id/toggleEditTue"
+   299	                        android:layout_width="0dp"
+   300	                        android:layout_height="wrap_content"
+   301	                        android:layout_margin="2dp"
+   302	                        android:layout_weight="1"
+   303	                        android:background="@drawable/bg_day_toggle"
+   304	                        android:checked="true"
+   305	                        android:minHeight="40dp"
+   306	                        android:minWidth="0dp"
+   307	                        android:textColor="@color/day_toggle_text"
+   308	                        android:textOff="T"
+   309	                        android:textOn="T" />
+   310	
+   311	                    <ToggleButton
+   312	                        android:id="@+id/toggleEditWed"
+   313	                        android:layout_width="0dp"
+   314	                        android:layout_height="wrap_content"
+   315	                        android:layout_margin="2dp"
+   316	                        android:layout_weight="1"
+   317	                        android:background="@drawable/bg_day_toggle"
+   318	                        android:checked="true"
+   319	                        android:minHeight="40dp"
+   320	                        android:minWidth="0dp"
+   321	                        android:textColor="@color/day_toggle_text"
+   322	                        android:textOff="W"
+   323	                        android:textOn="W" />
+   324	
+   325	                    <ToggleButton
+   326	                        android:id="@+id/toggleEditThu"
+   327	                        android:layout_width="0dp"
+   328	                        android:layout_height="wrap_content"
+   329	                        android:layout_margin="2dp"
+   330	                        android:layout_weight="1"
+   331	                        android:background="@drawable/bg_day_toggle"
+   332	                        android:checked="true"
+   333	                        android:minHeight="40dp"
+   334	                        android:minWidth="0dp"
+   335	                        android:textColor="@color/day_toggle_text"
+   336	                        android:textOff="T"
+   337	                        android:textOn="T" />
+   338	
+   339	                    <ToggleButton
+   340	                        android:id="@+id/toggleEditFri"
+   341	                        android:layout_width="0dp"
+   342	                        android:layout_height="wrap_content"
+   343	                        android:layout_margin="2dp"
+   344	                        android:layout_weight="1"
+   345	                        android:background="@drawable/bg_day_toggle"
+   346	                        android:checked="true"
+   347	                        android:minHeight="40dp"
+   348	                        android:minWidth="0dp"
+   349	                        android:textColor="@color/day_toggle_text"
+   350	                        android:textOff="F"
+   351	                        android:textOn="F" />
+   352	
+   353	                    <ToggleButton
+   354	                        android:id="@+id/toggleEditSat"
+   355	                        android:layout_width="0dp"
+   356	                        android:layout_height="wrap_content"
+   357	                        android:layout_margin="2dp"
+   358	                        android:layout_weight="1"
+   359	                        android:background="@drawable/bg_day_toggle"
+   360	                        android:checked="true"
+   361	                        android:minHeight="40dp"
+   362	                        android:minWidth="0dp"
+   363	                        android:textColor="@color/day_toggle_text"
+   364	                        android:textOff="S"
+   365	                        android:textOn="S" />
+   366	
+   367	                    <ToggleButton
+   368	                        android:id="@+id/toggleEditSun"
+   369	                        android:layout_width="0dp"
+   370	                        android:layout_height="wrap_content"
+   371	                        android:layout_margin="2dp"
+   372	                        android:layout_weight="1"
+   373	                        android:background="@drawable/bg_day_toggle"
+   374	                        android:checked="true"
+   375	                        android:minHeight="40dp"
+   376	                        android:minWidth="0dp"
+   377	                        android:textColor="@color/day_toggle_text"
+   378	                        android:textOff="S"
+   379	                        android:textOn="S" />
+   380	                </LinearLayout>
+   381	
+   382	                <TextView
+   383	                    android:layout_width="match_parent"
+   384	                    android:layout_height="wrap_content"
+   385	                    android:text="@string/edit_folder_unlock_edit_window_desc"
+   386	                    android:textColor="?attr/colorOnSurfaceVariant"
+   387	                    android:textSize="13sp" />
+   388	            </LinearLayout>
+   389	
+   390	            <LinearLayout
+   391	                android:id="@+id/llUnlockTimer"
+   392	                android:layout_width="match_parent"
+   393	                android:layout_height="wrap_content"
+   394	                android:layout_marginBottom="16dp"
+   395	                android:orientation="vertical"
+   396	                android:visibility="gone">
+   397	
+   398	                <com.google.android.material.button.MaterialButton
+   399	                    android:id="@+id/btnLockUntil"
+   400	                    style="@style/Widget.Material3.Button.OutlinedButton"
+   401	                    android:layout_width="match_parent"
+   402	                    android:layout_height="wrap_content"
+   403	                    android:layout_marginBottom="8dp"
+   404	                    android:text="@string/unlock_timer_pick_date" />
+   405	
+   406	                <TextView
+   407	                    android:id="@+id/tvLockUntilValue"
+   408	                    android:layout_width="match_parent"
+   409	                    android:layout_height="wrap_content"
+   410	                    android:layout_marginBottom="8dp"
+   411	                    android:textColor="?attr/colorOnSurfaceVariant"
+   412	                    android:textSize="13sp" />
+   413	
+   414	                <TextView
+   415	                    android:layout_width="match_parent"
+   416	                    android:layout_height="wrap_content"
+   417	                    android:text="@string/edit_folder_unlock_timer_desc"
+   418	                    android:textColor="?attr/colorOnSurfaceVariant"
+   419	                    android:textSize="13sp" />
+   420	            </LinearLayout>
+   421	
+   422	        </LinearLayout>
+   423	    </androidx.core.widget.NestedScrollView>
+   424	
+   425	</androidx.coordinatorlayout.widget.CoordinatorLayout>
+   426	

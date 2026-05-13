@@ -83,6 +83,11 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ui.folder.EditFolderActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".ui.block.AppPickerActivity"
             android:exported="false" />
 

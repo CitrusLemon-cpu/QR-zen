@@ -1,0 +1,100 @@
+     1	<?xml version="1.0" encoding="utf-8"?>
+     2	<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+     3	    xmlns:app="http://schemas.android.com/apk/res-auto"
+     4	    android:layout_width="match_parent"
+     5	    android:layout_height="wrap_content"
+     6	    android:layout_marginHorizontal="8dp"
+     7	    android:layout_marginVertical="4dp"
+     8	    android:clickable="true"
+     9	    android:focusable="true"
+    10	    app:cardCornerRadius="12dp"
+    11	    app:cardElevation="2dp"
+    12	    app:rippleColor="?attr/colorSurfaceVariant">
+    13	
+    14	    <LinearLayout
+    15	        android:layout_width="match_parent"
+    16	        android:layout_height="wrap_content"
+    17	        android:gravity="center_vertical"
+    18	        android:orientation="horizontal"
+    19	        android:padding="16dp">
+    20	
+    21	        <ImageView
+    22	            android:id="@+id/ivFolderIcon"
+    23	            android:layout_width="24dp"
+    24	            android:layout_height="24dp"
+    25	            android:contentDescription="@null"
+    26	            android:src="@drawable/ic_folder"
+    27	            app:tint="?attr/colorOnSurfaceVariant" />
+    28	
+    29	        <LinearLayout
+    30	            android:layout_width="0dp"
+    31	            android:layout_height="wrap_content"
+    32	            android:layout_marginStart="12dp"
+    33	            android:layout_weight="1"
+    34	            android:orientation="vertical">
+    35	
+    36	            <LinearLayout
+    37	                android:layout_width="wrap_content"
+    38	                android:layout_height="wrap_content"
+    39	                android:gravity="center_vertical"
+    40	                android:orientation="horizontal">
+    41	
+    42	                <TextView
+    43	                    android:id="@+id/tvFolderTitle"
+    44	                    android:layout_width="wrap_content"
+    45	                    android:layout_height="wrap_content"
+    46	                    android:textColor="?attr/colorOnSurface"
+    47	                    android:textSize="17sp"
+    48	                    android:textStyle="bold" />
+    49	
+    50	                <ImageView
+    51	                    android:id="@+id/ivFolderLock"
+    52	                    android:layout_width="16dp"
+    53	                    android:layout_height="16dp"
+    54	                    android:layout_marginStart="6dp"
+    55	                    android:contentDescription="@null"
+    56	                    android:src="@drawable/ic_lock"
+    57	                    android:visibility="gone"
+    58	                    app:tint="?attr/colorPrimary" />
+    59	            </LinearLayout>
+    60	
+    61	            <TextView
+    62	                android:id="@+id/tvFolderInfo"
+    63	                android:layout_width="wrap_content"
+    64	                android:layout_height="wrap_content"
+    65	                android:layout_marginTop="2dp"
+    66	                android:textColor="?attr/colorOnSurfaceVariant"
+    67	                android:textSize="13sp" />
+    68	        </LinearLayout>
+    69	
+    70	        <com.google.android.material.materialswitch.MaterialSwitch
+    71	            android:id="@+id/switchFolderEnabled"
+    72	            android:layout_width="wrap_content"
+    73	            android:layout_height="wrap_content" />
+    74	
+    75	        <ImageView
+    76	            android:id="@+id/ivExpandCollapse"
+    77	            android:layout_width="24dp"
+    78	            android:layout_height="24dp"
+    79	            android:layout_marginStart="4dp"
+    80	            android:clickable="true"
+    81	            android:contentDescription="@null"
+    82	            android:focusable="true"
+    83	            android:padding="2dp"
+    84	            android:src="@drawable/ic_expand_more"
+    85	            app:tint="?attr/colorOnSurfaceVariant" />
+    86	
+    87	        <ImageButton
+    88	            android:id="@+id/btnFolderOverflow"
+    89	            android:layout_width="40dp"
+    90	            android:layout_height="40dp"
+    91	            android:background="?attr/selectableItemBackgroundBorderless"
+    92	            android:contentDescription="More options"
+    93	            android:scaleType="center"
+    94	            android:src="@drawable/ic_more_vert"
+    95	            app:tint="?attr/colorOnSurfaceVariant" />
+    96	
+    97	    </LinearLayout>
+    98	
+    99	</com.google.android.material.card.MaterialCardView>
+   100	

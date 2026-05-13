@@ -51,6 +51,9 @@ interface AppBlockDao {
     @Query("UPDATE app_blocks SET folderId = :folderId WHERE id = :id")
     suspend fun setFolderId(id: Int, folderId: Int?)
 
+    @Query("UPDATE app_blocks SET folderId = NULL WHERE folderId = :folderId")
+    suspend fun clearFolderId(folderId: Int)
+
     @Query("UPDATE app_blocks SET pausedUntil = :until WHERE folderId = :folderId")
     suspend fun setPausedUntilByFolderId(folderId: Int, until: Long)
 
