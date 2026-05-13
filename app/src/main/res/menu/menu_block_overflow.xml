@@ -10,6 +10,9 @@
         android:id="@+id/action_lock_with_timer"
         android:title="Lock with Timer" />
     <item
+        android:id="@+id/action_move_to_folder"
+        android:title="Move to Folder" />
+    <item
         android:id="@+id/action_edit"
         android:title="Edit" />
     <item

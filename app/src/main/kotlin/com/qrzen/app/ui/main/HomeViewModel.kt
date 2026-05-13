@@ -4,8 +4,10 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.BlockFolderDao
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
+import com.qrzen.app.data.model.BlockFolder
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.widget.WidgetRefresh
@@ -13,6 +15,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,12 +23,20 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val dao: AppBlockDao,
+    private val blockFolderDao: BlockFolderDao,
     private val timeBlockDao: TimeBlockDao,
     @ApplicationContext private val ctx: Context
 ) : ViewModel() {
 
     val blocks: StateFlow<List<AppBlock>> = dao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val folders: StateFlow<List<BlockFolder>> = blockFolderDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val homeItems: StateFlow<List<HomeListItem>> = combine(blocks, folders) { blocks, folders ->
+        buildHomeItems(blocks, folders)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun delete(block: AppBlock) = viewModelScope.launch {
         Prefs.clearAllowlistUsageTimer(block.id)
@@ -132,8 +143,63 @@ class HomeViewModel @Inject constructor(
         WidgetRefresh.refresh(ctx)
     }
 
+    fun setFolderEnabled(folder: BlockFolder, enabled: Boolean) = viewModelScope.launch {
+        if (!enabled) {
+            dao.getByFolderId(folder.id).forEach { block ->
+                Prefs.clearAllowlistUsageTimer(block.id)
+                if (block.isAllowlistMode) {
+                    Prefs.clearAppTimersForBlock(block.id)
+                }
+                Prefs.clearWaitTimerState(block.id)
+                Prefs.clearScheduleWtState(block.id)
+            }
+        }
+        blockFolderDao.setEnabled(folder.id, enabled)
+        dao.setEnabledByFolderId(folder.id, enabled)
+        WidgetRefresh.refresh(ctx)
+    }
+
+    fun toggleFolderCollapsed(folder: BlockFolder) = viewModelScope.launch {
+        blockFolderDao.setCollapsed(folder.id, !folder.isCollapsed)
+    }
+
+    fun deleteFolder(folder: BlockFolder) = viewModelScope.launch {
+        dao.clearFolderId(folder.id)
+        blockFolderDao.delete(folder)
+        WidgetRefresh.refresh(ctx)
+    }
+
+    fun moveBlockToFolder(block: AppBlock, folderId: Int?) = viewModelScope.launch {
+        dao.setFolderId(block.id, folderId)
+        WidgetRefresh.refresh(ctx)
+    }
+
     suspend fun isBlockCurrentlyActive(block: AppBlock): Boolean {
         val timeBlocks = timeBlockDao.getByBlockId(block.id)
         return UnlockMethodUtils.isBlockCurrentlyActive(block, timeBlocks)
+    }
+
+    private fun buildHomeItems(blocks: List<AppBlock>, folders: List<BlockFolder>): List<HomeListItem> {
+        val items = mutableListOf<HomeListItem>()
+        val folderIds = folders.map { it.id }.toSet()
+        val blocksByFolderId = blocks.filter { it.folderId != null && it.folderId in folderIds }
+            .groupBy { it.folderId }
+
+        folders.forEach { folder ->
+            val folderBlocks = blocksByFolderId[folder.id].orEmpty()
+            items += HomeListItem.FolderHeader(folder, folderBlocks.size)
+            if (!folder.isCollapsed) {
+                folderBlocks.forEach { block ->
+                    items += HomeListItem.BlockItem(block, true)
+                }
+            }
+        }
+
+        blocks.filter { it.folderId == null || it.folderId !in folderIds }
+            .forEach { block ->
+                items += HomeListItem.BlockItem(block, false)
+            }
+
+        return items
     }
 }

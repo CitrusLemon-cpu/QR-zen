@@ -28,6 +28,7 @@ class UnlockChallengeActivity : AppCompatActivity() {
         const val ACTION_TOGGLE = "TOGGLE"
         const val ACTION_DELETE = "DELETE"
         const val ACTION_ARCHIVE = "ARCHIVE"
+        const val ACTION_MOVE_TO_FOLDER = "MOVE_TO_FOLDER"
 
         fun createIntent(context: Context, blockId: Int, action: String): Intent {
             return Intent(context, UnlockChallengeActivity::class.java).apply {
