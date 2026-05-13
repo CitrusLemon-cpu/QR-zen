@@ -13,6 +13,7 @@ class QrZenApp : Application() {
         super.onCreate()
         MMKV.initialize(this)
         Prefs.migrateMasterPasswordIfNeeded()
+        Prefs.migrateMasterPasswordOverrideMode()
         BackgroundService.start(this)
         ServiceRestartWorker.ensureScheduled(this)
     }

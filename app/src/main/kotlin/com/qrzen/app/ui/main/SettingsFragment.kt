@@ -13,6 +13,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.BlockFolderDao
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.FragmentSettingsBinding
 import com.qrzen.app.service.DiagnosticNotifier
@@ -27,10 +28,12 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
     @Inject lateinit var dao: AppBlockDao
+    @Inject lateinit var blockFolderDao: BlockFolderDao
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
-    private var isUpdatingMasterPasswordSwitch = false
+    private var isUpdatingOverrideModeSelection = false
+    private var pendingOverrideMode: String? = null
     private val masterPasswordGuard = BruteForceGuard()
     private val pauseAllOptions = listOf(
         PauseAllOption("30 minutes", 30 * 60_000L),
@@ -49,26 +52,40 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        binding.swMasterPwd.isChecked = Prefs.masterPasswordEnabled
         binding.etMasterPwd.setText("")
         binding.swRemoveNotif.isChecked = Prefs.removeNotifications
         binding.swSilentMode.isChecked = Prefs.silentMode
+        setSelectedOverrideMode(Prefs.masterPasswordOverrideMode.ifEmpty { Prefs.OVERRIDE_NONE })
         updateMasterPasswordViews()
         updatePauseAllViews()
 
-        binding.swMasterPwd.setOnCheckedChangeListener { _, checked ->
-            if (isUpdatingMasterPasswordSwitch) return@setOnCheckedChangeListener
-            if (!checked && Prefs.masterPassword.isNotEmpty()) {
-                setMasterPasswordSwitchChecked(true)
-                promptDisableMasterPassword()
+        binding.rgOverrideMode.setOnCheckedChangeListener { _, checkedId ->
+            if (isUpdatingOverrideModeSelection) return@setOnCheckedChangeListener
+            val selectedMode = modeForCheckedId(checkedId) ?: return@setOnCheckedChangeListener
+            val currentMode = Prefs.masterPasswordOverrideMode.ifEmpty { Prefs.OVERRIDE_NONE }
+            val hasMasterPassword = Prefs.masterPassword.isNotEmpty()
+
+            updateOverrideModeDescription(selectedMode)
+
+            if (selectedMode == currentMode && pendingOverrideMode == null) {
                 return@setOnCheckedChangeListener
             }
-            Prefs.masterPasswordEnabled = checked
-            if (!checked) {
-                binding.etOldPwd.text?.clear()
+
+            if (currentMode == Prefs.OVERRIDE_STRICT && selectedMode != Prefs.OVERRIDE_STRICT) {
+                viewLifecycleOwner.lifecycleScope.launch {
+                    val canExitStrictMode = dao.getAll().all { !it.isEnabled } &&
+                        blockFolderDao.getAll().all { !it.isEnabled }
+                    if (!canExitStrictMode) {
+                        setSelectedOverrideMode(Prefs.OVERRIDE_STRICT)
+                        Snackbar.make(binding.root, getString(R.string.strict_cannot_disable), Snackbar.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    handleOverrideModeSelection(currentMode, selectedMode, hasMasterPassword)
+                }
+                return@setOnCheckedChangeListener
             }
-            updateMasterPasswordViews()
-            updatePauseAllViews()
+
+            handleOverrideModeSelection(currentMode, selectedMode, hasMasterPassword)
         }
 
         binding.btnSavePwd.setOnClickListener {
@@ -86,7 +103,14 @@ class SettingsFragment : Fragment() {
             binding.tilOldPwd.error = null
             binding.tilMasterPwd.error = null
             Prefs.masterPassword = PasswordHasher.hash(newPassword)
-            Prefs.masterPasswordEnabled = true
+            val targetMode = pendingOverrideMode ?: Prefs.masterPasswordOverrideMode.ifEmpty { Prefs.OVERRIDE_MASTER_PASSWORD }
+            Prefs.masterPasswordOverrideMode = if (targetMode == Prefs.OVERRIDE_NONE) {
+                Prefs.OVERRIDE_MASTER_PASSWORD
+            } else {
+                targetMode
+            }
+            pendingOverrideMode = null
+            setSelectedOverrideMode(Prefs.masterPasswordOverrideMode)
             Snackbar.make(binding.root, "Master password saved", Snackbar.LENGTH_SHORT).show()
             binding.etOldPwd.text?.clear()
             binding.etMasterPwd.text?.clear()
@@ -141,29 +165,35 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         if (_binding != null) {
+            if (pendingOverrideMode == null) {
+                setSelectedOverrideMode(Prefs.masterPasswordOverrideMode.ifEmpty { Prefs.OVERRIDE_NONE })
+            } else {
+                updateOverrideModeDescription(pendingOverrideMode!!)
+            }
             updateMasterPasswordViews()
             updatePauseAllViews()
         }
     }
 
     private fun updateMasterPasswordViews() {
-        val masterPasswordEnabled = Prefs.masterPasswordEnabled
+        val currentMode = pendingOverrideMode ?: Prefs.masterPasswordOverrideMode.ifEmpty { Prefs.OVERRIDE_NONE }
         val hasMasterPassword = Prefs.masterPassword.isNotEmpty()
-        binding.tilOldPwd.visibility = if (masterPasswordEnabled && hasMasterPassword) View.VISIBLE else View.GONE
-        binding.tilMasterPwd.visibility = if (masterPasswordEnabled) View.VISIBLE else View.GONE
-        binding.btnSavePwd.visibility = if (masterPasswordEnabled) View.VISIBLE else View.GONE
-        if (!masterPasswordEnabled || !hasMasterPassword) {
+        binding.tilOldPwd.visibility = if (currentMode != Prefs.OVERRIDE_NONE && hasMasterPassword) View.VISIBLE else View.GONE
+        binding.tilMasterPwd.visibility = if (currentMode != Prefs.OVERRIDE_NONE) View.VISIBLE else View.GONE
+        binding.btnSavePwd.visibility = if (currentMode != Prefs.OVERRIDE_NONE) View.VISIBLE else View.GONE
+        if (currentMode == Prefs.OVERRIDE_NONE || !hasMasterPassword) {
             binding.tilOldPwd.error = null
         }
-        if (!masterPasswordEnabled) {
+        if (currentMode == Prefs.OVERRIDE_NONE) {
             binding.tilMasterPwd.error = null
         }
     }
 
     private fun updatePauseAllViews() {
-        val masterPasswordEnabled = Prefs.masterPasswordEnabled
-        binding.btnPauseAll.visibility = if (masterPasswordEnabled) View.VISIBLE else View.GONE
-        binding.btnPauseAll.isEnabled = masterPasswordEnabled
+        val mode = Prefs.masterPasswordOverrideMode.ifEmpty { Prefs.OVERRIDE_NONE }
+        val showPauseAll = mode == Prefs.OVERRIDE_MASTER_PASSWORD
+        binding.btnPauseAll.visibility = if (showPauseAll) View.VISIBLE else View.GONE
+        binding.btnPauseAll.isEnabled = showPauseAll
         val pauseAllUntil = Prefs.pauseAllUntil
         val isPauseActive = pauseAllUntil > System.currentTimeMillis()
         if (isPauseActive) {
@@ -185,14 +215,81 @@ class SettingsFragment : Fragment() {
             onVerified = {
                 Prefs.masterPassword = ""
                 Prefs.pauseAllUntil = 0L
-                Prefs.masterPasswordEnabled = false
+                Prefs.masterPasswordOverrideMode = Prefs.OVERRIDE_NONE
+                pendingOverrideMode = null
                 binding.etOldPwd.text?.clear()
                 binding.etMasterPwd.text?.clear()
                 binding.tilOldPwd.error = null
                 binding.tilMasterPwd.error = null
-                setMasterPasswordSwitchChecked(false)
+                setSelectedOverrideMode(Prefs.OVERRIDE_NONE)
                 updateMasterPasswordViews()
                 updatePauseAllViews()
+            }
+        )
+    }
+
+    private fun handleOverrideModeSelection(currentMode: String, selectedMode: String, hasMasterPassword: Boolean) {
+        when {
+            selectedMode == Prefs.OVERRIDE_NONE -> {
+                pendingOverrideMode = null
+                if (currentMode != Prefs.OVERRIDE_NONE && hasMasterPassword) {
+                    setSelectedOverrideMode(currentMode)
+                    promptDisableMasterPassword()
+                } else {
+                    applyOverrideMode(selectedMode)
+                    binding.etOldPwd.text?.clear()
+                }
+            }
+
+            !hasMasterPassword -> {
+                pendingOverrideMode = selectedMode
+                updateMasterPasswordViews()
+                updatePauseAllViews()
+                Snackbar.make(binding.root, "Set a master password first", Snackbar.LENGTH_SHORT).show()
+            }
+
+            else -> {
+                pendingOverrideMode = null
+                applyOverrideMode(selectedMode)
+            }
+        }
+    }
+
+    private fun applyOverrideMode(mode: String) {
+        Prefs.masterPasswordOverrideMode = mode
+        setSelectedOverrideMode(mode)
+        updateMasterPasswordViews()
+        updatePauseAllViews()
+    }
+
+    private fun setSelectedOverrideMode(mode: String) {
+        isUpdatingOverrideModeSelection = true
+        binding.rgOverrideMode.check(
+            when (mode) {
+                Prefs.OVERRIDE_MASTER_PASSWORD -> R.id.rbOverrideMasterPassword
+                Prefs.OVERRIDE_STRICT -> R.id.rbOverrideStrict
+                else -> R.id.rbOverrideNone
+            }
+        )
+        updateOverrideModeDescription(mode)
+        isUpdatingOverrideModeSelection = false
+    }
+
+    private fun modeForCheckedId(checkedId: Int): String? {
+        return when (checkedId) {
+            R.id.rbOverrideNone -> Prefs.OVERRIDE_NONE
+            R.id.rbOverrideMasterPassword -> Prefs.OVERRIDE_MASTER_PASSWORD
+            R.id.rbOverrideStrict -> Prefs.OVERRIDE_STRICT
+            else -> null
+        }
+    }
+
+    private fun updateOverrideModeDescription(mode: String) {
+        binding.tvOverrideModeDesc.text = getString(
+            when (mode) {
+                Prefs.OVERRIDE_MASTER_PASSWORD -> R.string.override_mode_master_password_desc
+                Prefs.OVERRIDE_STRICT -> R.string.override_mode_strict_desc
+                else -> R.string.override_mode_none_desc
             }
         )
     }
@@ -292,12 +389,6 @@ class SettingsFragment : Fragment() {
             updatePauseAllViews()
             Snackbar.make(binding.root, getString(R.string.settings_resume_all_confirm), Snackbar.LENGTH_SHORT).show()
         }
-    }
-
-    private fun setMasterPasswordSwitchChecked(checked: Boolean) {
-        isUpdatingMasterPasswordSwitch = true
-        binding.swMasterPwd.isChecked = checked
-        isUpdatingMasterPasswordSwitch = false
     }
 
     override fun onDestroyView() {

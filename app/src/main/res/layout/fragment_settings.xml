@@ -5,9 +5,45 @@
         android:orientation="vertical" android:padding="16dp">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="Security" android:textSize="14sp" android:textStyle="bold" android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
-        <com.google.android.material.materialswitch.MaterialSwitch android:id="@+id/swMasterPwd"
-            android:layout_width="match_parent" android:layout_height="wrap_content"
-            android:text="Enable master password fallback" android:layout_marginBottom="8dp" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:text="Master password override"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="13sp" />
+        <RadioGroup
+            android:id="@+id/rgOverrideMode"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rbOverrideNone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/override_mode_none" />
+
+            <RadioButton
+                android:id="@+id/rbOverrideMasterPassword"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/override_mode_master_password" />
+
+            <RadioButton
+                android:id="@+id/rbOverrideStrict"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/override_mode_strict" />
+        </RadioGroup>
+        <TextView
+            android:id="@+id/tvOverrideModeDesc"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textSize="12sp" />
         <com.google.android.material.textfield.TextInputLayout android:id="@+id/tilOldPwd"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
             android:layout_width="match_parent" android:layout_height="wrap_content"

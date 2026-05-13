@@ -17,7 +17,6 @@ import com.king.zxing.CameraScan
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.BlockEventDao
-import com.qrzen.app.data.db.BlockFolderDao
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
@@ -46,7 +45,6 @@ class LockScreenActivity : AppCompatActivity() {
 
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var blockEventDao: BlockEventDao
-    @Inject lateinit var blockFolderDao: BlockFolderDao
     @Inject lateinit var timeBlockDao: TimeBlockDao
 
     private lateinit var binding: ActivityLockScreenBinding
@@ -85,18 +83,17 @@ class LockScreenActivity : AppCompatActivity() {
             }
             currentBlock = block
             val timeBlocks = timeBlockDao.getByBlockId(block.id)
-            val ignoreMasterPassword = shouldIgnoreMasterPassword(block)
             if (Prefs.pauseAllUntil > System.currentTimeMillis()) {
                 binding.tvBlockTitle.text = block.title
                 binding.tvBlockMessage.text = getString(R.string.lock_screen_message)
                 showPauseDurationSheet(block)
                 return@launch
             }
-            setupUi(block, timeBlocks, ignoreMasterPassword)
+            setupUi(block, timeBlocks)
         }
     }
 
-    private fun setupUi(block: AppBlock, timeBlocks: List<TimeBlock>, ignoreMasterPassword: Boolean) {
+    private fun setupUi(block: AppBlock, timeBlocks: List<TimeBlock>) {
         binding.tvBlockTitle.text = block.title
         binding.tvBlockMessage.text = getString(R.string.lock_screen_message)
         setupWaitTimerCountdown(block)
@@ -140,17 +137,34 @@ class LockScreenActivity : AppCompatActivity() {
                 showPauseDurationSheet(block)
             }
         )
-        val showMasterPwd = block.masterPasswordEnabled && Prefs.masterPasswordEnabled && !ignoreMasterPassword
-        binding.btnMasterPassword.visibility = if (showMasterPwd) View.VISIBLE else View.GONE
-        binding.btnMasterPassword.setOnClickListener { showMasterPasswordDialog(block) }
+        val mode = Prefs.masterPasswordOverrideMode
+        when {
+            mode == Prefs.OVERRIDE_STRICT && block.masterPasswordEnabled && Prefs.masterPassword.isNotEmpty() -> {
+                binding.btnMasterPassword.visibility = View.VISIBLE
+                binding.btnMasterPassword.isEnabled = false
+                binding.btnMasterPassword.alpha = 0.5f
+                binding.btnMasterPassword.text = getString(R.string.lock_screen_strict_disabled)
+                binding.btnMasterPassword.setOnClickListener(null)
+            }
+
+            mode == Prefs.OVERRIDE_MASTER_PASSWORD && block.masterPasswordEnabled && Prefs.masterPassword.isNotEmpty() -> {
+                binding.btnMasterPassword.visibility = View.VISIBLE
+                binding.btnMasterPassword.isEnabled = true
+                binding.btnMasterPassword.alpha = 1.0f
+                binding.btnMasterPassword.text = getString(R.string.block_master_password)
+                binding.btnMasterPassword.setOnClickListener { showMasterPasswordDialog(block) }
+            }
+
+            else -> {
+                binding.btnMasterPassword.visibility = View.GONE
+                binding.btnMasterPassword.isEnabled = true
+                binding.btnMasterPassword.alpha = 1.0f
+                binding.btnMasterPassword.text = getString(R.string.block_master_password)
+                binding.btnMasterPassword.setOnClickListener(null)
+            }
+        }
         binding.btnGoHome.setOnClickListener { goToLauncher() }
         SilentModeHelper.applySilentMode(this)
-    }
-
-    private suspend fun shouldIgnoreMasterPassword(block: AppBlock): Boolean {
-        if (block.ignoreMasterPassword) return true
-        val folderId = block.folderId ?: return false
-        return blockFolderDao.getById(folderId)?.ignoreMasterPassword == true
     }
 
     private fun showPauseDurationSheet(block: AppBlock) {

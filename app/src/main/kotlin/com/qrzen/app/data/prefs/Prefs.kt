@@ -4,15 +4,23 @@ import com.qrzen.app.util.PasswordHasher
 import com.tencent.mmkv.MMKV
 
 object Prefs {
+    const val OVERRIDE_NONE = "none"
+    const val OVERRIDE_MASTER_PASSWORD = "master_password"
+    const val OVERRIDE_STRICT = "strict"
+
     private val kv: MMKV get() = MMKV.defaultMMKV()
 
     var masterPassword: String
         get() = kv.decodeString(KEY_MASTER_PASSWORD, "") ?: ""
         set(v) { kv.encode(KEY_MASTER_PASSWORD, v) }
 
+    var masterPasswordOverrideMode: String
+        get() = kv.decodeString(KEY_MASTER_PWD_OVERRIDE_MODE, "") ?: ""
+        set(v) { kv.encode(KEY_MASTER_PWD_OVERRIDE_MODE, v) }
+
     var masterPasswordEnabled: Boolean
-        get() = kv.decodeBool(KEY_MASTER_PWD_ENABLED, false)
-        set(v) { kv.encode(KEY_MASTER_PWD_ENABLED, v) }
+        get() = masterPasswordOverrideMode != OVERRIDE_NONE
+        set(v) { masterPasswordOverrideMode = if (v) OVERRIDE_MASTER_PASSWORD else OVERRIDE_NONE }
 
     /** Epoch millis until which all blocks are paused via master password override */
     var pauseAllUntil: Long
@@ -39,6 +47,15 @@ object Prefs {
         val current = masterPassword
         if (current.isNotEmpty() && !PasswordHasher.isHashed(current)) {
             masterPassword = PasswordHasher.hash(current)
+        }
+    }
+
+    fun migrateMasterPasswordOverrideMode() {
+        if (masterPasswordOverrideMode.isNotEmpty()) return
+        masterPasswordOverrideMode = if (masterPasswordEnabled && masterPassword.isNotEmpty()) {
+            OVERRIDE_MASTER_PASSWORD
+        } else {
+            OVERRIDE_NONE
         }
     }
 
@@ -298,7 +315,7 @@ object Prefs {
     }
 
     private const val KEY_MASTER_PASSWORD = "qrzen_master_pwd"
-    private const val KEY_MASTER_PWD_ENABLED = "qrzen_master_pwd_enabled"
+    private const val KEY_MASTER_PWD_OVERRIDE_MODE = "qrzen_master_pwd_override_mode"
     private const val KEY_PAUSE_ALL_UNTIL = "qrzen_pause_all_until"
     private const val KEY_ONBOARDING_DONE = "qrzen_onboarding_done"
     private const val KEY_REMOVE_NOTIF = "qrzen_remove_notif"
