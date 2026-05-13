@@ -42,7 +42,7 @@
     42	    private val onRestartFromPause: (AppBlock) -> Unit,
     43	    private val onLockWithTimer: (AppBlock) -> Unit,
     44	    private val onMoveToFolder: (AppBlock) -> Unit,
-    45	    private val onFolderToggle: (BlockFolder, Boolean) -> Unit,
+    45	    private val onFolderToggle: (BlockFolder, Boolean) -> Boolean,
     46	    private val onFolderExpandCollapse: (BlockFolder) -> Unit,
     47	    private val onFolderEdit: (BlockFolder) -> Unit,
     48	    private val onFolderPause: (BlockFolder) -> Unit,
@@ -93,615 +93,667 @@
     93	    }
     94	
     95	    inner class FolderViewHolder(private val binding: ItemFolderBinding) : RecyclerView.ViewHolder(binding.root) {
-    96	        fun bind(item: HomeListItem.FolderHeader) {
-    97	            val folder = item.folder
-    98	            binding.tvFolderTitle.text = folder.title
-    99	            binding.tvFolderInfo.text = buildFolderInfo(binding.root.context, folder, item.blockCount)
-   100	            binding.ivFolderLock.visibility = if (
-   101	                folder.unlockMethod.ifBlank { UnlockMethodUtils.METHOD_NONE } == UnlockMethodUtils.METHOD_NONE
-   102	            ) {
-   103	                View.GONE
-   104	            } else {
-   105	                View.VISIBLE
-   106	            }
-   107	            binding.ivExpandCollapse.setImageResource(
-   108	                if (folder.isCollapsed) R.drawable.ic_expand_more else R.drawable.ic_expand_less
-   109	            )
-   110	
-   111	            binding.switchFolderEnabled.setOnCheckedChangeListener(null)
-   112	            binding.switchFolderEnabled.isChecked = folder.isEnabled
-   113	            binding.switchFolderEnabled.setOnCheckedChangeListener { _, isChecked ->
-   114	                onFolderToggle(folder, isChecked)
-   115	            }
-   116	
-   117	            binding.root.setOnClickListener { onFolderExpandCollapse(folder) }
-   118	            binding.ivExpandCollapse.setOnClickListener { onFolderExpandCollapse(folder) }
-   119	            binding.btnFolderOverflow.setOnClickListener { showFolderPopupMenu(it, folder) }
-   120	        }
+    96	        private var pauseTimer: CountDownTimer? = null
+    97	
+    98	        fun bind(item: HomeListItem.FolderHeader) {
+    99	            val folder = item.folder
+   100	            pauseTimer?.cancel()
+   101	            pauseTimer = null
+   102	
+   103	            binding.tvFolderTitle.text = folder.title
+   104	            binding.tvFolderInfo.text = buildFolderInfo(binding.root.context, folder, item.blockCount)
+   105	            binding.ivFolderLock.visibility = if (
+   106	                folder.unlockMethod.ifBlank { UnlockMethodUtils.METHOD_NONE } == UnlockMethodUtils.METHOD_NONE
+   107	            ) {
+   108	                View.GONE
+   109	            } else {
+   110	                View.VISIBLE
+   111	            }
+   112	            binding.ivExpandCollapse.setImageResource(
+   113	                if (folder.isCollapsed) R.drawable.ic_expand_more else R.drawable.ic_expand_less
+   114	            )
+   115	
+   116	            setupPauseTimer(folder)
+   117	
+   118	            binding.switchFolderEnabled.setOnCheckedChangeListener(null)
+   119	            binding.switchFolderEnabled.isChecked = folder.isEnabled
+   120	            bindFolderToggleListener(folder)
    121	
-   122	        private fun showFolderPopupMenu(anchor: View, folder: BlockFolder) {
-   123	            val popup = PopupMenu(anchor.context, anchor)
-   124	            popup.menuInflater.inflate(R.menu.menu_folder_overflow, popup.menu)
-   125	            popup.setOnMenuItemClickListener { item ->
-   126	                when (item.itemId) {
-   127	                    R.id.action_pause_folder -> {
-   128	                        onFolderPause(folder)
-   129	                        true
-   130	                    }
-   131	                    R.id.action_edit_folder -> {
-   132	                        onFolderEdit(folder)
-   133	                        true
-   134	                    }
-   135	                    R.id.action_delete_folder -> {
-   136	                        onFolderDelete(folder)
-   137	                        true
-   138	                    }
-   139	                    else -> false
-   140	                }
-   141	            }
-   142	            popup.show()
-   143	        }
-   144	    }
-   145	
-   146	    inner class BlockViewHolder(private val binding: ItemBlockBinding) : RecyclerView.ViewHolder(binding.root) {
-   147	        private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-   148	        private var countDownTimer: CountDownTimer? = null
-   149	        private var blockNowTimer: CountDownTimer? = null
-   150	        private var lockTimer: CountDownTimer? = null
-   151	        private var activeTimer: CountDownTimer? = null
-   152	        private var pomodoroTimer: CountDownTimer? = null
-   153	        private var usageStatusTimer: CountDownTimer? = null
-   154	        private var iconLoadJob: Job? = null
-   155	        private var usageQueryJob: Job? = null
-   156	        private var boundBlockId: Int? = null
-   157	        private var boundPackages: List<String> = emptyList()
-   158	
-   159	        fun bind(item: HomeListItem.BlockItem) {
-   160	            val block = item.block
-   161	
-   162	            countDownTimer?.cancel()
-   163	            countDownTimer = null
-   164	            blockNowTimer?.cancel()
-   165	            blockNowTimer = null
-   166	            lockTimer?.cancel()
-   167	            lockTimer = null
-   168	            activeTimer?.cancel()
-   169	            activeTimer = null
-   170	            pomodoroTimer?.cancel()
-   171	            pomodoroTimer = null
-   172	            usageStatusTimer?.cancel()
-   173	            usageStatusTimer = null
-   174	            iconLoadJob?.cancel()
-   175	            iconLoadJob = null
-   176	            usageQueryJob?.cancel()
-   177	            usageQueryJob = null
-   178	
-   179	            updateIndent(item.isInFolder)
-   180	
-   181	            boundBlockId = block.id
-   182	            binding.tvTitle.text = block.title
-   183	            val modePrefix = if (block.isAllowlistMode) "Allowlist" else "Blocklist"
-   184	            when (block.blockingStyle) {
-   185	                UnlockMethodUtils.STYLE_MANUAL -> {
-   186	                    binding.tvTimeRange.text = "Manual"
-   187	                    binding.tvDays.text = modePrefix
-   188	                }
-   189	                UnlockMethodUtils.STYLE_SCHEDULE -> {
-   190	                    val timeRangeText = when (block.scheduleBreakType) {
-   191	                        UnlockMethodUtils.BREAK_POMODORO -> {
-   192	                            usageQueryJob = scope.launch {
-   193	                                val timeBlocks = withContext(Dispatchers.IO) {
-   194	                                    timeBlockDao.getByBlockId(block.id)
-   195	                                }
-   196	                                bindSchedulePomodoroPhase(block, timeBlocks)
-   197	                            }
-   198	                            "Scheduled · Pomodoro (${block.pomodoroDurationMin}m/${block.pomodoroBreakMin}m)"
-   199	                        }
-   200	                        UnlockMethodUtils.BREAK_WAIT_TIMER -> {
-   201	                            val adaptiveSuffix = if (block.waitTimerAdaptive) " · adaptive" else ""
-   202	                            "Scheduled · Wait Timer (${block.waitTimerUseMinutes}m use / ${block.waitTimerWaitMinutes}m block$adaptiveSuffix)"
-   203	                        }
-   204	                        UnlockMethodUtils.BREAK_USAGE_LIMIT -> {
-   205	                            val period = if (block.usageLimitPeriod == "HOURLY") "hour" else "day"
-   206	                            "Scheduled · Usage Limit (${block.usageLimitMinutes} min/$period)"
-   207	                        }
-   208	                        UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE ->
-   209	                            "Scheduled · Allowance (${block.scheduledAllowanceMinutes} min/window)"
-   210	                        else -> "Scheduled"
-   211	                    }
-   212	                    binding.tvTimeRange.text = timeRangeText
-   213	                    binding.tvDays.text = modePrefix
-   214	                }
-   215	                UnlockMethodUtils.STYLE_USAGE_LIMIT -> {
-   216	                    val period = if (block.usageLimitPeriod == "HOURLY") "per hour" else "per day"
-   217	                    binding.tvTimeRange.text = "${block.usageLimitMinutes} min $period"
-   218	                    binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
-   219	
-   220	                    usageQueryJob = scope.launch {
-   221	                        val remainingText = withContext(Dispatchers.IO) {
-   222	                            computeUsageLimitRemaining(binding.root.context, block)
-   223	                        }
-   224	                        binding.tvTimeRange.text = remainingText
-   225	                    }
-   226	                }
-   227	                UnlockMethodUtils.STYLE_WAIT_TIMER -> {
-   228	                    val modeLabel = if (block.waitTimerAdaptive) "Adaptive" else "Normal"
-   229	                    binding.tvTimeRange.text = "${block.waitTimerUseMinutes}m use / ${block.waitTimerWaitMinutes}m block ($modeLabel)"
-   230	                    binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
+   122	            binding.root.setOnClickListener { onFolderExpandCollapse(folder) }
+   123	            binding.ivExpandCollapse.setOnClickListener { onFolderExpandCollapse(folder) }
+   124	            binding.btnFolderOverflow.setOnClickListener { showFolderPopupMenu(it, folder) }
+   125	        }
+   126	
+   127	        private fun bindFolderToggleListener(folder: BlockFolder) {
+   128	            binding.switchFolderEnabled.setOnCheckedChangeListener { _, isChecked ->
+   129	                val accepted = onFolderToggle(folder, isChecked)
+   130	                if (!accepted) {
+   131	                    binding.switchFolderEnabled.setOnCheckedChangeListener(null)
+   132	                    binding.switchFolderEnabled.isChecked = folder.isEnabled
+   133	                    bindFolderToggleListener(folder)
+   134	                }
+   135	            }
+   136	        }
+   137	
+   138	        private fun setupPauseTimer(folder: BlockFolder) {
+   139	            val now = System.currentTimeMillis()
+   140	            if (folder.pausedUntil == Long.MAX_VALUE) {
+   141	                binding.tvFolderPauseTimer.visibility = View.VISIBLE
+   142	                binding.tvFolderPauseTimer.text = "⏸ Paused indefinitely"
+   143	                return
+   144	            }
+   145	            if (folder.pausedUntil > now) {
+   146	                val remaining = folder.pausedUntil - now
+   147	                binding.tvFolderPauseTimer.visibility = View.VISIBLE
+   148	                binding.tvFolderPauseTimer.text = "⏸ Paused – ${formatDuration(remaining)} remaining"
+   149	                pauseTimer = object : CountDownTimer(remaining, 1000L) {
+   150	                    override fun onTick(millisUntilFinished: Long) {
+   151	                        binding.tvFolderPauseTimer.text = "⏸ Paused – ${formatDuration(millisUntilFinished)} remaining"
+   152	                    }
+   153	
+   154	                    override fun onFinish() {
+   155	                        binding.tvFolderPauseTimer.visibility = View.GONE
+   156	                    }
+   157	                }.start()
+   158	            } else {
+   159	                binding.tvFolderPauseTimer.visibility = View.GONE
+   160	            }
+   161	        }
+   162	
+   163	        private fun showFolderPopupMenu(anchor: View, folder: BlockFolder) {
+   164	            val popup = PopupMenu(anchor.context, anchor)
+   165	            popup.menuInflater.inflate(R.menu.menu_folder_overflow, popup.menu)
+   166	            popup.menu.findItem(R.id.action_pause_folder)?.title = if (folder.pausedUntil > System.currentTimeMillis()) {
+   167	                "Unpause"
+   168	            } else {
+   169	                "Pause"
+   170	            }
+   171	            popup.setOnMenuItemClickListener { item ->
+   172	                when (item.itemId) {
+   173	                    R.id.action_pause_folder -> {
+   174	                        onFolderPause(folder)
+   175	                        true
+   176	                    }
+   177	                    R.id.action_edit_folder -> {
+   178	                        onFolderEdit(folder)
+   179	                        true
+   180	                    }
+   181	                    R.id.action_delete_folder -> {
+   182	                        onFolderDelete(folder)
+   183	                        true
+   184	                    }
+   185	                    else -> false
+   186	                }
+   187	            }
+   188	            popup.show()
+   189	        }
+   190	
+   191	        fun cancelTimer() {
+   192	            pauseTimer?.cancel()
+   193	            pauseTimer = null
+   194	        }
+   195	    }
+   196	
+   197	    inner class BlockViewHolder(private val binding: ItemBlockBinding) : RecyclerView.ViewHolder(binding.root) {
+   198	        private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+   199	        private var countDownTimer: CountDownTimer? = null
+   200	        private var blockNowTimer: CountDownTimer? = null
+   201	        private var lockTimer: CountDownTimer? = null
+   202	        private var activeTimer: CountDownTimer? = null
+   203	        private var pomodoroTimer: CountDownTimer? = null
+   204	        private var usageStatusTimer: CountDownTimer? = null
+   205	        private var iconLoadJob: Job? = null
+   206	        private var usageQueryJob: Job? = null
+   207	        private var boundBlockId: Int? = null
+   208	        private var boundPackages: List<String> = emptyList()
+   209	
+   210	        fun bind(item: HomeListItem.BlockItem) {
+   211	            val block = item.block
+   212	
+   213	            countDownTimer?.cancel()
+   214	            countDownTimer = null
+   215	            blockNowTimer?.cancel()
+   216	            blockNowTimer = null
+   217	            lockTimer?.cancel()
+   218	            lockTimer = null
+   219	            activeTimer?.cancel()
+   220	            activeTimer = null
+   221	            pomodoroTimer?.cancel()
+   222	            pomodoroTimer = null
+   223	            usageStatusTimer?.cancel()
+   224	            usageStatusTimer = null
+   225	            iconLoadJob?.cancel()
+   226	            iconLoadJob = null
+   227	            usageQueryJob?.cancel()
+   228	            usageQueryJob = null
+   229	
+   230	            updateIndent(item.isInFolder)
    231	
-   232	                    usageQueryJob = scope.launch {
-   233	                        val status = withContext(Dispatchers.IO) {
-   234	                            computeWaitTimerStatus(binding.root.context, block)
-   235	                        }
-   236	                        binding.tvTimeRange.text = status.text
-   237	
-   238	                        if (status.blockingRemainingMs > 0L) {
-   239	                            usageStatusTimer?.cancel()
-   240	                            usageStatusTimer = object : CountDownTimer(status.blockingRemainingMs, 1000L) {
-   241	                                override fun onTick(ms: Long) {
-   242	                                    val min = ms / 60_000
-   243	                                    val sec = (ms % 60_000) / 1000
-   244	                                    binding.tvTimeRange.text = "Blocked for ${min}m ${sec}s"
-   245	                                }
-   246	
-   247	                                override fun onFinish() {
-   248	                                    binding.tvTimeRange.text = computeWaitTimerStatus(binding.root.context, block).text
-   249	                                }
-   250	                            }.start()
-   251	                        }
-   252	                    }
-   253	                }
-   254	                UnlockMethodUtils.STYLE_POMODORO -> {
-   255	                    val state = UnlockMethodUtils.computePomodoroState(block)
-   256	                    if (state.isSessionActive) {
-   257	                        if (state.isInFocus) {
-   258	                            binding.tvTimeRange.text = "🎯 Focus ${state.currentRound}/${state.totalRounds}"
-   259	                        } else {
-   260	                            binding.tvTimeRange.text = "☕ Break ${state.currentRound}/${state.totalRounds}"
-   261	                        }
-   262	                    } else {
-   263	                        binding.tvTimeRange.text = "${block.pomodoroDurationMin}m focus / ${block.pomodoroBreakMin}m break"
-   264	                    }
-   265	                    binding.tvDays.text = modePrefix
-   266	                }
-   267	                else -> {
-   268	                    binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
+   232	            boundBlockId = block.id
+   233	            binding.tvTitle.text = block.title
+   234	            val modePrefix = if (block.isAllowlistMode) "Allowlist" else "Blocklist"
+   235	            when (block.blockingStyle) {
+   236	                UnlockMethodUtils.STYLE_MANUAL -> {
+   237	                    binding.tvTimeRange.text = "Manual"
+   238	                    binding.tvDays.text = modePrefix
+   239	                }
+   240	                UnlockMethodUtils.STYLE_SCHEDULE -> {
+   241	                    val timeRangeText = when (block.scheduleBreakType) {
+   242	                        UnlockMethodUtils.BREAK_POMODORO -> {
+   243	                            usageQueryJob = scope.launch {
+   244	                                val timeBlocks = withContext(Dispatchers.IO) {
+   245	                                    timeBlockDao.getByBlockId(block.id)
+   246	                                }
+   247	                                bindSchedulePomodoroPhase(block, timeBlocks)
+   248	                            }
+   249	                            "Scheduled · Pomodoro (${block.pomodoroDurationMin}m/${block.pomodoroBreakMin}m)"
+   250	                        }
+   251	                        UnlockMethodUtils.BREAK_WAIT_TIMER -> {
+   252	                            val adaptiveSuffix = if (block.waitTimerAdaptive) " · adaptive" else ""
+   253	                            "Scheduled · Wait Timer (${block.waitTimerUseMinutes}m use / ${block.waitTimerWaitMinutes}m block$adaptiveSuffix)"
+   254	                        }
+   255	                        UnlockMethodUtils.BREAK_USAGE_LIMIT -> {
+   256	                            val period = if (block.usageLimitPeriod == "HOURLY") "hour" else "day"
+   257	                            "Scheduled · Usage Limit (${block.usageLimitMinutes} min/$period)"
+   258	                        }
+   259	                        UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE ->
+   260	                            "Scheduled · Allowance (${block.scheduledAllowanceMinutes} min/window)"
+   261	                        else -> "Scheduled"
+   262	                    }
+   263	                    binding.tvTimeRange.text = timeRangeText
+   264	                    binding.tvDays.text = modePrefix
+   265	                }
+   266	                UnlockMethodUtils.STYLE_USAGE_LIMIT -> {
+   267	                    val period = if (block.usageLimitPeriod == "HOURLY") "per hour" else "per day"
+   268	                    binding.tvTimeRange.text = "${block.usageLimitMinutes} min $period"
    269	                    binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
-   270	                }
-   271	            }
-   272	
-   273	            val unlockSummary = UnlockMethodUtils.getUnlockMethodSummary(binding.root.context, block)
-   274	            binding.tvUnlockMethod.visibility = if (unlockSummary.isNullOrBlank()) View.GONE else View.VISIBLE
-   275	            binding.tvUnlockMethod.text = unlockSummary.orEmpty()
-   276	
-   277	            binding.switchEnabled.setOnCheckedChangeListener(null)
-   278	            binding.switchEnabled.isChecked = block.isEnabled
-   279	            bindToggleListener(block)
-   280	
-   281	            binding.btnOverflow.setOnClickListener { view ->
-   282	                showPopupMenu(view, block)
-   283	            }
-   284	
-   285	            setupPauseTimer(block)
-   286	            setupBlockNowTimer(block)
-   287	            setupLockTimer(block)
-   288	            setupActiveTimer(block)
-   289	            setupPomodoroTimer(block)
-   290	
-   291	            val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-   292	            boundPackages = packages
-   293	            if (packages.isEmpty()) {
-   294	                binding.rvBlockApps.visibility = View.GONE
-   295	                binding.rvBlockApps.adapter = null
-   296	                return
-   297	            }
-   298	
-   299	            binding.rvBlockApps.visibility = View.VISIBLE
-   300	            binding.rvBlockApps.adapter = null
-   301	            if (binding.rvBlockApps.layoutManager == null) {
-   302	                binding.rvBlockApps.layoutManager = LinearLayoutManager(binding.root.context, LinearLayoutManager.HORIZONTAL, false)
-   303	            }
-   304	
-   305	            val pm = binding.root.context.packageManager
-   306	            iconLoadJob = scope.launch {
-   307	                val icons = withContext(Dispatchers.IO) {
-   308	                    packages.mapNotNull { pkg ->
-   309	                        try {
-   310	                            val appInfo = pm.getApplicationInfo(pkg, 0)
-   311	                            BlockAppIcon(pkg, pm.getApplicationIcon(appInfo))
-   312	                        } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
-   313	                            null
-   314	                        }
+   270	
+   271	                    usageQueryJob = scope.launch {
+   272	                        val remainingText = withContext(Dispatchers.IO) {
+   273	                            computeUsageLimitRemaining(binding.root.context, block)
+   274	                        }
+   275	                        binding.tvTimeRange.text = remainingText
+   276	                    }
+   277	                }
+   278	                UnlockMethodUtils.STYLE_WAIT_TIMER -> {
+   279	                    val modeLabel = if (block.waitTimerAdaptive) "Adaptive" else "Normal"
+   280	                    binding.tvTimeRange.text = "${block.waitTimerUseMinutes}m use / ${block.waitTimerWaitMinutes}m block ($modeLabel)"
+   281	                    binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
+   282	
+   283	                    usageQueryJob = scope.launch {
+   284	                        val status = withContext(Dispatchers.IO) {
+   285	                            computeWaitTimerStatus(binding.root.context, block)
+   286	                        }
+   287	                        binding.tvTimeRange.text = status.text
+   288	
+   289	                        if (status.blockingRemainingMs > 0L) {
+   290	                            usageStatusTimer?.cancel()
+   291	                            usageStatusTimer = object : CountDownTimer(status.blockingRemainingMs, 1000L) {
+   292	                                override fun onTick(ms: Long) {
+   293	                                    val min = ms / 60_000
+   294	                                    val sec = (ms % 60_000) / 1000
+   295	                                    binding.tvTimeRange.text = "Blocked for ${min}m ${sec}s"
+   296	                                }
+   297	
+   298	                                override fun onFinish() {
+   299	                                    binding.tvTimeRange.text = computeWaitTimerStatus(binding.root.context, block).text
+   300	                                }
+   301	                            }.start()
+   302	                        }
+   303	                    }
+   304	                }
+   305	                UnlockMethodUtils.STYLE_POMODORO -> {
+   306	                    val state = UnlockMethodUtils.computePomodoroState(block)
+   307	                    if (state.isSessionActive) {
+   308	                        if (state.isInFocus) {
+   309	                            binding.tvTimeRange.text = "🎯 Focus ${state.currentRound}/${state.totalRounds}"
+   310	                        } else {
+   311	                            binding.tvTimeRange.text = "☕ Break ${state.currentRound}/${state.totalRounds}"
+   312	                        }
+   313	                    } else {
+   314	                        binding.tvTimeRange.text = "${block.pomodoroDurationMin}m focus / ${block.pomodoroBreakMin}m break"
    315	                    }
-   316	                }
-   317	                if (packages != boundPackages) return@launch
-   318	                if (icons.isEmpty()) {
-   319	                    binding.rvBlockApps.visibility = View.GONE
-   320	                    binding.rvBlockApps.adapter = null
-   321	                } else {
-   322	                    binding.rvBlockApps.visibility = View.VISIBLE
-   323	                    binding.rvBlockApps.adapter = BlockAppsIconAdapter(icons)
-   324	                }
-   325	            }
-   326	        }
+   316	                    binding.tvDays.text = modePrefix
+   317	                }
+   318	                else -> {
+   319	                    binding.tvTimeRange.text = "${block.startTime} – ${block.endTime}"
+   320	                    binding.tvDays.text = "$modePrefix · ${UnlockMethodUtils.formatDays(block.activeDays)}"
+   321	                }
+   322	            }
+   323	
+   324	            val unlockSummary = UnlockMethodUtils.getUnlockMethodSummary(binding.root.context, block)
+   325	            binding.tvUnlockMethod.visibility = if (unlockSummary.isNullOrBlank()) View.GONE else View.VISIBLE
+   326	            binding.tvUnlockMethod.text = unlockSummary.orEmpty()
    327	
-   328	        private fun updateIndent(isInFolder: Boolean) {
-   329	            val layoutParams = (binding.root.layoutParams as? ViewGroup.MarginLayoutParams)
-   330	                ?: RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-   331	            layoutParams.marginStart = dpToPx(if (isInFolder) 24 else 8)
-   332	            layoutParams.marginEnd = dpToPx(8)
-   333	            binding.root.layoutParams = layoutParams
-   334	        }
+   328	            binding.switchEnabled.setOnCheckedChangeListener(null)
+   329	            binding.switchEnabled.isChecked = block.isEnabled
+   330	            bindToggleListener(block)
+   331	
+   332	            binding.btnOverflow.setOnClickListener { view ->
+   333	                showPopupMenu(view, block)
+   334	            }
    335	
-   336	        private fun bindToggleListener(block: AppBlock) {
-   337	            binding.switchEnabled.setOnCheckedChangeListener { _, checked ->
-   338	                val accepted = onToggle(block, checked)
-   339	                if (!accepted) {
-   340	                    binding.switchEnabled.setOnCheckedChangeListener(null)
-   341	                    binding.switchEnabled.isChecked = block.isEnabled
-   342	                    bindToggleListener(block)
-   343	                }
-   344	            }
-   345	        }
-   346	
-   347	        private fun setupPauseTimer(block: AppBlock) {
-   348	            val now = System.currentTimeMillis()
-   349	            val isPaused = block.pausedUntil > now
-   350	            val isIndefinite = block.pausedUntil == Long.MAX_VALUE
-   351	
-   352	            if (isPaused || isIndefinite) {
-   353	                binding.tvPauseTimer.visibility = View.VISIBLE
-   354	                binding.tvPauseTimer.setOnClickListener {
-   355	                    onRestartFromPause(block)
-   356	                }
-   357	
-   358	                if (isIndefinite) {
-   359	                    binding.tvPauseTimer.text = "⏸ Paused indefinitely • Tap to restart"
-   360	                } else {
-   361	                    val remaining = block.pausedUntil - now
-   362	                    binding.tvPauseTimer.text = "⏸ Paused – ${formatDuration(remaining)} remaining"
-   363	                    countDownTimer = object : CountDownTimer(remaining, 1000L) {
-   364	                        override fun onTick(millisUntilFinished: Long) {
-   365	                            binding.tvPauseTimer.text = "⏸ Paused – ${formatDuration(millisUntilFinished)} remaining"
-   366	                        }
-   367	
-   368	                        override fun onFinish() {
-   369	                            binding.tvPauseTimer.visibility = View.GONE
-   370	                        }
-   371	                    }.start()
-   372	                }
-   373	            } else {
-   374	                binding.tvPauseTimer.visibility = View.GONE
-   375	            }
-   376	        }
-   377	
-   378	        private fun setupBlockNowTimer(block: AppBlock) {
-   379	            val now = System.currentTimeMillis()
-   380	            if (block.blockNowUntil > now) {
-   381	                binding.tvBlockNowTimer.visibility = View.VISIBLE
-   382	                val remaining = block.blockNowUntil - now
-   383	                binding.tvBlockNowTimer.text = "⏱ Blocking for ${formatDuration(remaining)}"
-   384	                blockNowTimer = object : CountDownTimer(remaining, 1000L) {
-   385	                    override fun onTick(ms: Long) {
-   386	                        binding.tvBlockNowTimer.text = "⏱ Blocking for ${formatDuration(ms)}"
-   387	                    }
-   388	
-   389	                    override fun onFinish() {
-   390	                        binding.tvBlockNowTimer.visibility = View.GONE
-   391	                    }
-   392	                }.start()
-   393	            } else {
-   394	                binding.tvBlockNowTimer.visibility = View.GONE
+   336	            setupPauseTimer(block)
+   337	            setupBlockNowTimer(block)
+   338	            setupLockTimer(block)
+   339	            setupActiveTimer(block)
+   340	            setupPomodoroTimer(block)
+   341	
+   342	            val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+   343	            boundPackages = packages
+   344	            if (packages.isEmpty()) {
+   345	                binding.rvBlockApps.visibility = View.GONE
+   346	                binding.rvBlockApps.adapter = null
+   347	                return
+   348	            }
+   349	
+   350	            binding.rvBlockApps.visibility = View.VISIBLE
+   351	            binding.rvBlockApps.adapter = null
+   352	            if (binding.rvBlockApps.layoutManager == null) {
+   353	                binding.rvBlockApps.layoutManager = LinearLayoutManager(binding.root.context, LinearLayoutManager.HORIZONTAL, false)
+   354	            }
+   355	
+   356	            val pm = binding.root.context.packageManager
+   357	            iconLoadJob = scope.launch {
+   358	                val icons = withContext(Dispatchers.IO) {
+   359	                    packages.mapNotNull { pkg ->
+   360	                        try {
+   361	                            val appInfo = pm.getApplicationInfo(pkg, 0)
+   362	                            BlockAppIcon(pkg, pm.getApplicationIcon(appInfo))
+   363	                        } catch (_: android.content.pm.PackageManager.NameNotFoundException) {
+   364	                            null
+   365	                        }
+   366	                    }
+   367	                }
+   368	                if (packages != boundPackages) return@launch
+   369	                if (icons.isEmpty()) {
+   370	                    binding.rvBlockApps.visibility = View.GONE
+   371	                    binding.rvBlockApps.adapter = null
+   372	                } else {
+   373	                    binding.rvBlockApps.visibility = View.VISIBLE
+   374	                    binding.rvBlockApps.adapter = BlockAppsIconAdapter(icons)
+   375	                }
+   376	            }
+   377	        }
+   378	
+   379	        private fun updateIndent(isInFolder: Boolean) {
+   380	            val layoutParams = (binding.root.layoutParams as? ViewGroup.MarginLayoutParams)
+   381	                ?: RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+   382	            layoutParams.marginStart = dpToPx(if (isInFolder) 24 else 8)
+   383	            layoutParams.marginEnd = dpToPx(8)
+   384	            binding.root.layoutParams = layoutParams
+   385	        }
+   386	
+   387	        private fun bindToggleListener(block: AppBlock) {
+   388	            binding.switchEnabled.setOnCheckedChangeListener { _, checked ->
+   389	                val accepted = onToggle(block, checked)
+   390	                if (!accepted) {
+   391	                    binding.switchEnabled.setOnCheckedChangeListener(null)
+   392	                    binding.switchEnabled.isChecked = block.isEnabled
+   393	                    bindToggleListener(block)
+   394	                }
    395	            }
    396	        }
    397	
-   398	        private fun setupLockTimer(block: AppBlock) {
+   398	        private fun setupPauseTimer(block: AppBlock) {
    399	            val now = System.currentTimeMillis()
-   400	            if (block.toggleLockUntil > now) {
-   401	                binding.tvLockTimer.visibility = View.VISIBLE
-   402	                val remaining = block.toggleLockUntil - now
-   403	                binding.tvLockTimer.text = "🔒 Locked for ${formatDuration(remaining)}"
-   404	                lockTimer = object : CountDownTimer(remaining, 1000L) {
-   405	                    override fun onTick(ms: Long) {
-   406	                        binding.tvLockTimer.text = "🔒 Locked for ${formatDuration(ms)}"
-   407	                    }
+   400	            val isPaused = block.pausedUntil > now
+   401	            val isIndefinite = block.pausedUntil == Long.MAX_VALUE
+   402	
+   403	            if (isPaused || isIndefinite) {
+   404	                binding.tvPauseTimer.visibility = View.VISIBLE
+   405	                binding.tvPauseTimer.setOnClickListener {
+   406	                    onRestartFromPause(block)
+   407	                }
    408	
-   409	                    override fun onFinish() {
-   410	                        binding.tvLockTimer.visibility = View.GONE
-   411	                    }
-   412	                }.start()
-   413	            } else {
-   414	                binding.tvLockTimer.visibility = View.GONE
-   415	            }
-   416	        }
-   417	
-   418	        private fun setupActiveTimer(block: AppBlock) {
-   419	            val now = System.currentTimeMillis()
-   420	            if (block.activeUntil > now) {
-   421	                binding.tvActiveTimer.visibility = View.VISIBLE
-   422	                val remaining = block.activeUntil - now
-   423	                val sdf = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
-   424	                val endsAt = sdf.format(java.util.Date(block.activeUntil))
-   425	                binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(remaining)} (until $endsAt)"
-   426	                activeTimer = object : CountDownTimer(remaining, 1000L) {
-   427	                    override fun onTick(ms: Long) {
-   428	                        binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(ms)} (until $endsAt)"
-   429	                    }
-   430	
-   431	                    override fun onFinish() {
-   432	                        binding.tvActiveTimer.visibility = View.GONE
-   433	                    }
-   434	                }.start()
-   435	            } else {
-   436	                binding.tvActiveTimer.visibility = View.GONE
-   437	            }
-   438	        }
+   409	                if (isIndefinite) {
+   410	                    binding.tvPauseTimer.text = "⏸ Paused indefinitely • Tap to restart"
+   411	                } else {
+   412	                    val remaining = block.pausedUntil - now
+   413	                    binding.tvPauseTimer.text = "⏸ Paused – ${formatDuration(remaining)} remaining"
+   414	                    countDownTimer = object : CountDownTimer(remaining, 1000L) {
+   415	                        override fun onTick(millisUntilFinished: Long) {
+   416	                            binding.tvPauseTimer.text = "⏸ Paused – ${formatDuration(millisUntilFinished)} remaining"
+   417	                        }
+   418	
+   419	                        override fun onFinish() {
+   420	                            binding.tvPauseTimer.visibility = View.GONE
+   421	                        }
+   422	                    }.start()
+   423	                }
+   424	            } else {
+   425	                binding.tvPauseTimer.visibility = View.GONE
+   426	            }
+   427	        }
+   428	
+   429	        private fun setupBlockNowTimer(block: AppBlock) {
+   430	            val now = System.currentTimeMillis()
+   431	            if (block.blockNowUntil > now) {
+   432	                binding.tvBlockNowTimer.visibility = View.VISIBLE
+   433	                val remaining = block.blockNowUntil - now
+   434	                binding.tvBlockNowTimer.text = "⏱ Blocking for ${formatDuration(remaining)}"
+   435	                blockNowTimer = object : CountDownTimer(remaining, 1000L) {
+   436	                    override fun onTick(ms: Long) {
+   437	                        binding.tvBlockNowTimer.text = "⏱ Blocking for ${formatDuration(ms)}"
+   438	                    }
    439	
-   440	        private fun setupPomodoroTimer(block: AppBlock) {
-   441	            if (block.blockingStyle != UnlockMethodUtils.STYLE_POMODORO) {
-   442	                return
-   443	            }
-   444	            val state = UnlockMethodUtils.computePomodoroState(block)
-   445	            if (!state.isSessionActive) {
-   446	                if (block.blockNowUntil <= System.currentTimeMillis()) {
-   447	                    binding.tvBlockNowTimer.visibility = View.GONE
-   448	                }
-   449	                return
-   450	            }
-   451	            binding.tvBlockNowTimer.visibility = View.VISIBLE
-   452	            val label = if (state.isInFocus) "🎯" else "☕"
-   453	            binding.tvBlockNowTimer.text = "$label ${formatDuration(state.periodRemainingMs)} remaining"
-   454	            pomodoroTimer = object : CountDownTimer(state.periodRemainingMs, 1000L) {
-   455	                override fun onTick(ms: Long) {
-   456	                    binding.tvBlockNowTimer.text = "$label ${formatDuration(ms)} remaining"
-   457	                }
-   458	
-   459	                override fun onFinish() {
-   460	                    binding.tvBlockNowTimer.visibility = View.GONE
-   461	                }
-   462	            }.start()
-   463	        }
-   464	
-   465	        private fun bindSchedulePomodoroPhase(block: AppBlock, timeBlocks: List<TimeBlock>) {
-   466	            if (boundBlockId != block.id) return
-   467	            val phase = UnlockMethodUtils.computeSchedulePomodoroPhase(block, timeBlocks)
-   468	            if (!phase.isActive || phase.phaseRemainingMs <= 0L) {
-   469	                binding.tvTimeRange.text = "Scheduled · Pomodoro (${block.pomodoroDurationMin}m/${block.pomodoroBreakMin}m)"
-   470	                return
-   471	            }
-   472	
-   473	            val phaseEmoji = if (phase.isInFocus) "\uD83C\uDFAF" else "\u2615"
-   474	            val phaseWord = if (phase.isInFocus) "Focus" else "Break"
-   475	            binding.tvTimeRange.text = "$phaseEmoji $phaseWord ${formatPhaseDuration(phase.phaseRemainingMs)}"
-   476	
-   477	            usageStatusTimer?.cancel()
-   478	            usageStatusTimer = object : CountDownTimer(phase.phaseRemainingMs, 1000L) {
-   479	                override fun onTick(ms: Long) {
-   480	                    binding.tvTimeRange.text = "$phaseEmoji $phaseWord ${formatPhaseDuration(ms)}"
-   481	                }
-   482	
-   483	                override fun onFinish() {
-   484	                    scope.launch {
-   485	                        bindSchedulePomodoroPhase(block, timeBlocks)
-   486	                    }
-   487	                }
-   488	            }.start()
+   440	                    override fun onFinish() {
+   441	                        binding.tvBlockNowTimer.visibility = View.GONE
+   442	                    }
+   443	                }.start()
+   444	            } else {
+   445	                binding.tvBlockNowTimer.visibility = View.GONE
+   446	            }
+   447	        }
+   448	
+   449	        private fun setupLockTimer(block: AppBlock) {
+   450	            val now = System.currentTimeMillis()
+   451	            if (block.toggleLockUntil > now) {
+   452	                binding.tvLockTimer.visibility = View.VISIBLE
+   453	                val remaining = block.toggleLockUntil - now
+   454	                binding.tvLockTimer.text = "🔒 Locked for ${formatDuration(remaining)}"
+   455	                lockTimer = object : CountDownTimer(remaining, 1000L) {
+   456	                    override fun onTick(ms: Long) {
+   457	                        binding.tvLockTimer.text = "🔒 Locked for ${formatDuration(ms)}"
+   458	                    }
+   459	
+   460	                    override fun onFinish() {
+   461	                        binding.tvLockTimer.visibility = View.GONE
+   462	                    }
+   463	                }.start()
+   464	            } else {
+   465	                binding.tvLockTimer.visibility = View.GONE
+   466	            }
+   467	        }
+   468	
+   469	        private fun setupActiveTimer(block: AppBlock) {
+   470	            val now = System.currentTimeMillis()
+   471	            if (block.activeUntil > now) {
+   472	                binding.tvActiveTimer.visibility = View.VISIBLE
+   473	                val remaining = block.activeUntil - now
+   474	                val sdf = java.text.SimpleDateFormat("h:mm a", java.util.Locale.getDefault())
+   475	                val endsAt = sdf.format(java.util.Date(block.activeUntil))
+   476	                binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(remaining)} (until $endsAt)"
+   477	                activeTimer = object : CountDownTimer(remaining, 1000L) {
+   478	                    override fun onTick(ms: Long) {
+   479	                        binding.tvActiveTimer.text = "⏱ Active for ${formatDuration(ms)} (until $endsAt)"
+   480	                    }
+   481	
+   482	                    override fun onFinish() {
+   483	                        binding.tvActiveTimer.visibility = View.GONE
+   484	                    }
+   485	                }.start()
+   486	            } else {
+   487	                binding.tvActiveTimer.visibility = View.GONE
+   488	            }
    489	        }
    490	
-   491	        private fun showPopupMenu(anchor: View, block: AppBlock) {
-   492	            val popup = PopupMenu(anchor.context, anchor)
-   493	            popup.menuInflater.inflate(R.menu.menu_block_overflow, popup.menu)
-   494	
-   495	            val now = System.currentTimeMillis()
-   496	            val isPaused = block.pausedUntil > now || block.pausedUntil == Long.MAX_VALUE
-   497	            popup.menu.findItem(R.id.action_pause)?.title = if (isPaused) "Unpause" else "Pause"
-   498	
-   499	            val isManualNoMethod = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
-   500	                UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
-   501	
-   502	            popup.menu.findItem(R.id.action_pause)?.isVisible = !isManualNoMethod
-   503	            popup.menu.findItem(R.id.action_block_now)?.isVisible = !isManualNoMethod
-   504	            popup.menu.findItem(R.id.action_lock_with_timer)?.isVisible = isManualNoMethod
-   505	
-   506	            popup.setOnMenuItemClickListener { item ->
-   507	                when (item.itemId) {
-   508	                    R.id.action_pause -> {
-   509	                        if (isPaused) onRestartFromPause(block) else onPause(block)
-   510	                        true
-   511	                    }
-   512	                    R.id.action_block_now -> {
-   513	                        onBlockNow(block)
-   514	                        true
-   515	                    }
-   516	                    R.id.action_lock_with_timer -> {
-   517	                        onLockWithTimer(block)
-   518	                        true
-   519	                    }
-   520	                    R.id.action_move_to_folder -> {
-   521	                        onMoveToFolder(block)
-   522	                        true
-   523	                    }
-   524	                    R.id.action_edit -> {
-   525	                        onEdit(block)
-   526	                        true
-   527	                    }
-   528	                    R.id.action_archive -> {
-   529	                        onArchive(block)
-   530	                        true
-   531	                    }
-   532	                    R.id.action_delete -> {
-   533	                        onDelete(block)
-   534	                        true
-   535	                    }
-   536	                    else -> false
-   537	                }
-   538	            }
-   539	            popup.show()
+   491	        private fun setupPomodoroTimer(block: AppBlock) {
+   492	            if (block.blockingStyle != UnlockMethodUtils.STYLE_POMODORO) {
+   493	                return
+   494	            }
+   495	            val state = UnlockMethodUtils.computePomodoroState(block)
+   496	            if (!state.isSessionActive) {
+   497	                if (block.blockNowUntil <= System.currentTimeMillis()) {
+   498	                    binding.tvBlockNowTimer.visibility = View.GONE
+   499	                }
+   500	                return
+   501	            }
+   502	            binding.tvBlockNowTimer.visibility = View.VISIBLE
+   503	            val label = if (state.isInFocus) "🎯" else "☕"
+   504	            binding.tvBlockNowTimer.text = "$label ${formatDuration(state.periodRemainingMs)} remaining"
+   505	            pomodoroTimer = object : CountDownTimer(state.periodRemainingMs, 1000L) {
+   506	                override fun onTick(ms: Long) {
+   507	                    binding.tvBlockNowTimer.text = "$label ${formatDuration(ms)} remaining"
+   508	                }
+   509	
+   510	                override fun onFinish() {
+   511	                    binding.tvBlockNowTimer.visibility = View.GONE
+   512	                }
+   513	            }.start()
+   514	        }
+   515	
+   516	        private fun bindSchedulePomodoroPhase(block: AppBlock, timeBlocks: List<TimeBlock>) {
+   517	            if (boundBlockId != block.id) return
+   518	            val phase = UnlockMethodUtils.computeSchedulePomodoroPhase(block, timeBlocks)
+   519	            if (!phase.isActive || phase.phaseRemainingMs <= 0L) {
+   520	                binding.tvTimeRange.text = "Scheduled · Pomodoro (${block.pomodoroDurationMin}m/${block.pomodoroBreakMin}m)"
+   521	                return
+   522	            }
+   523	
+   524	            val phaseEmoji = if (phase.isInFocus) "\uD83C\uDFAF" else "\u2615"
+   525	            val phaseWord = if (phase.isInFocus) "Focus" else "Break"
+   526	            binding.tvTimeRange.text = "$phaseEmoji $phaseWord ${formatPhaseDuration(phase.phaseRemainingMs)}"
+   527	
+   528	            usageStatusTimer?.cancel()
+   529	            usageStatusTimer = object : CountDownTimer(phase.phaseRemainingMs, 1000L) {
+   530	                override fun onTick(ms: Long) {
+   531	                    binding.tvTimeRange.text = "$phaseEmoji $phaseWord ${formatPhaseDuration(ms)}"
+   532	                }
+   533	
+   534	                override fun onFinish() {
+   535	                    scope.launch {
+   536	                        bindSchedulePomodoroPhase(block, timeBlocks)
+   537	                    }
+   538	                }
+   539	            }.start()
    540	        }
    541	
-   542	        fun cancelTimer() {
-   543	            countDownTimer?.cancel()
-   544	            countDownTimer = null
-   545	            blockNowTimer?.cancel()
-   546	            blockNowTimer = null
-   547	            lockTimer?.cancel()
-   548	            lockTimer = null
-   549	            activeTimer?.cancel()
-   550	            activeTimer = null
-   551	            pomodoroTimer?.cancel()
-   552	            pomodoroTimer = null
-   553	            usageStatusTimer?.cancel()
-   554	            usageStatusTimer = null
-   555	            iconLoadJob?.cancel()
-   556	            iconLoadJob = null
-   557	            usageQueryJob?.cancel()
-   558	            usageQueryJob = null
-   559	            boundBlockId = null
-   560	        }
-   561	    }
-   562	
-   563	    private data class WaitTimerStatus(val text: String, val blockingRemainingMs: Long)
-   564	
-   565	    override fun getItemViewType(position: Int): Int {
-   566	        return when (getItem(position)) {
-   567	            is HomeListItem.FolderHeader -> VIEW_TYPE_FOLDER
-   568	            is HomeListItem.BlockItem -> VIEW_TYPE_BLOCK
-   569	        }
-   570	    }
-   571	
-   572	    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
-   573	        return when (viewType) {
-   574	            VIEW_TYPE_FOLDER -> FolderViewHolder(ItemFolderBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-   575	            else -> BlockViewHolder(ItemBlockBinding.inflate(LayoutInflater.from(parent.context), parent, false))
-   576	        }
-   577	    }
-   578	
-   579	    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
-   580	        when (val item = getItem(position)) {
-   581	            is HomeListItem.FolderHeader -> (holder as FolderViewHolder).bind(item)
-   582	            is HomeListItem.BlockItem -> (holder as BlockViewHolder).bind(item)
-   583	        }
-   584	    }
-   585	
-   586	    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
-   587	        super.onViewRecycled(holder)
-   588	        if (holder is BlockViewHolder) {
-   589	            holder.cancelTimer()
-   590	        }
-   591	    }
+   542	        private fun showPopupMenu(anchor: View, block: AppBlock) {
+   543	            val popup = PopupMenu(anchor.context, anchor)
+   544	            popup.menuInflater.inflate(R.menu.menu_block_overflow, popup.menu)
+   545	
+   546	            val now = System.currentTimeMillis()
+   547	            val isPaused = block.pausedUntil > now || block.pausedUntil == Long.MAX_VALUE
+   548	            popup.menu.findItem(R.id.action_pause)?.title = if (isPaused) "Unpause" else "Pause"
+   549	
+   550	            val isManualNoMethod = block.blockingStyle == UnlockMethodUtils.STYLE_MANUAL &&
+   551	                UnlockMethodUtils.getNormalizedMethod(block) == UnlockMethodUtils.METHOD_NONE
+   552	
+   553	            popup.menu.findItem(R.id.action_pause)?.isVisible = !isManualNoMethod
+   554	            popup.menu.findItem(R.id.action_block_now)?.isVisible = !isManualNoMethod
+   555	            popup.menu.findItem(R.id.action_lock_with_timer)?.isVisible = isManualNoMethod
+   556	
+   557	            popup.setOnMenuItemClickListener { item ->
+   558	                when (item.itemId) {
+   559	                    R.id.action_pause -> {
+   560	                        if (isPaused) onRestartFromPause(block) else onPause(block)
+   561	                        true
+   562	                    }
+   563	                    R.id.action_block_now -> {
+   564	                        onBlockNow(block)
+   565	                        true
+   566	                    }
+   567	                    R.id.action_lock_with_timer -> {
+   568	                        onLockWithTimer(block)
+   569	                        true
+   570	                    }
+   571	                    R.id.action_move_to_folder -> {
+   572	                        onMoveToFolder(block)
+   573	                        true
+   574	                    }
+   575	                    R.id.action_edit -> {
+   576	                        onEdit(block)
+   577	                        true
+   578	                    }
+   579	                    R.id.action_archive -> {
+   580	                        onArchive(block)
+   581	                        true
+   582	                    }
+   583	                    R.id.action_delete -> {
+   584	                        onDelete(block)
+   585	                        true
+   586	                    }
+   587	                    else -> false
+   588	                }
+   589	            }
+   590	            popup.show()
+   591	        }
    592	
-   593	    private fun buildFolderInfo(context: Context, folder: BlockFolder, blockCount: Int): String {
-   594	        val blockCountText = if (blockCount == 1) "1 block" else "$blockCount blocks"
-   595	        val lockText = when (folder.unlockMethod.ifBlank { UnlockMethodUtils.METHOD_NONE }) {
-   596	            UnlockMethodUtils.METHOD_DELAY -> "${context.getString(R.string.unlock_method_delay)} lock"
-   597	            UnlockMethodUtils.METHOD_PASSWORD -> "${context.getString(R.string.unlock_method_password)} lock"
-   598	            UnlockMethodUtils.METHOD_TYPE_OVER_TEXT -> "${context.getString(R.string.unlock_method_type_over)} lock"
-   599	            UnlockMethodUtils.METHOD_QR_CODE -> "${context.getString(R.string.unlock_method_qr_code)} lock"
-   600	            UnlockMethodUtils.METHOD_EDIT_WINDOW -> "${context.getString(R.string.unlock_method_edit_window)} lock"
-   601	            UnlockMethodUtils.METHOD_TIMER -> "${context.getString(R.string.unlock_method_timer)} lock"
-   602	            else -> null
-   603	        }
-   604	        return if (lockText.isNullOrBlank()) blockCountText else "$blockCountText · $lockText"
-   605	    }
-   606	
-   607	    private fun computeUsageLimitRemaining(context: Context, block: AppBlock): String {
-   608	        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
-   609	            ?: return "${block.usageLimitMinutes}m left"
-   610	
-   611	        val now = System.currentTimeMillis()
-   612	        val startTime = when (block.usageLimitPeriod) {
-   613	            "HOURLY" -> now - 3_600_000L
-   614	            else -> {
-   615	                java.util.Calendar.getInstance().apply {
-   616	                    set(java.util.Calendar.HOUR_OF_DAY, 0)
-   617	                    set(java.util.Calendar.MINUTE, 0)
-   618	                    set(java.util.Calendar.SECOND, 0)
-   619	                    set(java.util.Calendar.MILLISECOND, 0)
-   620	                }.timeInMillis
-   621	            }
-   622	        }
-   623	        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-   624	        val events = usageStatsManager.queryEvents(startTime, now)
-   625	        val event = android.app.usage.UsageEvents.Event()
-   626	        val foregroundStartTimes = mutableMapOf<String, Long>()
-   627	        var totalUsageMs = 0L
-   628	
-   629	        while (events.hasNextEvent()) {
-   630	            events.getNextEvent(event)
-   631	            val pkg = event.packageName ?: continue
-   632	            if (pkg !in packages) continue
-   633	            when (event.eventType) {
-   634	                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> {
-   635	                    foregroundStartTimes[pkg] = event.timeStamp
-   636	                }
-   637	                android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> {
-   638	                    val start = foregroundStartTimes.remove(pkg)
-   639	                    if (start != null) {
-   640	                        totalUsageMs += (event.timeStamp - start).coerceAtLeast(0L)
-   641	                    }
-   642	                }
-   643	            }
-   644	        }
-   645	        for ((_, start) in foregroundStartTimes) {
-   646	            totalUsageMs += (now - start).coerceAtLeast(0L)
-   647	        }
-   648	
-   649	        val limitMs = block.usageLimitMinutes * 60_000L
-   650	        val remainingMs = (limitMs - totalUsageMs).coerceAtLeast(0L)
-   651	        val remainingMin = remainingMs / 60_000L
-   652	
-   653	        val periodLabel = if (block.usageLimitPeriod == "HOURLY") "this hour" else "today"
-   654	        return if (remainingMs <= 0L) {
-   655	            "Limit reached"
-   656	        } else {
-   657	            "${remainingMin}m left $periodLabel"
-   658	        }
-   659	    }
-   660	
-   661	    private fun computeWaitTimerStatus(@Suppress("UNUSED_PARAMETER") context: Context, block: AppBlock): WaitTimerStatus {
-   662	        val now = System.currentTimeMillis()
-   663	        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
-   664	        val blockingUntilKey = "wait_timer_blocking_${block.id}"
-   665	        val remainingKey = "wait_timer_remaining_${block.id}"
-   666	        val blockingUntil = kv.decodeLong(blockingUntilKey, 0L)
-   667	
-   668	        if (blockingUntil > now) {
-   669	            val remainingMs = blockingUntil - now
-   670	            val remainingMin = remainingMs / 60_000L
-   671	            return WaitTimerStatus("Blocked for ${remainingMin}m", remainingMs)
-   672	        }
-   673	
-   674	        val remaining = kv.decodeLong(remainingKey, -1L)
-   675	        val maxMs = block.waitTimerUseMinutes * 60_000L
-   676	        val actualRemaining = if (remaining < 0L) maxMs else remaining
-   677	        val remainingMin = actualRemaining / 60_000L
-   678	        val remainingSec = (actualRemaining % 60_000L) / 1000L
-   679	
-   680	        return if (actualRemaining <= 0L) {
-   681	            WaitTimerStatus("Block pending", 0L)
-   682	        } else {
-   683	            val modeLabel = if (block.waitTimerAdaptive) "Adaptive" else "Normal"
-   684	            WaitTimerStatus("${remainingMin}m ${remainingSec}s left ($modeLabel)", 0L)
-   685	        }
-   686	    }
-   687	
-   688	    private fun formatDuration(millis: Long): String {
-   689	        val totalSeconds = millis / 1000
-   690	        val hours = totalSeconds / 3600
-   691	        val minutes = (totalSeconds % 3600) / 60
-   692	        val seconds = totalSeconds % 60
-   693	        return if (hours > 0) String.format("%d:%02d:%02d", hours, minutes, seconds)
-   694	        else String.format("%d:%02d", minutes, seconds)
-   695	    }
-   696	
-   697	    private fun formatPhaseDuration(ms: Long): String {
-   698	        val min = ms / 60_000L
-   699	        val sec = (ms % 60_000L) / 1000L
-   700	        return "${min}m ${sec}s"
-   701	    }
-   702	
-   703	    private fun dpToPx(value: Int): Int {
-   704	        return (value * android.content.res.Resources.getSystem().displayMetrics.density).toInt()
-   705	    }
-   706	}
-   707	
+   593	        fun cancelTimer() {
+   594	            countDownTimer?.cancel()
+   595	            countDownTimer = null
+   596	            blockNowTimer?.cancel()
+   597	            blockNowTimer = null
+   598	            lockTimer?.cancel()
+   599	            lockTimer = null
+   600	            activeTimer?.cancel()
+   601	            activeTimer = null
+   602	            pomodoroTimer?.cancel()
+   603	            pomodoroTimer = null
+   604	            usageStatusTimer?.cancel()
+   605	            usageStatusTimer = null
+   606	            iconLoadJob?.cancel()
+   607	            iconLoadJob = null
+   608	            usageQueryJob?.cancel()
+   609	            usageQueryJob = null
+   610	            boundBlockId = null
+   611	        }
+   612	    }
+   613	
+   614	    private data class WaitTimerStatus(val text: String, val blockingRemainingMs: Long)
+   615	
+   616	    override fun getItemViewType(position: Int): Int {
+   617	        return when (getItem(position)) {
+   618	            is HomeListItem.FolderHeader -> VIEW_TYPE_FOLDER
+   619	            is HomeListItem.BlockItem -> VIEW_TYPE_BLOCK
+   620	        }
+   621	    }
+   622	
+   623	    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+   624	        return when (viewType) {
+   625	            VIEW_TYPE_FOLDER -> FolderViewHolder(ItemFolderBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+   626	            else -> BlockViewHolder(ItemBlockBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+   627	        }
+   628	    }
+   629	
+   630	    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+   631	        when (val item = getItem(position)) {
+   632	            is HomeListItem.FolderHeader -> (holder as FolderViewHolder).bind(item)
+   633	            is HomeListItem.BlockItem -> (holder as BlockViewHolder).bind(item)
+   634	        }
+   635	    }
+   636	
+   637	    override fun onViewRecycled(holder: RecyclerView.ViewHolder) {
+   638	        super.onViewRecycled(holder)
+   639	        when (holder) {
+   640	            is FolderViewHolder -> holder.cancelTimer()
+   641	            is BlockViewHolder -> holder.cancelTimer()
+   642	        }
+   643	    }
+   644	
+   645	    private fun buildFolderInfo(context: Context, folder: BlockFolder, blockCount: Int): String {
+   646	        val blockCountText = if (blockCount == 1) "1 block" else "$blockCount blocks"
+   647	        val lockText = when (folder.unlockMethod.ifBlank { UnlockMethodUtils.METHOD_NONE }) {
+   648	            UnlockMethodUtils.METHOD_DELAY -> "${context.getString(R.string.unlock_method_delay)} lock"
+   649	            UnlockMethodUtils.METHOD_PASSWORD -> "${context.getString(R.string.unlock_method_password)} lock"
+   650	            UnlockMethodUtils.METHOD_TYPE_OVER_TEXT -> "${context.getString(R.string.unlock_method_type_over)} lock"
+   651	            UnlockMethodUtils.METHOD_QR_CODE -> "${context.getString(R.string.unlock_method_qr_code)} lock"
+   652	            UnlockMethodUtils.METHOD_EDIT_WINDOW -> "${context.getString(R.string.unlock_method_edit_window)} lock"
+   653	            UnlockMethodUtils.METHOD_TIMER -> "${context.getString(R.string.unlock_method_timer)} lock"
+   654	            else -> null
+   655	        }
+   656	        return if (lockText.isNullOrBlank()) blockCountText else "$blockCountText · $lockText"
+   657	    }
+   658	
+   659	    private fun computeUsageLimitRemaining(context: Context, block: AppBlock): String {
+   660	        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+   661	            ?: return "${block.usageLimitMinutes}m left"
+   662	
+   663	        val now = System.currentTimeMillis()
+   664	        val startTime = when (block.usageLimitPeriod) {
+   665	            "HOURLY" -> now - 3_600_000L
+   666	            else -> {
+   667	                java.util.Calendar.getInstance().apply {
+   668	                    set(java.util.Calendar.HOUR_OF_DAY, 0)
+   669	                    set(java.util.Calendar.MINUTE, 0)
+   670	                    set(java.util.Calendar.SECOND, 0)
+   671	                    set(java.util.Calendar.MILLISECOND, 0)
+   672	                }.timeInMillis
+   673	            }
+   674	        }
+   675	        val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+   676	        val events = usageStatsManager.queryEvents(startTime, now)
+   677	        val event = android.app.usage.UsageEvents.Event()
+   678	        val foregroundStartTimes = mutableMapOf<String, Long>()
+   679	        var totalUsageMs = 0L
+   680	
+   681	        while (events.hasNextEvent()) {
+   682	            events.getNextEvent(event)
+   683	            val pkg = event.packageName ?: continue
+   684	            if (pkg !in packages) continue
+   685	            when (event.eventType) {
+   686	                android.app.usage.UsageEvents.Event.MOVE_TO_FOREGROUND -> {
+   687	                    foregroundStartTimes[pkg] = event.timeStamp
+   688	                }
+   689	                android.app.usage.UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+   690	                    val start = foregroundStartTimes.remove(pkg)
+   691	                    if (start != null) {
+   692	                        totalUsageMs += (event.timeStamp - start).coerceAtLeast(0L)
+   693	                    }
+   694	                }
+   695	            }
+   696	        }
+   697	        for ((_, start) in foregroundStartTimes) {
+   698	            totalUsageMs += (now - start).coerceAtLeast(0L)
+   699	        }
+   700	
+   701	        val limitMs = block.usageLimitMinutes * 60_000L
+   702	        val remainingMs = (limitMs - totalUsageMs).coerceAtLeast(0L)
+   703	        val remainingMin = remainingMs / 60_000L
+   704	
+   705	        val periodLabel = if (block.usageLimitPeriod == "HOURLY") "this hour" else "today"
+   706	        return if (remainingMs <= 0L) {
+   707	            "Limit reached"
+   708	        } else {
+   709	            "${remainingMin}m left $periodLabel"
+   710	        }
+   711	    }
+   712	
+   713	    private fun computeWaitTimerStatus(@Suppress("UNUSED_PARAMETER") context: Context, block: AppBlock): WaitTimerStatus {
+   714	        val now = System.currentTimeMillis()
+   715	        val kv = com.tencent.mmkv.MMKV.defaultMMKV()
+   716	        val blockingUntilKey = "wait_timer_blocking_${block.id}"
+   717	        val remainingKey = "wait_timer_remaining_${block.id}"
+   718	        val blockingUntil = kv.decodeLong(blockingUntilKey, 0L)
+   719	
+   720	        if (blockingUntil > now) {
+   721	            val remainingMs = blockingUntil - now
+   722	            val remainingMin = remainingMs / 60_000L
+   723	            return WaitTimerStatus("Blocked for ${remainingMin}m", remainingMs)
+   724	        }
+   725	
+   726	        val remaining = kv.decodeLong(remainingKey, -1L)
+   727	        val maxMs = block.waitTimerUseMinutes * 60_000L
+   728	        val actualRemaining = if (remaining < 0L) maxMs else remaining
+   729	        val remainingMin = actualRemaining / 60_000L
+   730	        val remainingSec = (actualRemaining % 60_000L) / 1000L
+   731	
+   732	        return if (actualRemaining <= 0L) {
+   733	            WaitTimerStatus("Block pending", 0L)
+   734	        } else {
+   735	            val modeLabel = if (block.waitTimerAdaptive) "Adaptive" else "Normal"
+   736	            WaitTimerStatus("${remainingMin}m ${remainingSec}s left ($modeLabel)", 0L)
+   737	        }
+   738	    }
+   739	
+   740	    private fun formatDuration(millis: Long): String {
+   741	        val totalSeconds = millis / 1000
+   742	        val hours = totalSeconds / 3600
+   743	        val minutes = (totalSeconds % 3600) / 60
+   744	        val seconds = totalSeconds % 60
+   745	        return if (hours > 0) String.format("%d:%02d:%02d", hours, minutes, seconds)
+   746	        else String.format("%d:%02d", minutes, seconds)
+   747	    }
+   748	
+   749	    private fun formatPhaseDuration(ms: Long): String {
+   750	        val min = ms / 60_000L
+   751	        val sec = (ms % 60_000L) / 1000L
+   752	        return "${min}m ${sec}s"
+   753	    }
+   754	
+   755	    private fun dpToPx(value: Int): Int {
+   756	        return (value * android.content.res.Resources.getSystem().displayMetrics.density).toInt()
+   757	    }
+   758	}
+   759	

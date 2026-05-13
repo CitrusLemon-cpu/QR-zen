@@ -131,76 +131,90 @@
    131	        WidgetRefresh.refresh(ctx)
    132	    }
    133	
-   134	    fun blockNow(block: AppBlock, durationMs: Long) = viewModelScope.launch {
+   134	    fun pauseFolder(folder: BlockFolder, durationMs: Long) = viewModelScope.launch {
    135	        val until = if (durationMs == Long.MAX_VALUE) Long.MAX_VALUE
    136	        else System.currentTimeMillis() + durationMs
-   137	        dao.update(block.copy(isEnabled = true, pausedUntil = 0L, blockNowUntil = until))
-   138	        WidgetRefresh.refresh(ctx)
-   139	    }
-   140	
-   141	    fun archive(block: AppBlock) = viewModelScope.launch {
-   142	        dao.setArchived(block.id, true)
-   143	        WidgetRefresh.refresh(ctx)
-   144	    }
-   145	
-   146	    fun setFolderEnabled(folder: BlockFolder, enabled: Boolean) = viewModelScope.launch {
-   147	        if (!enabled) {
-   148	            dao.getByFolderId(folder.id).forEach { block ->
-   149	                Prefs.clearAllowlistUsageTimer(block.id)
-   150	                if (block.isAllowlistMode) {
-   151	                    Prefs.clearAppTimersForBlock(block.id)
-   152	                }
-   153	                Prefs.clearWaitTimerState(block.id)
-   154	                Prefs.clearScheduleWtState(block.id)
-   155	            }
-   156	        }
-   157	        blockFolderDao.setEnabled(folder.id, enabled)
-   158	        dao.setEnabledByFolderId(folder.id, enabled)
-   159	        WidgetRefresh.refresh(ctx)
-   160	    }
-   161	
-   162	    fun toggleFolderCollapsed(folder: BlockFolder) = viewModelScope.launch {
-   163	        blockFolderDao.setCollapsed(folder.id, !folder.isCollapsed)
-   164	    }
-   165	
-   166	    fun deleteFolder(folder: BlockFolder) = viewModelScope.launch {
-   167	        dao.clearFolderId(folder.id)
-   168	        blockFolderDao.delete(folder)
-   169	        WidgetRefresh.refresh(ctx)
-   170	    }
-   171	
-   172	    fun moveBlockToFolder(block: AppBlock, folderId: Int?) = viewModelScope.launch {
-   173	        dao.setFolderId(block.id, folderId)
-   174	        WidgetRefresh.refresh(ctx)
-   175	    }
-   176	
-   177	    suspend fun isBlockCurrentlyActive(block: AppBlock): Boolean {
-   178	        val timeBlocks = timeBlockDao.getByBlockId(block.id)
-   179	        return UnlockMethodUtils.isBlockCurrentlyActive(block, timeBlocks)
-   180	    }
-   181	
-   182	    private fun buildHomeItems(blocks: List<AppBlock>, folders: List<BlockFolder>): List<HomeListItem> {
-   183	        val items = mutableListOf<HomeListItem>()
-   184	        val folderIds = folders.map { it.id }.toSet()
-   185	        val blocksByFolderId = blocks.filter { it.folderId != null && it.folderId in folderIds }
-   186	            .groupBy { it.folderId }
-   187	
-   188	        folders.forEach { folder ->
-   189	            val folderBlocks = blocksByFolderId[folder.id].orEmpty()
-   190	            items += HomeListItem.FolderHeader(folder, folderBlocks.size)
-   191	            if (!folder.isCollapsed) {
-   192	                folderBlocks.forEach { block ->
-   193	                    items += HomeListItem.BlockItem(block, true)
-   194	                }
-   195	            }
-   196	        }
-   197	
-   198	        blocks.filter { it.folderId == null || it.folderId !in folderIds }
-   199	            .forEach { block ->
-   200	                items += HomeListItem.BlockItem(block, false)
-   201	            }
-   202	
-   203	        return items
-   204	    }
-   205	}
-   206	
+   137	        blockFolderDao.setPausedUntil(folder.id, until)
+   138	        dao.setPausedUntilByFolderId(folder.id, until)
+   139	        WidgetRefresh.refresh(ctx)
+   140	    }
+   141	
+   142	    fun unpauseFolder(folder: BlockFolder) = viewModelScope.launch {
+   143	        blockFolderDao.setPausedUntil(folder.id, 0L)
+   144	        dao.setPausedUntilByFolderId(folder.id, 0L)
+   145	        WidgetRefresh.refresh(ctx)
+   146	    }
+   147	
+   148	    fun blockNow(block: AppBlock, durationMs: Long) = viewModelScope.launch {
+   149	        val until = if (durationMs == Long.MAX_VALUE) Long.MAX_VALUE
+   150	        else System.currentTimeMillis() + durationMs
+   151	        dao.update(block.copy(isEnabled = true, pausedUntil = 0L, blockNowUntil = until))
+   152	        WidgetRefresh.refresh(ctx)
+   153	    }
+   154	
+   155	    fun archive(block: AppBlock) = viewModelScope.launch {
+   156	        dao.setArchived(block.id, true)
+   157	        WidgetRefresh.refresh(ctx)
+   158	    }
+   159	
+   160	    fun setFolderEnabled(folder: BlockFolder, enabled: Boolean) = viewModelScope.launch {
+   161	        if (!enabled) {
+   162	            dao.getByFolderId(folder.id).forEach { block ->
+   163	                Prefs.clearAllowlistUsageTimer(block.id)
+   164	                if (block.isAllowlistMode) {
+   165	                    Prefs.clearAppTimersForBlock(block.id)
+   166	                }
+   167	                Prefs.clearWaitTimerState(block.id)
+   168	                Prefs.clearScheduleWtState(block.id)
+   169	            }
+   170	        }
+   171	        blockFolderDao.setEnabled(folder.id, enabled)
+   172	        dao.setEnabledByFolderId(folder.id, enabled)
+   173	        WidgetRefresh.refresh(ctx)
+   174	    }
+   175	
+   176	    fun toggleFolderCollapsed(folder: BlockFolder) = viewModelScope.launch {
+   177	        blockFolderDao.setCollapsed(folder.id, !folder.isCollapsed)
+   178	    }
+   179	
+   180	    fun deleteFolder(folder: BlockFolder) = viewModelScope.launch {
+   181	        dao.clearFolderId(folder.id)
+   182	        blockFolderDao.delete(folder)
+   183	        WidgetRefresh.refresh(ctx)
+   184	    }
+   185	
+   186	    fun moveBlockToFolder(block: AppBlock, folderId: Int?) = viewModelScope.launch {
+   187	        dao.setFolderId(block.id, folderId)
+   188	        WidgetRefresh.refresh(ctx)
+   189	    }
+   190	
+   191	    suspend fun isBlockCurrentlyActive(block: AppBlock): Boolean {
+   192	        val timeBlocks = timeBlockDao.getByBlockId(block.id)
+   193	        return UnlockMethodUtils.isBlockCurrentlyActive(block, timeBlocks)
+   194	    }
+   195	
+   196	    private fun buildHomeItems(blocks: List<AppBlock>, folders: List<BlockFolder>): List<HomeListItem> {
+   197	        val items = mutableListOf<HomeListItem>()
+   198	        val folderIds = folders.map { it.id }.toSet()
+   199	        val blocksByFolderId = blocks.filter { it.folderId != null && it.folderId in folderIds }
+   200	            .groupBy { it.folderId }
+   201	
+   202	        folders.forEach { folder ->
+   203	            val folderBlocks = blocksByFolderId[folder.id].orEmpty()
+   204	            items += HomeListItem.FolderHeader(folder, folderBlocks.size)
+   205	            if (!folder.isCollapsed) {
+   206	                folderBlocks.forEach { block ->
+   207	                    items += HomeListItem.BlockItem(block, true)
+   208	                }
+   209	            }
+   210	        }
+   211	
+   212	        blocks.filter { it.folderId == null || it.folderId !in folderIds }
+   213	            .forEach { block ->
+   214	                items += HomeListItem.BlockItem(block, false)
+   215	            }
+   216	
+   217	        return items
+   218	    }
+   219	}
+   220	
