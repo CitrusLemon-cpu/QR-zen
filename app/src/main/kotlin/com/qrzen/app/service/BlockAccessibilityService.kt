@@ -37,7 +37,6 @@ class BlockAccessibilityService : AccessibilityService() {
         private val SYSTEM_EXEMPT_PACKAGES = setOf(
             "android",
             "com.android.systemui",
-            "com.android.settings",
             "com.android.intentresolver",
             "com.android.documentsui",
             "com.google.android.documentsui",
