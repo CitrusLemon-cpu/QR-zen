@@ -161,8 +161,8 @@
    161	
    162	        binding.fabAdd.setOnClickListener {
    163	            val options = arrayOf(
-   164	                getString(R.string.home_new_blocklist_block),
-   165	                getString(R.string.home_new_allowlist_block),
+   164	                getString(R.string.block_type_blocklist),
+   165	                getString(R.string.block_type_allowlist),
    166	                getString(R.string.home_new_folder)
    167	            )
    168	            AlertDialog.Builder(requireContext())
