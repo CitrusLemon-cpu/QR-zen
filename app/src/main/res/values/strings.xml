@@ -40,6 +40,9 @@
     <string name="edit_block_auto_add_new_apps_block_desc">Newly installed apps will be automatically added to this block</string>
     <string name="edit_block_auto_add_new_apps_allow_desc">Newly installed apps will be automatically added to this allowlist</string>
     <string name="edit_block_master_pwd_toggle">Enable master password fallback</string>
+    <string name="ignore_master_password">Ignore Master Password</string>
+    <string name="ignore_master_password_desc">Master password cannot bypass this block</string>
+    <string name="ignore_master_password_folder_desc">Master password cannot bypass blocks in this folder</string>
     <string name="edit_block_save">Save Block</string>
     <string name="app_picker_title">Select Apps to Block</string>
     <string name="app_picker_search_hint">Search apps</string>

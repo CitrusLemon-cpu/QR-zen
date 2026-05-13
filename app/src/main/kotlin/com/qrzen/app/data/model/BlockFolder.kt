@@ -23,5 +23,8 @@ data class BlockFolder(
     val editWindowDays: String = "1111111",
     val lockUntil: Long = 0L,
     val qrSecret: String = "",
-    val masterPasswordEnabled: Boolean = false
+    val masterPasswordEnabled: Boolean = false,
+    /** When true, master password cannot bypass any block in this folder */
+    // TODO: Surface this in EditFolderActivity near the folder unlock method section when that UI lands.
+    val ignoreMasterPassword: Boolean = false
 )

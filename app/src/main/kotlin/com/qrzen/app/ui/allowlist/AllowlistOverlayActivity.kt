@@ -24,6 +24,7 @@ import com.king.zxing.CameraScan
 import com.qrzen.app.R
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.BlockEventDao
+import com.qrzen.app.data.db.BlockFolderDao
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
 import com.qrzen.app.data.model.BlockEvent
@@ -65,6 +66,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var timeBlockDao: TimeBlockDao
     @Inject lateinit var blockEventDao: BlockEventDao
+    @Inject lateinit var blockFolderDao: BlockFolderDao
 
     private lateinit var binding: ActivityAllowlistOverlayBinding
     private lateinit var unlockRenderer: UnlockChallengeRenderer
@@ -75,6 +77,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     private var timeBlocksByBlockId: Map<Int, List<TimeBlock>> = emptyMap()
     private val sessionRemovedApps = mutableSetOf<String>()
     private var pauseSheetShown = false
+    private var anyBlockIgnoresMasterPassword = false
     private val timeFormatter = DateTimeFormatter.ofPattern("HH:mm")
     private val masterPasswordGuard = BruteForceGuard()
     private var masterPasswordLockoutRunnable: Runnable? = null
@@ -129,6 +132,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                 finish()
                 return@launch
             }
+            anyBlockIgnoresMasterPassword = hasAnyIgnoredMasterPassword(activeBlocks)
             if (Prefs.pauseAllUntil > System.currentTimeMillis()) {
                 setupHeader()
                 showPauseDurationSheet(activeBlocks.first())
@@ -398,9 +402,22 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                 showPauseDurationSheet(block)
             }
         )
-        val showMasterPwd = block.masterPasswordEnabled && Prefs.masterPasswordEnabled
+        val showMasterPwd = block.masterPasswordEnabled && Prefs.masterPasswordEnabled && !anyBlockIgnoresMasterPassword
         binding.btnMasterPassword.visibility = if (showMasterPwd) View.VISIBLE else View.GONE
         binding.btnMasterPassword.setOnClickListener { showMasterPasswordDialog(block) }
+    }
+
+    private suspend fun hasAnyIgnoredMasterPassword(blocks: List<AppBlock>): Boolean {
+        val folderIgnoreById = mutableMapOf<Int, Boolean>()
+        for (block in blocks) {
+            if (block.ignoreMasterPassword) return true
+            val folderId = block.folderId ?: continue
+            val folderIgnoresMasterPassword = folderIgnoreById[folderId] ?: (
+                blockFolderDao.getById(folderId)?.ignoreMasterPassword == true
+            ).also { folderIgnoreById[folderId] = it }
+            if (folderIgnoresMasterPassword) return true
+        }
+        return false
     }
 
     private fun formatCountdown(millis: Long): String {
@@ -548,6 +565,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
                 finish()
                 return@launch
             }
+            anyBlockIgnoresMasterPassword = hasAnyIgnoredMasterPassword(activeBlocks)
             selectedBlockIndex = activeBlocks.indexOfFirst { it.id == previousSelectedId }
                 .takeIf { it >= 0 } ?: 0
             displayedCountdownIndex = activeBlocks.indexOfFirst { it.id == previousDisplayedId }
