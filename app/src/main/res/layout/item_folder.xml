@@ -1,109 +1,108 @@
-     1	<?xml version="1.0" encoding="utf-8"?>
-     2	<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
-     3	    xmlns:app="http://schemas.android.com/apk/res-auto"
-     4	    android:layout_width="match_parent"
-     5	    android:layout_height="wrap_content"
-     6	    android:layout_marginHorizontal="8dp"
-     7	    android:layout_marginVertical="4dp"
-     8	    android:clickable="true"
-     9	    android:focusable="true"
-    10	    app:cardCornerRadius="12dp"
-    11	    app:cardElevation="2dp"
-    12	    app:rippleColor="?attr/colorSurfaceVariant">
-    13	
-    14	    <LinearLayout
-    15	        android:layout_width="match_parent"
-    16	        android:layout_height="wrap_content"
-    17	        android:gravity="center_vertical"
-    18	        android:orientation="horizontal"
-    19	        android:padding="16dp">
-    20	
-    21	        <ImageView
-    22	            android:id="@+id/ivFolderIcon"
-    23	            android:layout_width="24dp"
-    24	            android:layout_height="24dp"
-    25	            android:contentDescription="@null"
-    26	            android:src="@drawable/ic_folder"
-    27	            app:tint="?attr/colorOnSurfaceVariant" />
-    28	
-    29	        <LinearLayout
-    30	            android:layout_width="0dp"
-    31	            android:layout_height="wrap_content"
-    32	            android:layout_marginStart="12dp"
-    33	            android:layout_weight="1"
-    34	            android:orientation="vertical">
-    35	
-    36	            <LinearLayout
-    37	                android:layout_width="wrap_content"
-    38	                android:layout_height="wrap_content"
-    39	                android:gravity="center_vertical"
-    40	                android:orientation="horizontal">
-    41	
-    42	                <TextView
-    43	                    android:id="@+id/tvFolderTitle"
-    44	                    android:layout_width="wrap_content"
-    45	                    android:layout_height="wrap_content"
-    46	                    android:textColor="?attr/colorOnSurface"
-    47	                    android:textSize="17sp"
-    48	                    android:textStyle="bold" />
-    49	
-    50	                <ImageView
-    51	                    android:id="@+id/ivFolderLock"
-    52	                    android:layout_width="16dp"
-    53	                    android:layout_height="16dp"
-    54	                    android:layout_marginStart="6dp"
-    55	                    android:contentDescription="@null"
-    56	                    android:src="@drawable/ic_lock"
-    57	                    android:visibility="gone"
-    58	                    app:tint="?attr/colorPrimary" />
-    59	            </LinearLayout>
-    60	
-    61	            <TextView
-    62	                android:id="@+id/tvFolderInfo"
-    63	                android:layout_width="wrap_content"
-    64	                android:layout_height="wrap_content"
-    65	                android:layout_marginTop="2dp"
-    66	                android:textColor="?attr/colorOnSurfaceVariant"
-    67	                android:textSize="13sp" />
-    68	
-    69	            <TextView
-    70	                android:id="@+id/tvFolderPauseTimer"
-    71	                android:layout_width="wrap_content"
-    72	                android:layout_height="wrap_content"
-    73	                android:layout_marginTop="6dp"
-    74	                android:textColor="#FFA726"
-    75	                android:textSize="13sp"
-    76	                android:visibility="gone" />
-    77	        </LinearLayout>
-    78	
-    79	        <com.google.android.material.materialswitch.MaterialSwitch
-    80	            android:id="@+id/switchFolderEnabled"
-    81	            android:layout_width="wrap_content"
-    82	            android:layout_height="wrap_content" />
-    83	
-    84	        <ImageView
-    85	            android:id="@+id/ivExpandCollapse"
-    86	            android:layout_width="24dp"
-    87	            android:layout_height="24dp"
-    88	            android:layout_marginStart="4dp"
-    89	            android:clickable="true"
-    90	            android:contentDescription="@null"
-    91	            android:focusable="true"
-    92	            android:padding="2dp"
-    93	            android:src="@drawable/ic_expand_more"
-    94	            app:tint="?attr/colorOnSurfaceVariant" />
-    95	
-    96	        <ImageButton
-    97	            android:id="@+id/btnFolderOverflow"
-    98	            android:layout_width="40dp"
-    99	            android:layout_height="40dp"
-   100	            android:background="?attr/selectableItemBackgroundBorderless"
-   101	            android:contentDescription="More options"
-   102	            android:scaleType="center"
-   103	            android:src="@drawable/ic_more_vert"
-   104	            app:tint="?attr/colorOnSurfaceVariant" />
-   105	
-   106	    </LinearLayout>
-   107	
-   108	</com.google.android.material.card.MaterialCardView>
-   109	
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="4dp"
+    android:clickable="true"
+    android:focusable="true"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:rippleColor="?attr/colorSurfaceVariant">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="16dp">
+
+        <ImageView
+            android:id="@+id/ivFolderIcon"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_folder"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvFolderTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="17sp"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/ivFolderLock"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="6dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_lock"
+                    android:visibility="gone"
+                    app:tint="?attr/colorPrimary" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvFolderInfo"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/tvFolderPauseTimer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="#FFA726"
+                android:textSize="13sp"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <com.google.android.material.materialswitch.MaterialSwitch
+            android:id="@+id/switchFolderEnabled"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <ImageView
+            android:id="@+id/ivExpandCollapse"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_marginStart="4dp"
+            android:clickable="true"
+            android:contentDescription="@null"
+            android:focusable="true"
+            android:padding="2dp"
+            android:src="@drawable/ic_expand_more"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+        <ImageButton
+            android:id="@+id/btnFolderOverflow"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="More options"
+            android:scaleType="center"
+            android:src="@drawable/ic_more_vert"
+            app:tint="?attr/colorOnSurfaceVariant" />
+
+    </LinearLayout>
+
+</com.google.android.material.card.MaterialCardView>

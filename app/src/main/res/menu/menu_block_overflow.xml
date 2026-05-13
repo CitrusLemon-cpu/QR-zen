@@ -1,25 +1,24 @@
-     1	<?xml version="1.0" encoding="utf-8"?>
-     2	<menu xmlns:android="http://schemas.android.com/apk/res/android">
-     3	    <item
-     4	        android:id="@+id/action_pause"
-     5	        android:title="Pause" />
-     6	    <item
-     7	        android:id="@+id/action_block_now"
-     8	        android:title="Block now" />
-     9	    <item
-    10	        android:id="@+id/action_lock_with_timer"
-    11	        android:title="Lock with Timer" />
-    12	    <item
-    13	        android:id="@+id/action_move_to_folder"
-    14	        android:title="Move to Folder" />
-    15	    <item
-    16	        android:id="@+id/action_edit"
-    17	        android:title="Edit" />
-    18	    <item
-    19	        android:id="@+id/action_archive"
-    20	        android:title="Archive" />
-    21	    <item
-    22	        android:id="@+id/action_delete"
-    23	        android:title="Delete" />
-    24	</menu>
-    25	
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/action_pause"
+        android:title="Pause" />
+    <item
+        android:id="@+id/action_block_now"
+        android:title="Block now" />
+    <item
+        android:id="@+id/action_lock_with_timer"
+        android:title="Lock with Timer" />
+    <item
+        android:id="@+id/action_move_to_folder"
+        android:title="Move to Folder" />
+    <item
+        android:id="@+id/action_edit"
+        android:title="Edit" />
+    <item
+        android:id="@+id/action_archive"
+        android:title="Archive" />
+    <item
+        android:id="@+id/action_delete"
+        android:title="Delete" />
+</menu>
