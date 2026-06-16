@@ -63,6 +63,7 @@ class BackgroundService : Service() {
     @Volatile private var isAccessibilityEnabled = false
     private var accessibilityBlockOverlay: AccessibilityBlockOverlay? = null
     private var packageInstallReceiver: PackageInstallReceiver? = null
+    private var audioBlockManager: AudioBlockManager? = null
     private var overlayHideCounter = 0
     private val pomodoroNotifIds = mutableMapOf<Int, Int>()
     private var nextPomodoroNotifId = 3000
@@ -190,6 +191,9 @@ class BackgroundService : Service() {
         }
         if (accessibilityBlockOverlay == null) {
             accessibilityBlockOverlay = AccessibilityBlockOverlay(this)
+        }
+        if (audioBlockManager == null) {
+            audioBlockManager = AudioBlockManager(this)
         }
         if (accessibilityObserver == null) {
             isAccessibilityEnabled = checkAccessibilityEnabled()
@@ -366,6 +370,9 @@ class BackgroundService : Service() {
                     cancelPomodoroBreakNotification(block.id)
                 }
             }
+        if (shouldRefresh) {
+            allBlocks = dao.getAll()
+        }
         val currentlyActiveIds = mutableSetOf<Int>()
         allBlocks
             .filter { it.isEnabled && !it.isArchived && it.pausedUntil <= now }
@@ -381,6 +388,7 @@ class BackgroundService : Service() {
         }
         if (shouldRefresh) WidgetRefresh.refresh(applicationContext)
         resetAppTimersOnWindowChange(allBlocks)
+        refreshAudioBlocking(allBlocks)
 
         val hasActiveBlocks = currentlyActiveIds.isNotEmpty()
         val hasWaitTimerBlocks = allBlocks.any {
@@ -901,12 +909,35 @@ class BackgroundService : Service() {
         return lastPkg
     }
 
+    private suspend fun refreshAudioBlocking(blocks: List<AppBlock>, foregroundPkg: String? = null) {
+        val now = System.currentTimeMillis()
+        val packages = if (Prefs.pauseAllUntil > now) {
+            emptySet()
+        } else {
+            blocks
+                .filter { it.blockAudio && it.isEnabled && !it.isArchived && now > it.pausedUntil }
+                .filter { isBlockActive(it, foregroundPkg) }
+                .flatMap { block ->
+                    block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                }
+                .toSet()
+        }
+        val manager = audioBlockManager ?: return
+        manager.updateBlockedPackages(packages)
+        if (packages.isEmpty()) {
+            manager.stop()
+        } else {
+            manager.start()
+        }
+    }
+
     private suspend fun checkForegroundApp() {
         isAccessibilityEnabled = checkAccessibilityEnabled()
         val now = System.currentTimeMillis()
         val allCandidates = dao.getAll().filter {
             it.isEnabled && !it.isArchived && now > it.pausedUntil
         }
+        refreshAudioBlocking(allCandidates)
         if (isDeviceLocked()) {
             overlayHideCounter = OVERLAY_HIDE_DEBOUNCE
             waitTimerOverlay?.hide()
@@ -959,6 +990,7 @@ class BackgroundService : Service() {
         for (block in allCandidates) {
             if (isBlockActive(block, pkg)) activeBlocks.add(block)
         }
+        refreshAudioBlocking(allCandidates, pkg)
 
         val blocklistBlock = activeBlocks
             .filter { !it.isAllowlistMode }
@@ -1328,6 +1360,8 @@ class BackgroundService : Service() {
             try { unregisterReceiver(it) } catch (_: Exception) {}
             packageInstallReceiver = null
         }
+        audioBlockManager?.destroy()
+        audioBlockManager = null
         iconCache.clear()
         scope.cancel()
         stopUsagePolling()

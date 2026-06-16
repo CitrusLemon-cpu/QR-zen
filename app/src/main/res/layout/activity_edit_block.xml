@@ -74,6 +74,14 @@
                 android:layout_marginBottom="16dp"
                 android:text="@string/edit_block_auto_add_new_apps" />
 
+            <com.google.android.material.switchmaterial.SwitchMaterial
+                android:id="@+id/switchBlockAudio"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"
+                android:contentDescription="@string/edit_block_block_audio_desc"
+                android:text="@string/edit_block_block_audio" />
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
