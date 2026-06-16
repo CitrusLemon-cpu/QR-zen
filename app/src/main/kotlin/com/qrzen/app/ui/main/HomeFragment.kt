@@ -128,7 +128,11 @@ class HomeFragment : Fragment() {
                 }
             },
             onPause = { block ->
-                requestUnlock(block, UnlockChallengeActivity.ACTION_PAUSE)
+                if (block.pausedUntil > System.currentTimeMillis() || block.pausedUntil == Long.MAX_VALUE) {
+                    viewModel.unpause(block)
+                } else {
+                    requestUnlock(block, UnlockChallengeActivity.ACTION_PAUSE)
+                }
             },
             onBlockNow = { block -> showBlockNowDurationPicker(block) },
             onEdit = { block ->
@@ -170,7 +174,11 @@ class HomeFragment : Fragment() {
                 requestFolderUnlock(folder, UnlockChallengeActivity.ACTION_FOLDER_EDIT)
             },
             onFolderPause = { folder ->
-                requestFolderUnlock(folder, UnlockChallengeActivity.ACTION_FOLDER_PAUSE)
+                if (folder.pausedUntil > System.currentTimeMillis() || folder.pausedUntil == Long.MAX_VALUE) {
+                    viewModel.unpauseFolder(folder)
+                } else {
+                    requestFolderUnlock(folder, UnlockChallengeActivity.ACTION_FOLDER_PAUSE)
+                }
             },
             onFolderDelete = { folder ->
                 requestFolderUnlock(folder, UnlockChallengeActivity.ACTION_FOLDER_DELETE)
