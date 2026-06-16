@@ -17,6 +17,7 @@ import com.qrzen.app.R
 import com.qrzen.app.data.backup.BlockBackup
 import com.qrzen.app.data.backup.BlockBackupManager
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.AppDatabase
 import com.qrzen.app.data.db.BlockFolderDao
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.prefs.Prefs
@@ -39,6 +40,7 @@ class SettingsFragment : Fragment() {
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var blockFolderDao: BlockFolderDao
     @Inject lateinit var timeBlockDao: TimeBlockDao
+    @Inject lateinit var db: AppDatabase
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
@@ -54,26 +56,26 @@ class SettingsFragment : Fragment() {
         PauseAllOption("12 hours", 12 * 60 * 60_000L),
         PauseAllOption("24 hours", 24 * 60 * 60_000L)
     )
-    private val backupManager by lazy { BlockBackupManager(dao, blockFolderDao, timeBlockDao) }
-    private var pendingExportRequest: PendingExportRequest? = null
+    private val backupManager by lazy { BlockBackupManager(db, dao, blockFolderDao, timeBlockDao) }
     private val exportBlocksLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        val exportRequest = pendingExportRequest ?: return@registerForActivityResult
-        pendingExportRequest = null
         val uri = result.data?.data ?: return@registerForActivityResult
         viewLifecycleOwner.lifecycleScope.launch {
             runCatching {
                 withContext(Dispatchers.IO) {
+                    val json = backupManager.export()
+                    val backup = BlockBackup.fromJson(JSONObject(json))
                     requireContext().contentResolver.openOutputStream(uri)?.use { output ->
-                        output.write(exportRequest.json.toByteArray())
+                        output.write(json.toByteArray())
                     } ?: error("Unable to open destination file")
+                    backup
                 }
-            }.onSuccess {
+            }.onSuccess { backup ->
                 Snackbar.make(
                     binding.root,
                     getString(
                         R.string.settings_export_success,
-                        exportRequest.blocksExported,
-                        exportRequest.foldersExported
+                        backup.blocks.size,
+                        backup.folders.size
                     ),
                     Snackbar.LENGTH_LONG
                 ).show()
@@ -462,11 +464,6 @@ class SettingsFragment : Fragment() {
                     Snackbar.make(binding.root, getString(R.string.settings_export_empty), Snackbar.LENGTH_SHORT).show()
                     return@onSuccess
                 }
-                pendingExportRequest = PendingExportRequest(
-                    json = json,
-                    blocksExported = backup.blocks.size,
-                    foldersExported = backup.folders.size
-                )
                 exportBlocksLauncher.launch(
                     Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                         addCategory(Intent.CATEGORY_OPENABLE)
@@ -554,9 +551,4 @@ class SettingsFragment : Fragment() {
     }
 
     private data class PauseAllOption(val label: String, val durationMs: Long)
-    private data class PendingExportRequest(
-        val json: String,
-        val blocksExported: Int,
-        val foldersExported: Int
-    )
 }

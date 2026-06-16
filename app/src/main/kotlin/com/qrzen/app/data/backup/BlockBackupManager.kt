@@ -1,6 +1,8 @@
 package com.qrzen.app.data.backup
 
+import androidx.room.withTransaction
 import com.qrzen.app.data.db.AppBlockDao
+import com.qrzen.app.data.db.AppDatabase
 import com.qrzen.app.data.db.BlockFolderDao
 import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.model.AppBlock
@@ -15,6 +17,7 @@ data class ImportResult(
 )
 
 class BlockBackupManager(
+    private val db: AppDatabase,
     private val appBlockDao: AppBlockDao,
     private val blockFolderDao: BlockFolderDao,
     private val timeBlockDao: TimeBlockDao
@@ -95,101 +98,103 @@ class BlockBackupManager(
             "Unsupported backup version: ${backup.version}"
         }
 
-        val folderIdMap = mutableMapOf<Int, Int>()
-        backup.folders.forEach { folder ->
-            val newFolderId = blockFolderDao.insert(
-                BlockFolder(
-                    title = folder.title,
-                    isEnabled = folder.isEnabled,
-                    pausedUntil = 0L,
-                    isCollapsed = folder.isCollapsed,
-                    sortOrder = folder.sortOrder,
-                    unlockMethod = sanitizeUnlockMethod(folder.unlockMethod),
-                    delayMinutes = folder.delayMinutes,
-                    blockPassword = "",
-                    typeOverText = "",
-                    typeOverIsRandom = false,
-                    editWindowStart = folder.editWindowStart,
-                    editWindowEnd = folder.editWindowEnd,
-                    editWindowDays = folder.editWindowDays,
-                    lockUntil = 0L,
-                    qrSecret = UUID.randomUUID().toString(),
-                    masterPasswordEnabled = folder.masterPasswordEnabled
-                )
-            ).toInt()
-            folderIdMap[folder.backupId] = newFolderId
-        }
-
-        var importedBlocks = 0
-        backup.blocks.forEach { block ->
-            val newBlockId = appBlockDao.insert(
-                AppBlock(
-                    title = block.title,
-                    appPackages = block.appPackages,
-                    isAllowlistMode = block.isAllowlistMode,
-                    startTime = block.startTime,
-                    endTime = block.endTime,
-                    activeDays = block.activeDays,
-                    qrSecret = UUID.randomUUID().toString(),
-                    unlockMethod = sanitizeUnlockMethod(block.unlockMethod),
-                    delayMinutes = block.delayMinutes,
-                    blockPassword = "",
-                    typeOverText = "",
-                    typeOverIsRandom = block.typeOverIsRandom,
-                    editWindowStart = block.editWindowStart,
-                    editWindowEnd = block.editWindowEnd,
-                    editWindowDays = block.editWindowDays,
-                    lockUntil = 0L,
-                    masterPasswordEnabled = block.masterPasswordEnabled,
-                    pausedUntil = 0L,
-                    blockNowUntil = 0L,
-                    isEnabled = block.isEnabled,
-                    isPomodoroBlock = block.isPomodoroBlock,
-                    pomodoroDurationMin = block.pomodoroDurationMin,
-                    pomodoroBreakMin = block.pomodoroBreakMin,
-                    isArchived = block.isArchived,
-                    blockingStyle = block.blockingStyle,
-                    scheduleBreakType = block.scheduleBreakType,
-                    scheduledAllowanceMinutes = block.scheduledAllowanceMinutes,
-                    usageLimitMinutes = block.usageLimitMinutes,
-                    usageLimitPeriod = block.usageLimitPeriod,
-                    waitTimerWaitMinutes = block.waitTimerWaitMinutes,
-                    waitTimerUseMinutes = block.waitTimerUseMinutes,
-                    waitTimerAdaptive = block.waitTimerAdaptive,
-                    timerBreakMinutes = block.timerBreakMinutes,
-                    showTimer = block.showTimer,
-                    toggleLockUntil = 0L,
-                    autoDisableOnToggleLockExpiry = false,
-                    activeUntil = 0L,
-                    pomodoroRoundsTotal = 0,
-                    pomodoroSessionStartMillis = 0L,
-                    pomodoroLockEditing = block.pomodoroLockEditing,
-                    autoAddNewApps = block.autoAddNewApps,
-                    blockAudio = block.blockAudio,
-                    folderId = block.folderBackupId?.let(folderIdMap::get)
-                )
-            ).toInt()
-
-            if (block.timeBlocks.isNotEmpty()) {
-                timeBlockDao.insertAll(
-                    block.timeBlocks.map { timeBlock ->
-                        TimeBlock(
-                            blockId = newBlockId,
-                            startTime = timeBlock.startTime,
-                            endTime = timeBlock.endTime,
-                            activeDays = timeBlock.activeDays
-                        )
-                    }
-                )
+        return db.withTransaction {
+            val folderIdMap = mutableMapOf<Int, Int>()
+            backup.folders.forEach { folder ->
+                val newFolderId = blockFolderDao.insert(
+                    BlockFolder(
+                        title = folder.title,
+                        isEnabled = folder.isEnabled,
+                        pausedUntil = 0L,
+                        isCollapsed = folder.isCollapsed,
+                        sortOrder = folder.sortOrder,
+                        unlockMethod = sanitizeUnlockMethod(folder.unlockMethod),
+                        delayMinutes = folder.delayMinutes,
+                        blockPassword = "",
+                        typeOverText = "",
+                        typeOverIsRandom = false,
+                        editWindowStart = folder.editWindowStart,
+                        editWindowEnd = folder.editWindowEnd,
+                        editWindowDays = folder.editWindowDays,
+                        lockUntil = 0L,
+                        qrSecret = UUID.randomUUID().toString(),
+                        masterPasswordEnabled = folder.masterPasswordEnabled
+                    )
+                ).toInt()
+                folderIdMap[folder.backupId] = newFolderId
             }
 
-            importedBlocks += 1
-        }
+            var importedBlocks = 0
+            backup.blocks.forEach { block ->
+                val newBlockId = appBlockDao.insert(
+                    AppBlock(
+                        title = block.title,
+                        appPackages = block.appPackages,
+                        isAllowlistMode = block.isAllowlistMode,
+                        startTime = block.startTime,
+                        endTime = block.endTime,
+                        activeDays = block.activeDays,
+                        qrSecret = UUID.randomUUID().toString(),
+                        unlockMethod = sanitizeUnlockMethod(block.unlockMethod),
+                        delayMinutes = block.delayMinutes,
+                        blockPassword = "",
+                        typeOverText = "",
+                        typeOverIsRandom = block.typeOverIsRandom,
+                        editWindowStart = block.editWindowStart,
+                        editWindowEnd = block.editWindowEnd,
+                        editWindowDays = block.editWindowDays,
+                        lockUntil = 0L,
+                        masterPasswordEnabled = block.masterPasswordEnabled,
+                        pausedUntil = 0L,
+                        blockNowUntil = 0L,
+                        isEnabled = block.isEnabled,
+                        isPomodoroBlock = block.isPomodoroBlock,
+                        pomodoroDurationMin = block.pomodoroDurationMin,
+                        pomodoroBreakMin = block.pomodoroBreakMin,
+                        isArchived = block.isArchived,
+                        blockingStyle = block.blockingStyle,
+                        scheduleBreakType = block.scheduleBreakType,
+                        scheduledAllowanceMinutes = block.scheduledAllowanceMinutes,
+                        usageLimitMinutes = block.usageLimitMinutes,
+                        usageLimitPeriod = block.usageLimitPeriod,
+                        waitTimerWaitMinutes = block.waitTimerWaitMinutes,
+                        waitTimerUseMinutes = block.waitTimerUseMinutes,
+                        waitTimerAdaptive = block.waitTimerAdaptive,
+                        timerBreakMinutes = block.timerBreakMinutes,
+                        showTimer = block.showTimer,
+                        toggleLockUntil = 0L,
+                        autoDisableOnToggleLockExpiry = false,
+                        activeUntil = 0L,
+                        pomodoroRoundsTotal = 0,
+                        pomodoroSessionStartMillis = 0L,
+                        pomodoroLockEditing = block.pomodoroLockEditing,
+                        autoAddNewApps = block.autoAddNewApps,
+                        blockAudio = block.blockAudio,
+                        folderId = block.folderBackupId?.let(folderIdMap::get)
+                    )
+                ).toInt()
 
-        return ImportResult(
-            foldersImported = backup.folders.size,
-            blocksImported = importedBlocks
-        )
+                if (block.timeBlocks.isNotEmpty()) {
+                    timeBlockDao.insertAll(
+                        block.timeBlocks.map { timeBlock ->
+                            TimeBlock(
+                                blockId = newBlockId,
+                                startTime = timeBlock.startTime,
+                                endTime = timeBlock.endTime,
+                                activeDays = timeBlock.activeDays
+                            )
+                        }
+                    )
+                }
+
+                importedBlocks += 1
+            }
+
+            ImportResult(
+                foldersImported = backup.folders.size,
+                blocksImported = importedBlocks
+            )
+        }
     }
 
     private fun sanitizeUnlockMethod(unlockMethod: String): String {
