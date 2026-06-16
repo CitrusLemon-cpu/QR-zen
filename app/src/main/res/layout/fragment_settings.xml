@@ -121,6 +121,27 @@
             android:layout_marginBottom="16dp" />
         <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="Data" android:textSize="14sp" android:textStyle="bold"
+            android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
+        <TextView
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_export_import_desc"
+            android:textSize="13sp" android:textColor="?attr/colorOnSurfaceVariant"
+            android:layout_marginBottom="8dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnExportBlocks"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_export_blocks"
+            android:layout_marginBottom="8dp" />
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnImportBlocks"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_import_blocks"
+            android:layout_marginBottom="16dp" />
+        <View android:layout_width="match_parent" android:layout_height="1dp" android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="QR Zen v1.0.0" android:textSize="13sp" android:textColor="?attr/colorOnSurfaceVariant" android:layout_gravity="center_horizontal" />
     </LinearLayout>
 </ScrollView>

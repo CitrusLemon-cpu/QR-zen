@@ -1,6 +1,7 @@
 package com.qrzen.app.ui.main
 
 import android.app.NotificationManager
+import android.content.Intent
 import android.os.Bundle
 import android.text.InputType
 import android.view.LayoutInflater
@@ -8,12 +9,16 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.snackbar.Snackbar
 import com.qrzen.app.R
+import com.qrzen.app.data.backup.BlockBackup
+import com.qrzen.app.data.backup.BlockBackupManager
 import com.qrzen.app.data.db.AppBlockDao
 import com.qrzen.app.data.db.BlockFolderDao
+import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.FragmentSettingsBinding
 import com.qrzen.app.service.DiagnosticNotifier
@@ -22,13 +27,18 @@ import com.qrzen.app.util.BruteForceGuard
 import com.qrzen.app.util.PasswordHasher
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.time.LocalDate
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class SettingsFragment : Fragment() {
     @Inject lateinit var dao: AppBlockDao
     @Inject lateinit var blockFolderDao: BlockFolderDao
+    @Inject lateinit var timeBlockDao: TimeBlockDao
 
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
@@ -44,6 +54,55 @@ class SettingsFragment : Fragment() {
         PauseAllOption("12 hours", 12 * 60 * 60_000L),
         PauseAllOption("24 hours", 24 * 60 * 60_000L)
     )
+    private val backupManager by lazy { BlockBackupManager(dao, blockFolderDao, timeBlockDao) }
+    private var pendingExportRequest: PendingExportRequest? = null
+    private val exportBlocksLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val exportRequest = pendingExportRequest ?: return@registerForActivityResult
+        pendingExportRequest = null
+        val uri = result.data?.data ?: return@registerForActivityResult
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    requireContext().contentResolver.openOutputStream(uri)?.use { output ->
+                        output.write(exportRequest.json.toByteArray())
+                    } ?: error("Unable to open destination file")
+                }
+            }.onSuccess {
+                Snackbar.make(
+                    binding.root,
+                    getString(
+                        R.string.settings_export_success,
+                        exportRequest.blocksExported,
+                        exportRequest.foldersExported
+                    ),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }.onFailure { error ->
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.settings_export_error, error.message ?: error.javaClass.simpleName),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+    private val importBlocksLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val uri = result.data?.data ?: return@registerForActivityResult
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) {
+                    requireContext().contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() }
+                        ?: error("Unable to open backup file")
+                }
+            }.onSuccess(::showImportConfirmation).onFailure { error ->
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.settings_import_error, error.message ?: error.javaClass.simpleName),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         _binding = FragmentSettingsBinding.inflate(inflater, container, false)
@@ -130,6 +189,8 @@ class SettingsFragment : Fragment() {
         }
 
         binding.btnResumeAll.setOnClickListener { resumeAllBlocks() }
+        binding.btnExportBlocks.setOnClickListener { exportBlocks() }
+        binding.btnImportBlocks.setOnClickListener { importBlocks() }
 
         binding.swRemoveNotif.setOnCheckedChangeListener { _, checked ->
             Prefs.removeNotifications = checked
@@ -391,10 +452,111 @@ class SettingsFragment : Fragment() {
         }
     }
 
+    private fun exportBlocks() {
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { backupManager.export() }
+            }.onSuccess { json ->
+                val backup = BlockBackup.fromJson(JSONObject(json))
+                if (backup.blocks.isEmpty() && backup.folders.isEmpty()) {
+                    Snackbar.make(binding.root, getString(R.string.settings_export_empty), Snackbar.LENGTH_SHORT).show()
+                    return@onSuccess
+                }
+                pendingExportRequest = PendingExportRequest(
+                    json = json,
+                    blocksExported = backup.blocks.size,
+                    foldersExported = backup.folders.size
+                )
+                exportBlocksLauncher.launch(
+                    Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                        addCategory(Intent.CATEGORY_OPENABLE)
+                        type = "application/json"
+                        putExtra(Intent.EXTRA_TITLE, "qrzen-blocks-${LocalDate.now()}.json")
+                    }
+                )
+            }.onFailure { error ->
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.settings_export_error, error.message ?: error.javaClass.simpleName),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
+    private fun importBlocks() {
+        importBlocksLauncher.launch(
+            Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/json", "*/*"))
+            }
+        )
+    }
+
+    private fun showImportConfirmation(json: String) {
+        runCatching {
+            BlockBackup.fromJson(JSONObject(json)).also { backup ->
+                require(backup.version == 1) { "Unsupported backup version: ${backup.version}" }
+            }
+        }.onSuccess { backup ->
+            AlertDialog.Builder(requireContext())
+                .setTitle(R.string.settings_import_confirm_title)
+                .setMessage(
+                    getString(
+                        R.string.settings_import_confirm_message,
+                        backup.blocks.size,
+                        backup.folders.size
+                    )
+                )
+                .setPositiveButton(android.R.string.ok) { _, _ ->
+                    performImport(json)
+                }
+                .setNegativeButton(android.R.string.cancel, null)
+                .show()
+        }.onFailure { error ->
+            Snackbar.make(
+                binding.root,
+                getString(R.string.settings_import_error, error.message ?: error.javaClass.simpleName),
+                Snackbar.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    private fun performImport(json: String) {
+        viewLifecycleOwner.lifecycleScope.launch {
+            runCatching {
+                withContext(Dispatchers.IO) { backupManager.import(json) }
+            }.onSuccess { result ->
+                WidgetRefresh.refresh(requireContext().applicationContext)
+                Snackbar.make(
+                    binding.root,
+                    getString(
+                        R.string.settings_import_success,
+                        result.blocksImported,
+                        result.foldersImported
+                    ),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }.onFailure { error ->
+                Snackbar.make(
+                    binding.root,
+                    getString(R.string.settings_import_error, error.message ?: error.javaClass.simpleName),
+                    Snackbar.LENGTH_LONG
+                ).show()
+            }
+        }
+    }
+
     override fun onDestroyView() {
         super.onDestroyView()
         _binding = null
     }
 
     private data class PauseAllOption(val label: String, val durationMs: Long)
+    private data class PendingExportRequest(
+        val json: String,
+        val blocksExported: Int,
+        val foldersExported: Int
+    )
 }
