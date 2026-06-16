@@ -53,7 +53,7 @@ class AudioBlockManager(context: Context) {
     }
 
     private val playbackCallback =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             object : AudioManager.AudioPlaybackCallback() {
                 override fun onPlaybackConfigChanged(configs: MutableList<AudioPlaybackConfiguration>) {
                     updateAudioFocusForPlayback(configs.toList(), getBlockedSessionPackages())
@@ -66,7 +66,7 @@ class AudioBlockManager(context: Context) {
     fun start() {
         if (isStarted) return
         isStarted = true
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             playbackCallback?.let { audioManager.registerAudioPlaybackCallback(it, handler) }
         }
         handler.post(monitorRunnable)
@@ -76,7 +76,7 @@ class AudioBlockManager(context: Context) {
         if (!isStarted) return
         isStarted = false
         handler.removeCallbacks(monitorRunnable)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             playbackCallback?.let {
                 runCatching { audioManager.unregisterAudioPlaybackCallback(it) }
             }
@@ -102,7 +102,7 @@ class AudioBlockManager(context: Context) {
         }
 
         val blockedSessionPackages = pauseBlockedMediaSessions(packages)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             updateAudioFocusForPlayback(audioManager.activePlaybackConfigurations.orEmpty(), blockedSessionPackages)
         }
     }
@@ -137,7 +137,7 @@ class AudioBlockManager(context: Context) {
         configs: List<AudioPlaybackConfiguration>,
         blockedSessionPackages: Set<String>
     ) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return
         val packages = blockedPackages
         if (packages.isEmpty()) {
             abandonAudioFocus()

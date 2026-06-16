@@ -916,11 +916,11 @@ class BackgroundService : Service() {
         } else {
             blocks
                 .filter { it.blockAudio && it.isEnabled && !it.isArchived && now > it.pausedUntil }
-            .filter { isBlockActive(it, foregroundPkg) }
-            .flatMap { block ->
-                block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
-            }
-            .toSet()
+                .filter { isBlockActive(it, foregroundPkg) }
+                .flatMap { block ->
+                    block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                }
+                .toSet()
         }
         val manager = audioBlockManager ?: return
         manager.updateBlockedPackages(packages)
