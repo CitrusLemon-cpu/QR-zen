@@ -100,6 +100,7 @@ class EditBlockActivity : AppCompatActivity() {
     private var showTimer: Boolean = false
     private var lockUntil: Long = 0L
     private var autoAddNewApps: Boolean = false
+    private var blockAudio: Boolean = false
     private var pomodoroLockEditing: Boolean = false
     private var currentTimeBlocks: MutableList<TimeBlock> = mutableListOf()
     private var nextTempId: Int = -1
@@ -340,6 +341,9 @@ class EditBlockActivity : AppCompatActivity() {
         binding.switchAutoAddNewApps.setOnCheckedChangeListener { _, isChecked ->
             autoAddNewApps = isChecked
         }
+        binding.switchBlockAudio.setOnCheckedChangeListener { _, isChecked ->
+            blockAudio = isChecked
+        }
 
         setupBlockingStyleDropdown()
         setupUnlockMethodDropdown()
@@ -519,6 +523,7 @@ class EditBlockActivity : AppCompatActivity() {
         timerBreakMinutes = block.timerBreakMinutes
         lockUntil = block.lockUntil
         autoAddNewApps = block.autoAddNewApps
+        blockAudio = block.blockAudio
         pomodoroLockEditing = block.pomodoroLockEditing
 
         binding.etTitle.setText(block.title)
@@ -562,6 +567,7 @@ class EditBlockActivity : AppCompatActivity() {
         binding.cbShowTimer.isChecked = showTimer
         binding.cbPomodoroLockEditing.isChecked = pomodoroLockEditing
         binding.switchAutoAddNewApps.isChecked = autoAddNewApps
+        binding.switchBlockAudio.isChecked = blockAudio
         binding.switchAutoAddNewApps.text = if (isAllowlistMode) {
             getString(R.string.edit_block_auto_add_new_apps_allow_desc)
         } else {
@@ -1273,7 +1279,8 @@ class EditBlockActivity : AppCompatActivity() {
             pomodoroRoundsTotal = existingBlock?.pomodoroRoundsTotal ?: 0,
             pomodoroSessionStartMillis = existingBlock?.pomodoroSessionStartMillis ?: 0L,
             pomodoroLockEditing = pomodoroLockEditing,
-            autoAddNewApps = autoAddNewApps
+            autoAddNewApps = autoAddNewApps,
+            blockAudio = blockAudio
         ).copy(
             folderId = existingBlock?.folderId
         )
