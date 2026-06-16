@@ -42,6 +42,9 @@ interface AppBlockDao {
     @Query("SELECT * FROM app_blocks WHERE isArchived = 0")
     suspend fun getAll(): List<AppBlock>
 
+    @Query("SELECT * FROM app_blocks")
+    suspend fun getAllIncludingArchived(): List<AppBlock>
+
     @Query("SELECT * FROM app_blocks WHERE folderId = :folderId AND isArchived = 0")
     suspend fun getByFolderId(folderId: Int): List<AppBlock>
 

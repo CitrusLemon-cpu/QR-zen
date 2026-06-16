@@ -111,6 +111,16 @@
     <string name="settings_resume_all_confirm">All blocks resumed</string>
     <string name="settings_pause_all_duration">Pause duration</string>
     <string name="settings_master_pwd_required">Enter master password to continue</string>
+    <string name="settings_export_blocks">Export blocks</string>
+    <string name="settings_import_blocks">Import blocks</string>
+    <string name="settings_export_import_desc">Export your block configurations to transfer to another device. Passwords, QR secrets, and type-over text are not exported for security.</string>
+    <string name="settings_export_success">Exported %1$d blocks and %2$d folders</string>
+    <string name="settings_export_error">Failed to export: %1$s</string>
+    <string name="settings_import_success">Imported %1$d blocks and %2$d folders</string>
+    <string name="settings_import_error">Failed to import: %1$s</string>
+    <string name="settings_export_empty">No blocks to export</string>
+    <string name="settings_import_confirm_title">Import blocks?</string>
+    <string name="settings_import_confirm_message">This will add %1$d blocks and %2$d folders. Existing blocks will not be modified. Unlock methods requiring passwords or QR codes will be reset to None.</string>
     <string name="override_mode_none">None</string>
     <string name="override_mode_master_password">Master Password</string>
     <string name="override_mode_strict">Strict</string>
