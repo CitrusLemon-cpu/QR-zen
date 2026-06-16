@@ -113,8 +113,8 @@ class AudioBlockManager(context: Context) {
         controllers.forEach { controller ->
             val packageName = controller.packageName ?: return@forEach
             if (packageName !in packages) return@forEach
-            blockedSessionPackages += packageName
-            runCatching { controller.transportControls.pause() }
+            val paused = runCatching { controller.transportControls.pause(); true }.getOrDefault(false)
+            if (paused) blockedSessionPackages += packageName
         }
         return blockedSessionPackages
     }
