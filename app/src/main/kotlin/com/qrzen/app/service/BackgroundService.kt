@@ -920,6 +920,7 @@ class BackgroundService : Service() {
                 .flatMap { block ->
                     block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }
                 }
+                .minus(foregroundPkg.orEmpty())
                 .toSet()
         }
         val manager = audioBlockManager ?: return

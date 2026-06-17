@@ -40,7 +40,7 @@
     <string name="edit_block_auto_add_new_apps_block_desc">Newly installed apps will be automatically added to this block</string>
     <string name="edit_block_auto_add_new_apps_allow_desc">Newly installed apps will be automatically added to this allowlist</string>
     <string name="edit_block_block_audio">Audio only mode</string>
-    <string name="edit_block_block_audio_desc">Mute media audio from selected apps instead of blocking them. Apps remain usable.</string>
+    <string name="edit_block_block_audio_desc">Block background audio from selected apps. Audio plays normally while the app is open, but is muted if it continues playing in the background.</string>
     <string name="edit_block_master_pwd_toggle">Enable master password fallback</string>
     <string name="edit_block_save">Save Block</string>
     <string name="app_picker_title">Select Apps to Block</string>
