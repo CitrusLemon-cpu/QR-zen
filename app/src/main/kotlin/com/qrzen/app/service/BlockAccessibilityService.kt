@@ -223,7 +223,7 @@ class BlockAccessibilityService : AccessibilityService() {
             }
 
             val blocklistMatch = activeBlocks
-                .filter { !it.isAllowlistMode }
+                .filter { !it.isAllowlistMode && !it.blockAudio }
                 .firstOrNull { block ->
                     block.appPackages.split(",").map { it.trim() }.contains(pkg)
                 }
@@ -250,7 +250,7 @@ class BlockAccessibilityService : AccessibilityService() {
 
             if (isExemptFromAllowlist(pkg) || isDeviceLocked()) return@launch
 
-            val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
+            val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode && !it.blockAudio }
             if (allowlistBlocks.isNotEmpty()) {
                 val allowedSets = allowlistBlocks.map { block ->
                     block.appPackages.split(",")

@@ -993,12 +993,12 @@ class BackgroundService : Service() {
         refreshAudioBlocking(allCandidates, pkg)
 
         val blocklistBlock = activeBlocks
-            .filter { !it.isAllowlistMode }
+            .filter { !it.isAllowlistMode && !it.blockAudio }
             .firstOrNull { block ->
                 block.appPackages.split(",").map { it.trim() }.contains(pkg)
             }
 
-        val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode }
+        val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode && !it.blockAudio }
         var allowedForegroundPkg: String? = pkg
         if (allowlistBlocks.isNotEmpty()) {
             val allowedSets = allowlistBlocks.map { block ->
