@@ -51,4 +51,5 @@ dependencies {
     implementation(libs.lifecycle.runtime)
     implementation(libs.coroutines.android)
     implementation(libs.workmanager)
+    testImplementation("junit:junit:4.13.2")
 }

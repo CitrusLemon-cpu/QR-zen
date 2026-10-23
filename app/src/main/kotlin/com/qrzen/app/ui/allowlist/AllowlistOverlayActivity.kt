@@ -1,5 +1,6 @@
 package com.qrzen.app.ui.allowlist
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
@@ -675,6 +676,7 @@ class AllowlistOverlayActivity : AppCompatActivity() {
     }
 
     @Deprecated("Deprecated in Java")
+    @SuppressLint("MissingSuperCall") // Back deliberately returns to the launcher; it must not dismiss the block.
     override fun onBackPressed() {
         goToLauncher()
     }

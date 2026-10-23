@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.qrzen.app.service.BackgroundService
+import com.qrzen.app.service.ProtectionDiagnostics
 
 /**
  * Listens to 25 different system broadcasts at MAX priority (2147483647).
@@ -16,6 +17,7 @@ import com.qrzen.app.service.BackgroundService
  */
 class RebootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        BackgroundService.start(context)
+        ProtectionDiagnostics.record("Receiver ${intent.action ?: "unknown"}")
+        BackgroundService.start(context, BackgroundService.ACTION_BOOT_RECOVERY)
     }
 }

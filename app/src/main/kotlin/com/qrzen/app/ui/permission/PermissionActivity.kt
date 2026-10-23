@@ -1,9 +1,11 @@
 package com.qrzen.app.ui.permission
 
+import android.app.AppOpsManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Process
 import android.provider.Settings
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -30,6 +32,7 @@ class PermissionActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityPermissionBinding
     private var currentStep = 0
+    private var waitingForUsageAccess = false
 
     data class Step(
         val title: String,
@@ -120,7 +123,10 @@ class PermissionActivity : AppCompatActivity() {
                 "Allows QR Zen to see which apps you use so it can track screen time and enforce usage limits.",
                 grantLabel = "Grant & Finish",
                 onGrant = {
-                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                    waitingForUsageAccess = true
+                    startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                        data = Uri.parse("package:$packageName")
+                    })
                 }
             ))
         }
@@ -136,8 +142,6 @@ class PermissionActivity : AppCompatActivity() {
             steps[currentStep].onGrant(this)
             if (currentStep < steps.size - 1) {
                 showStep(currentStep + 1)
-            } else {
-                finishOnboarding()
             }
         }
 
@@ -148,6 +152,33 @@ class PermissionActivity : AppCompatActivity() {
                 finishOnboarding()
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (waitingForUsageAccess && hasUsageAccess()) {
+            waitingForUsageAccess = false
+            finishOnboarding()
+        }
+    }
+
+    private fun hasUsageAccess(): Boolean {
+        val appOps = getSystemService(AppOpsManager::class.java) ?: return false
+        val mode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            appOps.unsafeCheckOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                packageName
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            appOps.checkOpNoThrow(
+                AppOpsManager.OPSTR_GET_USAGE_STATS,
+                Process.myUid(),
+                packageName
+            )
+        }
+        return mode == AppOpsManager.MODE_ALLOWED
     }
 
     private fun showStep(step: Int) {

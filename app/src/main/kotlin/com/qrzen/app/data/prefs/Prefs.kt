@@ -109,10 +109,18 @@ object Prefs {
         kv.encode("sched_wt_last_tick_$blockId", ms)
     }
 
+    fun getScheduleWtWasInApp(blockId: Int): Boolean =
+        kv.decodeBool("sched_wt_in_app_$blockId", false)
+
+    fun setScheduleWtWasInApp(blockId: Int, value: Boolean) {
+        kv.encode("sched_wt_in_app_$blockId", value)
+    }
+
     fun clearScheduleWtState(blockId: Int) {
         kv.removeValueForKey("sched_wt_used_$blockId")
         kv.removeValueForKey("sched_wt_blocking_$blockId")
         kv.removeValueForKey("sched_wt_last_tick_$blockId")
+        kv.removeValueForKey("sched_wt_in_app_$blockId")
     }
 
     fun clearWaitTimerState(blockId: Int) {
@@ -146,10 +154,53 @@ object Prefs {
         kv.encode("sched_allow_tick_$blockId", ms)
     }
 
+    fun getSchedAllowanceWasInApp(blockId: Int): Boolean =
+        kv.decodeBool("sched_allow_in_app_$blockId", false)
+
+    fun setSchedAllowanceWasInApp(blockId: Int, value: Boolean) {
+        kv.encode("sched_allow_in_app_$blockId", value)
+    }
+
     fun clearSchedAllowanceState(blockId: Int) {
         kv.removeValueForKey("sched_allow_remaining_$blockId")
         kv.removeValueForKey("sched_allow_window_$blockId")
         kv.removeValueForKey("sched_allow_tick_$blockId")
+        kv.removeValueForKey("sched_allow_in_app_$blockId")
+    }
+
+    fun getUsageLimitTrackedMs(blockId: Int): Long =
+        kv.decodeLong("usage_limit_tracked_$blockId", 0L)
+
+    fun setUsageLimitTrackedMs(blockId: Int, ms: Long) {
+        kv.encode("usage_limit_tracked_$blockId", ms)
+    }
+
+    fun getUsageLimitPeriodStart(blockId: Int): Long =
+        kv.decodeLong("usage_limit_period_$blockId", 0L)
+
+    fun setUsageLimitPeriodStart(blockId: Int, ms: Long) {
+        kv.encode("usage_limit_period_$blockId", ms)
+    }
+
+    fun getUsageLimitLastTick(blockId: Int): Long =
+        kv.decodeLong("usage_limit_tick_$blockId", 0L)
+
+    fun setUsageLimitLastTick(blockId: Int, ms: Long) {
+        kv.encode("usage_limit_tick_$blockId", ms)
+    }
+
+    fun getUsageLimitWasInApp(blockId: Int): Boolean =
+        kv.decodeBool("usage_limit_in_app_$blockId", false)
+
+    fun setUsageLimitWasInApp(blockId: Int, value: Boolean) {
+        kv.encode("usage_limit_in_app_$blockId", value)
+    }
+
+    fun clearUsageLimitState(blockId: Int) {
+        kv.removeValueForKey("usage_limit_tracked_$blockId")
+        kv.removeValueForKey("usage_limit_period_$blockId")
+        kv.removeValueForKey("usage_limit_tick_$blockId")
+        kv.removeValueForKey("usage_limit_in_app_$blockId")
     }
 
     fun getAppTimerRemaining(blockId: Int, packageName: String): Long {

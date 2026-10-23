@@ -5,6 +5,10 @@
         android:icon="@android:drawable/ic_menu_today"
         android:title="@string/nav_home" />
     <item
+        android:id="@+id/scannerFragment"
+        android:icon="@android:drawable/ic_menu_camera"
+        android:title="@string/nav_scan" />
+    <item
         android:id="@+id/statsFragment"
         android:icon="@android:drawable/ic_menu_recent_history"
         android:title="@string/nav_stats" />

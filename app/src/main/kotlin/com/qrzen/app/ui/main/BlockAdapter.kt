@@ -485,7 +485,8 @@ class BlockAdapter(
             }
         }
         val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        val events = usageStatsManager.queryEvents(startTime, now)
+        val events = runCatching { usageStatsManager.queryEvents(startTime, now) }
+            .getOrElse { return "${block.usageLimitMinutes}m left" }
         val event = android.app.usage.UsageEvents.Event()
         val foregroundStartTimes = mutableMapOf<String, Long>()
         var totalUsageMs = 0L

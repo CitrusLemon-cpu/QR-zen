@@ -1,5 +1,6 @@
 package com.qrzen.app.ui.lock
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -369,6 +370,7 @@ class LockScreenActivity : AppCompatActivity() {
     }
 
     @Deprecated("Deprecated in Java")
+    @SuppressLint("MissingSuperCall") // Back deliberately returns to the launcher; it must not dismiss the block.
     override fun onBackPressed() {
         goToLauncher()
     }

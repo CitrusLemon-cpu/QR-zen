@@ -1,8 +1,14 @@
 package com.qrzen.app.ui.main
 
 import android.app.NotificationManager
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
+import android.net.Uri
+import android.provider.Settings
 import android.text.InputType
 import android.view.LayoutInflater
 import android.view.View
@@ -23,12 +29,19 @@ import com.qrzen.app.data.db.TimeBlockDao
 import com.qrzen.app.data.prefs.Prefs
 import com.qrzen.app.databinding.FragmentSettingsBinding
 import com.qrzen.app.service.DiagnosticNotifier
+import com.qrzen.app.service.BackgroundService
+import com.qrzen.app.service.ProtectionDiagnostics
+import com.qrzen.app.service.ProtectionMode
+import com.qrzen.app.service.ProtectionSnapshot
+import com.qrzen.app.service.ProtectionStatus
 import com.qrzen.app.ui.unlock.UnlockMethodUtils
 import com.qrzen.app.util.BruteForceGuard
 import com.qrzen.app.util.PasswordHasher
 import com.qrzen.app.widget.WidgetRefresh
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -46,6 +59,7 @@ class SettingsFragment : Fragment() {
     private val binding get() = _binding!!
     private var isUpdatingOverrideModeSelection = false
     private var pendingOverrideMode: String? = null
+    private var protectionRefreshJob: Job? = null
     private val masterPasswordGuard = BruteForceGuard()
     private val pauseAllOptions = listOf(
         PauseAllOption("30 minutes", 30 * 60_000L),
@@ -119,6 +133,7 @@ class SettingsFragment : Fragment() {
         setSelectedOverrideMode(Prefs.masterPasswordOverrideMode.ifEmpty { Prefs.OVERRIDE_NONE })
         updateMasterPasswordViews()
         updatePauseAllViews()
+        hidePermissionSettingsButtons()
 
         binding.rgOverrideMode.setOnCheckedChangeListener { _, checkedId ->
             if (isUpdatingOverrideModeSelection) return@setOnCheckedChangeListener
@@ -193,6 +208,20 @@ class SettingsFragment : Fragment() {
         binding.btnResumeAll.setOnClickListener { resumeAllBlocks() }
         binding.btnExportBlocks.setOnClickListener { exportBlocks() }
         binding.btnImportBlocks.setOnClickListener { importBlocks() }
+        binding.btnAccessibilitySettings.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+        binding.btnUsageSettings.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).apply {
+                data = Uri.parse("package:${requireContext().packageName}")
+            })
+        }
+        binding.btnOverlaySettings.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION).apply {
+                data = Uri.parse("package:${requireContext().packageName}")
+            })
+        }
+        binding.btnCopyProtectionDiagnostics.setOnClickListener { copyProtectionDiagnostics() }
 
         binding.swRemoveNotif.setOnCheckedChangeListener { _, checked ->
             Prefs.removeNotifications = checked
@@ -235,7 +264,69 @@ class SettingsFragment : Fragment() {
             }
             updateMasterPasswordViews()
             updatePauseAllViews()
+            BackgroundService.start(requireContext())
+            refreshProtectionStatus()
         }
+    }
+
+    private fun refreshProtectionStatus() {
+        protectionRefreshJob?.cancel()
+        hidePermissionSettingsButtons()
+        updateProtectionStatus(ProtectionStatus.snapshot(requireContext()))
+
+        protectionRefreshJob = viewLifecycleOwner.lifecycleScope.launch {
+            delay(PERMISSION_CHECK_INTERVAL_MS)
+            val firstCheck = ProtectionStatus.snapshot(requireContext())
+            delay(PERMISSION_CHECK_INTERVAL_MS)
+            val confirmedCheck = ProtectionStatus.snapshot(requireContext())
+            if (_binding == null) return@launch
+
+            updateProtectionStatus(confirmedCheck)
+            binding.btnAccessibilitySettings.visibility = if (
+                !firstCheck.accessibilityConfigured && !confirmedCheck.accessibilityConfigured
+            ) View.VISIBLE else View.GONE
+            binding.btnUsageSettings.visibility = if (
+                !firstCheck.usageAccess && !confirmedCheck.usageAccess
+            ) View.VISIBLE else View.GONE
+            binding.btnOverlaySettings.visibility = if (
+                !firstCheck.overlayAccess && !confirmedCheck.overlayAccess
+            ) View.VISIBLE else View.GONE
+        }
+    }
+
+    private fun hidePermissionSettingsButtons() {
+        binding.btnAccessibilitySettings.visibility = View.GONE
+        binding.btnUsageSettings.visibility = View.GONE
+        binding.btnOverlaySettings.visibility = View.GONE
+    }
+
+    private fun updateProtectionStatus(snapshot: ProtectionSnapshot) {
+        val (textRes, color) = when (snapshot.mode) {
+            ProtectionMode.PRIMARY -> R.string.settings_protection_primary to Color.parseColor("#2E7D32")
+            ProtectionMode.FALLBACK -> R.string.settings_protection_fallback to Color.parseColor("#EF6C00")
+            ProtectionMode.LIMITED -> R.string.settings_protection_limited to Color.parseColor("#EF6C00")
+            ProtectionMode.UNPROTECTED -> R.string.settings_protection_unprotected to Color.parseColor("#C62828")
+        }
+        binding.tvProtectionStatus.setText(textRes)
+        binding.tvProtectionStatus.setTextColor(color)
+    }
+
+    private fun copyProtectionDiagnostics() {
+        val snapshot = ProtectionStatus.snapshot(requireContext())
+        val report = buildString {
+            appendLine("QR Zen protection diagnostics")
+            appendLine("mode=${snapshot.mode}")
+            appendLine("accessibilityConfigured=${snapshot.accessibilityConfigured}")
+            appendLine("accessibilityConnected=${snapshot.accessibilityConnected}")
+            appendLine("usageAccess=${snapshot.usageAccess}")
+            appendLine("overlayAccess=${snapshot.overlayAccess}")
+            appendLine("userUnlocked=${snapshot.userUnlocked}")
+            appendLine()
+            append(ProtectionDiagnostics.read())
+        }
+        val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("QR Zen protection diagnostics", report))
+        Snackbar.make(binding.root, R.string.settings_diagnostics_copied, Snackbar.LENGTH_SHORT).show()
     }
 
     private fun updateMasterPasswordViews() {
@@ -546,9 +637,15 @@ class SettingsFragment : Fragment() {
     }
 
     override fun onDestroyView() {
+        protectionRefreshJob?.cancel()
+        protectionRefreshJob = null
         super.onDestroyView()
         _binding = null
     }
 
     private data class PauseAllOption(val label: String, val durationMs: Long)
+
+    private companion object {
+        const val PERMISSION_CHECK_INTERVAL_MS = 500L
+    }
 }
