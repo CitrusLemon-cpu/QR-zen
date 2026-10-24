@@ -43,7 +43,7 @@ class UnlockChallengeRenderer(
         when (UnlockMethodUtils.getNormalizedMethod(block)) {
             UnlockMethodUtils.METHOD_NONE -> {
                 if (block.toggleLockUntil > System.currentTimeMillis()) {
-                    showToggleLockTimerInfo(block, showGoBackButton, onGoBack)
+                    showToggleLockTimerInfo(block, showGoBackButton, onGoBack, onUnlocked)
                 } else {
                     showNoneChallenge(onUnlocked)
                 }
@@ -64,7 +64,7 @@ class UnlockChallengeRenderer(
                 if (UnlockMethodUtils.isTimerExpired(block)) {
                     onUnlocked()
                 } else {
-                    showTimerInfo(block, showGoBackButton, onGoBack)
+                    showTimerInfo(block, showGoBackButton, onGoBack, onUnlocked)
                 }
             }
             UnlockMethodUtils.METHOD_WHILE_ACTIVE -> {
@@ -231,7 +231,12 @@ class UnlockChallengeRenderer(
         binding.btnGoBack.setOnClickListener { onGoBack?.invoke() }
     }
 
-    private fun showTimerInfo(block: AppBlock, showGoBackButton: Boolean, onGoBack: (() -> Unit)?) {
+    private fun showTimerInfo(
+        block: AppBlock,
+        showGoBackButton: Boolean,
+        onGoBack: (() -> Unit)?,
+        onUnlocked: () -> Unit
+    ) {
         val binding = ViewUnlockInfoBinding.inflate(LayoutInflater.from(activity), container, false)
         container.addView(binding.root)
         binding.tvChallengeTitle.text = activity.getString(R.string.unlock_method_timer)
@@ -254,11 +259,17 @@ class UnlockChallengeRenderer(
                     R.string.challenge_timer_remaining,
                     UnlockMethodUtils.formatCountdown(0L)
                 )
+                onUnlocked()
             }
         }.start()
     }
 
-    private fun showToggleLockTimerInfo(block: AppBlock, showGoBackButton: Boolean, onGoBack: (() -> Unit)?) {
+    private fun showToggleLockTimerInfo(
+        block: AppBlock,
+        showGoBackButton: Boolean,
+        onGoBack: (() -> Unit)?,
+        onUnlocked: () -> Unit
+    ) {
         val binding = ViewUnlockInfoBinding.inflate(LayoutInflater.from(activity), container, false)
         container.addView(binding.root)
         binding.tvChallengeTitle.text = activity.getString(R.string.unlock_method_timer)
@@ -288,6 +299,7 @@ class UnlockChallengeRenderer(
                     R.string.challenge_timer_remaining,
                     UnlockMethodUtils.formatCountdown(0L)
                 )
+                onUnlocked()
             }
         }.start()
     }

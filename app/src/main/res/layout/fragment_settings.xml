@@ -4,6 +4,33 @@
     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
         android:orientation="vertical" android:padding="16dp">
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:text="@string/settings_protection_title" android:textSize="14sp" android:textStyle="bold"
+            android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
+        <TextView android:id="@+id/tvProtectionStatus"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textSize="13sp" android:layout_marginBottom="8dp" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnAccessibilitySettings"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_open_accessibility" android:layout_marginBottom="4dp"
+            android:visibility="gone" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnUsageSettings"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_open_usage" android:layout_marginBottom="4dp"
+            android:visibility="gone" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnOverlaySettings"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_open_overlay" android:layout_marginBottom="4dp"
+            android:visibility="gone" />
+        <com.google.android.material.button.MaterialButton android:id="@+id/btnCopyProtectionDiagnostics"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:text="@string/settings_copy_protection_diagnostics" android:layout_marginBottom="16dp" />
+        <View android:layout_width="match_parent" android:layout_height="1dp"
+            android:background="?attr/colorOutline" android:layout_marginBottom="16dp" />
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="Security" android:textSize="14sp" android:textStyle="bold" android:textColor="?attr/colorPrimary" android:layout_marginBottom="8dp" />
         <TextView
             android:layout_width="wrap_content"

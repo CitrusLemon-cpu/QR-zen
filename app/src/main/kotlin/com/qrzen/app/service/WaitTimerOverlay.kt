@@ -7,6 +7,7 @@ import android.graphics.Typeface
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
+import android.util.Log
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.MotionEvent
@@ -17,6 +18,10 @@ import android.widget.TextView
 import com.qrzen.app.R
 
 class WaitTimerOverlay(private val context: Context) {
+
+    private companion object {
+        const val TAG = "WaitTimerOverlay"
+    }
 
     data class TimerEntry(val blockId: Int, val label: String, val remainingMs: Long)
 
@@ -90,7 +95,11 @@ class WaitTimerOverlay(private val context: Context) {
             try {
                 windowManager.addView(view, layoutParams)
                 isShowing = true
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                Log.e(TAG, "Unable to attach timer overlay", error)
+                ProtectionDiagnostics.record(
+                    "Timer overlay attach failed: ${error.javaClass.simpleName}: ${error.message.orEmpty()}"
+                )
                 overlayView = null
                 timerViews.clear()
                 isShowing = false
@@ -109,6 +118,11 @@ class WaitTimerOverlay(private val context: Context) {
                 setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding)
                 setOnTouchListener(touchListener)
             }
+        }.onFailure { error ->
+            Log.e(TAG, "Unable to create timer overlay", error)
+            ProtectionDiagnostics.record(
+                "Timer overlay create failed: ${error.javaClass.simpleName}: ${error.message.orEmpty()}"
+            )
         }.getOrNull()?.also { overlayView = it }
     }
 
@@ -158,7 +172,11 @@ class WaitTimerOverlay(private val context: Context) {
         if (isShowing) {
             try {
                 windowManager.removeView(view)
-            } catch (_: Exception) {
+            } catch (error: Exception) {
+                Log.w(TAG, "Unable to remove timer overlay", error)
+                ProtectionDiagnostics.record(
+                    "Timer overlay removal failed: ${error.javaClass.simpleName}: ${error.message.orEmpty()}"
+                )
             }
         }
         overlayView = null

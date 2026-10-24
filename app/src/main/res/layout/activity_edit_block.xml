@@ -929,6 +929,16 @@
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:textSize="12sp" />
 
+                <TextView
+                    android:id="@+id/tvQrError"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/edit_block_qr_required"
+                    android:textColor="?attr/colorError"
+                    android:textSize="12sp"
+                    android:visibility="gone" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnScanQrToSet"
                     style="@style/Widget.Material3.Button.OutlinedButton"

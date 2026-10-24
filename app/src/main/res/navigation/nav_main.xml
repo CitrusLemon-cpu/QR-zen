@@ -10,6 +10,11 @@
         android:label="@string/nav_home" />
 
     <fragment
+        android:id="@+id/scannerFragment"
+        android:name="com.qrzen.app.ui.main.ScannerFragment"
+        android:label="@string/nav_scan" />
+
+    <fragment
         android:id="@+id/statsFragment"
         android:name="com.qrzen.app.ui.main.StatsFragment"
         android:label="@string/nav_stats" />

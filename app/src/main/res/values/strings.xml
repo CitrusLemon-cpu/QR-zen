@@ -5,6 +5,7 @@
 
     <!-- Bottom nav -->
     <string name="nav_home">Home</string>
+    <string name="nav_scan">Scan</string>
     <string name="nav_stats">Stats</string>
     <string name="nav_settings">Settings</string>
 
@@ -34,6 +35,8 @@
     <string name="edit_block_qr_section">QR Unlock Code</string>
     <string name="edit_block_scan_custom_qr">Scan Your Own QR Code</string>
     <string name="edit_block_generate_qr">Show QR Code</string>
+    <string name="edit_block_qr_not_scanned">No QR code scanned</string>
+    <string name="edit_block_qr_required">Scan a QR code before saving this block.</string>
     <string name="edit_block_share_qr">Share QR Code</string>
     <string name="edit_block_save_qr">Save to Downloads</string>
     <string name="edit_block_auto_add_new_apps">Auto-add newly installed apps</string>
@@ -199,8 +202,33 @@ Session ends at %4$s</string>
     <string name="accessibility_block_title">Accessibility Service Required</string>
     <string name="accessibility_block_message">Wait timer relies on the accessibility service to track app usage and enforce time limits. Please re-enable it to use this app.</string>
     <string name="accessibility_block_wait_timer">QR Zen needs accessibility service to track your usage time. Enable it to continue.</string>
+    <string name="accessibility_block_usage_limit">QR Zen needs accessibility service to enforce this usage limit. Enable it to continue.</string>
     <string name="accessibility_block_scheduled_allowance">QR Zen needs accessibility service to track your schedule allowance. Enable it to continue.</string>
+    <string name="usage_tracking_required">QR Zen cannot verify app usage. Re-enable Accessibility or Usage Access to continue.</string>
     <string name="accessibility_block_button">Re-enable Accessibility</string>
+    <string name="accessibility_enabled_not_connected">Accessibility is enabled in Android, but QR Zen has not connected to it. Usage fallback is unavailable. Toggle QR Zen accessibility off and on to reconnect.</string>
+    <string name="fallback_overlay_required">QR Zen can detect this blocked app through Usage Access, but Display over Apps is required to enforce the block.</string>
+    <string name="fallback_block_message">Accessibility is unavailable, so QR Zen is enforcing this block with Usage Access fallback.</string>
+    <string name="fallback_complete_unlock">Complete unlock</string>
+    <string name="fallback_go_home">Go Home</string>
+    <string name="fallback_allowlist_title">App not allowed</string>
+    <string name="settings_protection_title">Protection Status</string>
+    <string name="settings_open_accessibility">Accessibility Settings</string>
+    <string name="settings_open_usage">Usage Access Settings</string>
+    <string name="settings_open_overlay">Display over Apps Settings</string>
+    <string name="settings_copy_protection_diagnostics">Copy Protection Diagnostics</string>
+    <string name="settings_protection_primary">Full protection active. Accessibility is connected.</string>
+    <string name="settings_protection_fallback">Fallback protection active. QR Zen is using Usage Access.</string>
+    <string name="settings_protection_limited">Limited protection. Usage Access is available, but Display over Apps is missing.</string>
+    <string name="settings_protection_unprotected">Protection unavailable. Accessibility is not connected and complete fallback access is missing.</string>
+    <string name="settings_diagnostics_copied">Protection diagnostics copied</string>
+    <string name="scanner_title">QR Scanner</string>
+    <string name="scanner_description">Scan a QR code to view and copy its contents.</string>
+    <string name="scanner_open_camera">Open Camera</string>
+    <string name="scanner_scan_again">Scan Again</string>
+    <string name="scanner_result_label">Scanned content</string>
+    <string name="scanner_copy">Copy</string>
+    <string name="scanner_copied">Copied to clipboard</string>
     <string name="edit_folder_new_title">New Folder</string>
     <string name="edit_folder_edit_title">Edit Folder</string>
     <string name="edit_folder_title_hint">Folder name</string>

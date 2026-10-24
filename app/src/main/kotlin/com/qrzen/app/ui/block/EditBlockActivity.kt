@@ -43,7 +43,6 @@ import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
-import java.util.UUID
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -114,7 +113,7 @@ class EditBlockActivity : AppCompatActivity() {
             val scanned = result.data?.getStringExtra(com.king.zxing.CameraScan.SCAN_RESULT)
             if (!scanned.isNullOrBlank()) {
                 currentQrSecret = scanned
-                binding.tvQrSecret.text = scanned
+                updateQrStateUi()
             }
         }
     }
@@ -183,7 +182,6 @@ class EditBlockActivity : AppCompatActivity() {
 
         val blockId = intent.getIntExtra(EXTRA_BLOCK_ID, -1)
         if (blockId == -1) {
-            currentQrSecret = UUID.randomUUID().toString()
             supportActionBar?.title = if (isAllowlistMode) "New Allowlist Block" else "New Block"
             applyCurrentStateToUi()
         } else {
@@ -424,6 +422,7 @@ class EditBlockActivity : AppCompatActivity() {
         }
 
         binding.btnShowQr.setOnClickListener {
+            if (currentQrSecret.isBlank()) return@setOnClickListener
             QrDisplayFragment.newInstance(currentQrSecret)
                 .show(supportFragmentManager, "qr_display")
         }
@@ -555,7 +554,7 @@ class EditBlockActivity : AppCompatActivity() {
         } else {
             getString(R.string.edit_block_select_apps)
         }
-        binding.tvQrSecret.text = currentQrSecret
+        updateQrStateUi()
         binding.actBlockingStyle.setText(getBlockingStyleLabel(blockingStyle), false)
         refreshScheduleBreakDropdown()
         refreshUnlockMethodDropdown()
@@ -835,7 +834,13 @@ class EditBlockActivity : AppCompatActivity() {
         binding.llPomodoroSection.visibility = if (blockingStyle == UnlockMethodUtils.STYLE_POMODORO) View.VISIBLE else View.GONE
         binding.cbShowTimer.visibility = if (
             blockingStyle == UnlockMethodUtils.STYLE_USAGE_LIMIT ||
-            blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER
+            blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER ||
+            (blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE &&
+                scheduleBreakType in setOf(
+                    UnlockMethodUtils.BREAK_WAIT_TIMER,
+                    UnlockMethodUtils.BREAK_USAGE_LIMIT,
+                    UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE
+                ))
         ) View.VISIBLE else View.GONE
         if (blockingStyle != UnlockMethodUtils.STYLE_SCHEDULE) {
             hideSelectedBlockDetail()
@@ -854,6 +859,17 @@ class EditBlockActivity : AppCompatActivity() {
             if (scheduleBreakType == UnlockMethodUtils.BREAK_USAGE_LIMIT) View.VISIBLE else View.GONE
         binding.llScheduleBreakAllowanceSection.visibility =
             if (scheduleBreakType == UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE) View.VISIBLE else View.GONE
+        binding.cbShowTimer.visibility = if (
+            blockingStyle == UnlockMethodUtils.STYLE_SCHEDULE &&
+            scheduleBreakType in setOf(
+                UnlockMethodUtils.BREAK_WAIT_TIMER,
+                UnlockMethodUtils.BREAK_USAGE_LIMIT,
+                UnlockMethodUtils.BREAK_SCHEDULED_ALLOWANCE
+            )
+        ) View.VISIBLE else if (
+            blockingStyle == UnlockMethodUtils.STYLE_USAGE_LIMIT ||
+            blockingStyle == UnlockMethodUtils.STYLE_WAIT_TIMER
+        ) View.VISIBLE else View.GONE
     }
 
     private fun updateUnlockMethodUi() {
@@ -865,6 +881,14 @@ class EditBlockActivity : AppCompatActivity() {
         binding.llUnlockEditWindow.visibility = if (unlockMethod == UNLOCK_EDIT_WINDOW) View.VISIBLE else View.GONE
         binding.llUnlockTimer.visibility = if (unlockMethod == UNLOCK_TIMER) View.VISIBLE else View.GONE
         binding.llUnlockWhileActive.visibility = if (unlockMethod == UNLOCK_WHILE_ACTIVE) View.VISIBLE else View.GONE
+        if (unlockMethod == UNLOCK_QR_CODE) updateQrStateUi()
+    }
+
+    private fun updateQrStateUi() {
+        val hasQr = currentQrSecret.isNotBlank()
+        binding.tvQrSecret.text = if (hasQr) currentQrSecret else getString(R.string.edit_block_qr_not_scanned)
+        binding.btnShowQr.isEnabled = hasQr
+        if (hasQr) binding.tvQrError.visibility = View.GONE
     }
 
     private fun updateTypeOverUi() {
@@ -1208,6 +1232,14 @@ class EditBlockActivity : AppCompatActivity() {
         }
 
         when (unlockMethod) {
+            UNLOCK_QR_CODE -> {
+                if (currentQrSecret.isBlank()) {
+                    binding.tvQrError.visibility = View.VISIBLE
+                    binding.btnScanQrToSet.requestFocus()
+                    Toast.makeText(this, R.string.edit_block_qr_required, Toast.LENGTH_SHORT).show()
+                    return
+                }
+            }
             UNLOCK_PASSWORD -> {
                 if (blockPassword.isEmpty()) {
                     binding.tilBlockPassword.error = "Password is required"
@@ -1292,6 +1324,8 @@ class EditBlockActivity : AppCompatActivity() {
                 dao.update(block)
                 Prefs.clearWaitTimerState(block.id)
                 Prefs.clearScheduleWtState(block.id)
+                Prefs.clearSchedAllowanceState(block.id)
+                Prefs.clearUsageLimitState(block.id)
                 block.id
             }
 

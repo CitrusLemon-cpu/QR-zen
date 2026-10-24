@@ -28,8 +28,7 @@ data class AppBlock(
      */
     val activeDays: String = "1111111",
     /**
-     * UUID secret encoded in the physical/digital QR code for this block.
-     * Generated once when the block is created, never changes.
+     * User-scanned value encoded in the physical/digital QR code for this block.
      * Scanning the correct QR presents the pause-duration picker.
      */
     val qrSecret: String = "",

@@ -8,6 +8,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.content.pm.PackageManager
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.inputmethod.InputMethodManager
@@ -22,6 +24,7 @@ import dagger.hilt.android.EntryPointAccessors
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
@@ -31,14 +34,25 @@ class BlockAccessibilityService : AccessibilityService() {
 
     companion object {
         private const val TAG = "QrZenAccessibility"
+        private const val RECENTS_CONFIRM_DELAY_MS = 300L
         @Volatile var isRunning: Boolean = false
         @Volatile var currentForegroundPackage: String? = null
+        @Volatile var currentForegroundClassName: String? = null
+        @Volatile var currentForegroundIsRecents: Boolean = false
+
+        fun isRecentsActivityClass(className: String?): Boolean {
+            if (className.isNullOrBlank()) return false
+            return className.endsWith(".RecentsActivity", ignoreCase = true) ||
+                (className.contains("quickstep", ignoreCase = true) &&
+                    className.contains("recents", ignoreCase = true))
+        }
 
         private val SYSTEM_EXEMPT_PACKAGES = setOf(
             "android",
             "com.android.systemui",
             "com.android.intentresolver",
             "com.android.documentsui",
+            "com.android.pixeldisplayservice",
             "com.google.android.documentsui",
             "com.miui.securitycenter",
             "com.miui.securitycore",
@@ -66,6 +80,9 @@ class BlockAccessibilityService : AccessibilityService() {
         Log.e(TAG, "Coroutine error in accessibility service", throwable)
     }
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob() + exceptionHandler)
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var pendingRecentsCheck: Runnable? = null
+    private var foregroundEvaluationJob: Job? = null
     private var accessibilitySettingsObserver: android.database.ContentObserver? = null
 
     private val entryPoint by lazy {
@@ -79,9 +96,20 @@ class BlockAccessibilityService : AccessibilityService() {
         val homeIntent = Intent(Intent.ACTION_MAIN).apply {
             addCategory(Intent.CATEGORY_HOME)
         }
-        packageManager.queryIntentActivities(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+        packageManager.queryIntentActivities(homeIntent, PackageManager.MATCH_ALL)
             .mapNotNull { it.activityInfo?.packageName }
             .toSet()
+    }
+
+    private val defaultLauncherPackages: Set<String> by lazy {
+        val homeIntent = Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_HOME)
+        }
+        packageManager.resolveActivity(homeIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            ?.activityInfo
+            ?.packageName
+            ?.let(::setOf)
+            ?: emptySet()
     }
 
     private val dialerPackages: Set<String> by lazy {
@@ -110,6 +138,20 @@ class BlockAccessibilityService : AccessibilityService() {
             .toSet()
     }
 
+    private val systemPhotoPickerPackages: Set<String> by lazy {
+        val pickImagesIntent = Intent("android.provider.action.PICK_IMAGES").apply {
+            type = "image/*"
+        }
+        packageManager.queryIntentActivities(pickImagesIntent, PackageManager.MATCH_DEFAULT_ONLY)
+            .mapNotNull { it.activityInfo?.applicationInfo }
+            .filter { appInfo ->
+                (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0 &&
+                    packageManager.getLaunchIntentForPackage(appInfo.packageName) == null
+            }
+            .map { it.packageName }
+            .toSet()
+    }
+
     private val imePackages: Set<String> by lazy {
         val imm = getSystemService(InputMethodManager::class.java)
         imm?.enabledInputMethodList?.map { it.packageName }?.toSet() ?: emptySet()
@@ -130,13 +172,15 @@ class BlockAccessibilityService : AccessibilityService() {
         return result
     }
 
-    private fun isExemptFromAllowlist(pkg: String): Boolean {
-        return pkg in SYSTEM_EXEMPT_PACKAGES ||
-            pkg in launcherPackages ||
+    private fun isExemptFromAllowlist(pkg: String, confirmedRecents: Boolean): Boolean {
+        val normallyExempt = pkg in SYSTEM_EXEMPT_PACKAGES ||
+            pkg in defaultLauncherPackages ||
             pkg in dialerPackages ||
             pkg in imePackages ||
             pkg in shareHandlerPackages ||
+            pkg in systemPhotoPickerPackages ||
             isSystemNonLauncherApp(pkg)
+        return ForegroundSurfacePolicy.isExemptFromBlocking(normallyExempt, confirmedRecents)
     }
 
     private fun getAppLabel(pkg: String): String {
@@ -165,6 +209,9 @@ class BlockAccessibilityService : AccessibilityService() {
     override fun onServiceConnected() {
         super.onServiceConnected()
         isRunning = true
+        AccessibilityHealthMonitor.markConnected()
+        ProtectionDiagnostics.record("Accessibility onServiceConnected")
+        BackgroundService.start(this, BackgroundService.ACTION_ACCESSIBILITY_CONNECTED)
         accessibilitySettingsObserver?.let { contentResolver.unregisterContentObserver(it) }
         val observer = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
             override fun onChange(selfChange: Boolean) {
@@ -182,7 +229,12 @@ class BlockAccessibilityService : AccessibilityService() {
                 }
                 if (!stillEnabled) {
                     isRunning = false
-                    BackgroundService.start(this@BlockAccessibilityService)
+                    AccessibilityHealthMonitor.markDisconnected()
+                    ProtectionDiagnostics.record("Accessibility setting disabled")
+                    BackgroundService.start(
+                        this@BlockAccessibilityService,
+                        BackgroundService.ACTION_ACCESSIBILITY_DISCONNECTED
+                    )
                 }
             }
         }
@@ -197,21 +249,148 @@ class BlockAccessibilityService : AccessibilityService() {
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
-        if (event?.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
+        if (event == null ||
+            (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
+                event.eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED)
+        ) return
         val pkg = event.packageName?.toString() ?: return
-        if (pkg == packageName) return
+        val className = event.className?.toString()
+        AccessibilityHealthMonitor.markEvent()
+
+        val confirmedRecentsPkg = currentForegroundPackage
+            ?.takeIf { currentForegroundIsRecents }
+        val activeRoot = rootInActiveWindow
+        val activeRootPkg = activeRoot?.packageName?.toString()
+        val activeRootClassName = activeRoot?.className?.toString()
+        if (confirmedRecentsPkg != null &&
+            pkg != confirmedRecentsPkg &&
+            activeRootPkg == confirmedRecentsPkg
+        ) {
+            Log.d(TAG, "Ignoring Recents thumbnail event pkg=$pkg class=${className.orEmpty()}")
+            return
+        }
+
+        val isNonDefaultLauncher =
+            pkg in launcherPackages && pkg !in defaultLauncherPackages
+        if (isNonDefaultLauncher &&
+            currentForegroundIsRecents &&
+            currentForegroundPackage == pkg
+        ) {
+            return
+        }
+        if (isNonDefaultLauncher) {
+            Log.d(TAG, "Non-default launcher event pkg=$pkg class=${className.orEmpty()} type=${event.eventType}")
+        }
+        val eventIsRecents = isRecentsActivityClass(className)
+        val activeRootIsRecents = isRecentsActivityClass(activeRootClassName)
+        if (eventIsRecents || activeRootIsRecents) {
+            pendingRecentsCheck?.let(mainHandler::removeCallbacks)
+            pendingRecentsCheck = null
+            val recentsPkg = if (activeRootIsRecents) activeRootPkg ?: pkg else pkg
+            val recentsClassName = if (activeRootIsRecents) activeRootClassName else className
+            val diagnostic =
+                "Recents confirmed immediately pkg=$recentsPkg " +
+                    "class=${recentsClassName.orEmpty()} eventPkg=$pkg"
+            Log.d(TAG, diagnostic)
+            ProtectionDiagnostics.record(diagnostic)
+            processForegroundWindow(recentsPkg, recentsClassName, confirmedRecents = true)
+            return
+        }
+        if (isNonDefaultLauncher) {
+            scheduleConfirmedRecentsCheck(pkg, className)
+            return
+        }
+
+        processForegroundWindow(pkg, className, confirmedRecents = false)
+    }
+
+    private fun scheduleConfirmedRecentsCheck(pkg: String, className: String?) {
+        pendingRecentsCheck?.let(mainHandler::removeCallbacks)
+        val check = Runnable {
+            pendingRecentsCheck = null
+            val rootPkg = rootInActiveWindow?.packageName?.toString()
+            val activeWindowPkg = windows
+                .firstOrNull { it.isActive }
+                ?.root
+                ?.packageName
+                ?.toString()
+            val usageForeground = isLatestUsageForeground(pkg)
+            val confirmed = rootPkg == pkg || activeWindowPkg == pkg || usageForeground
+            val diagnostic =
+                "Recents confirmation pkg=$pkg confirmed=$confirmed " +
+                    "root=${rootPkg ?: "none"} activeWindow=${activeWindowPkg ?: "none"} " +
+                    "usageForeground=$usageForeground"
+            Log.d(TAG, diagnostic)
+            ProtectionDiagnostics.record(diagnostic)
+            if (confirmed) {
+                processForegroundWindow(pkg, className, confirmedRecents = true)
+            }
+        }
+        pendingRecentsCheck = check
+        mainHandler.postDelayed(check, RECENTS_CONFIRM_DELAY_MS)
+    }
+
+    private fun isLatestUsageForeground(pkg: String): Boolean {
+        val usageStatsManager = getSystemService(UsageStatsManager::class.java) ?: return false
+        val endTime = System.currentTimeMillis()
+        val events = runCatching {
+            usageStatsManager.queryEvents(endTime - 2_000L, endTime)
+        }.getOrNull() ?: return false
+        val event = UsageEvents.Event()
+        var foregroundPackage: String? = null
+        while (events.hasNextEvent()) {
+            events.getNextEvent(event)
+            val eventPackage = event.packageName ?: continue
+            when (event.eventType) {
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> foregroundPackage = eventPackage
+                UsageEvents.Event.MOVE_TO_BACKGROUND -> {
+                    if (foregroundPackage == eventPackage) foregroundPackage = null
+                }
+            }
+        }
+        return foregroundPackage == pkg
+    }
+
+    private fun processForegroundWindow(
+        pkg: String,
+        className: String?,
+        confirmedRecents: Boolean
+    ) {
 
         // Only filter genuinely transient windows (system UI, keyboards).
         // Launchers and dialers represent real navigation away from an app.
-        if (pkg !in SYSTEM_EXEMPT_PACKAGES &&
+        val isUnconfirmedNonDefaultLauncher =
+            pkg in launcherPackages && pkg !in defaultLauncherPackages && !confirmedRecents
+        if (confirmedRecents) {
+            // Pixel's Overview UI is hosted by the launcher. Preserve that surface
+            // as the foreground target so Home can remain exempt while Recents is not.
+            currentForegroundPackage = pkg
+            currentForegroundClassName = className
+            currentForegroundIsRecents = true
+        } else if (pkg !in SYSTEM_EXEMPT_PACKAGES &&
             pkg !in imePackages &&
             pkg !in shareHandlerPackages &&
+            !isUnconfirmedNonDefaultLauncher &&
             !isSystemNonLauncherApp(pkg)
         ) {
             currentForegroundPackage = pkg
+            currentForegroundClassName = className
+            currentForegroundIsRecents = confirmedRecents
         }
 
-        scope.launch {
+        // Do not leave the previous app cached while a QR Zen screen is visible.
+        // A stale value makes every usage-based allowance continue ticking.
+        if (pkg == packageName) return
+
+        val isTransientExemptWindow = pkg in SYSTEM_EXEMPT_PACKAGES ||
+            pkg in imePackages ||
+            pkg in shareHandlerPackages ||
+            pkg in systemPhotoPickerPackages ||
+            isSystemNonLauncherApp(pkg)
+        if (!confirmedRecents && isTransientExemptWindow) return
+
+        foregroundEvaluationJob?.cancel()
+        foregroundEvaluationJob = scope.launch {
             val dao = entryPoint.appBlockDao()
             val now = System.currentTimeMillis()
             if (Prefs.pauseAllUntil > now) return@launch
@@ -248,7 +427,7 @@ class BlockAccessibilityService : AccessibilityService() {
                 return@launch
             }
 
-            if (isExemptFromAllowlist(pkg) || isDeviceLocked()) return@launch
+            if (isExemptFromAllowlist(pkg, confirmedRecents) || isDeviceLocked()) return@launch
 
             val allowlistBlocks = activeBlocks.filter { it.isAllowlistMode && !it.blockAudio }
             if (allowlistBlocks.isNotEmpty()) {
@@ -261,6 +440,15 @@ class BlockAccessibilityService : AccessibilityService() {
                 }
                 val intersection = allowedSets.reduce { acc, set -> acc.intersect(set) }
                 if (!intersection.contains(pkg)) {
+                    if (currentForegroundPackage != pkg) return@launch
+                    val blockReason = allowlistBlocks.joinToString(separator = ", ") { block ->
+                        val configured = block.appPackages.split(",").map { it.trim() }.contains(pkg)
+                        val timerExpired = Prefs.isAppTimerExpired(block.id, pkg)
+                        "${block.id}:${block.title}[configured=$configured,timerExpired=$timerExpired]"
+                    }
+                    val diagnostic = "Accessibility allowlist blocked pkg=$pkg; blocks=$blockReason"
+                    Log.w(TAG, diagnostic)
+                    ProtectionDiagnostics.record(diagnostic)
                     launchAllowlistOverlay(pkg, allowlistBlocks)
                     if (Prefs.diagnosticNotifications) {
                         val isSystemNonLauncher = isSystemNonLauncherApp(pkg)
@@ -393,19 +581,25 @@ class BlockAccessibilityService : AccessibilityService() {
         val usageStatsManager = getSystemService(Context.USAGE_STATS_SERVICE) as? UsageStatsManager
             ?: return block.usageLimitMinutes * 60_000L
         val now = System.currentTimeMillis()
+        val trackingPeriodStart = Calendar.getInstance().apply {
+            timeInMillis = now
+            if (block.usageLimitPeriod == "HOURLY") {
+                set(Calendar.MINUTE, 0)
+            } else {
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+            }
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
         val startTime = when (block.usageLimitPeriod) {
             "HOURLY" -> now - 3_600_000L
-            else -> {
-                Calendar.getInstance().apply {
-                    set(Calendar.HOUR_OF_DAY, 0)
-                    set(Calendar.MINUTE, 0)
-                    set(Calendar.SECOND, 0)
-                    set(Calendar.MILLISECOND, 0)
-                }.timeInMillis
-            }
+            else -> trackingPeriodStart
         }
         val packages = block.appPackages.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-        val events = usageStatsManager.queryEvents(startTime, now)
+        val queryStart = (startTime - 24 * 60 * 60_000L).coerceAtLeast(0L)
+        val events = runCatching { usageStatsManager.queryEvents(queryStart, now) }
+            .getOrElse { return block.usageLimitMinutes * 60_000L }
         val event = UsageEvents.Event()
         val foregroundStartTimes = mutableMapOf<String, Long>()
         var totalUsageMs = 0L
@@ -415,17 +609,22 @@ class BlockAccessibilityService : AccessibilityService() {
             val pkg = event.packageName ?: continue
             if (pkg !in packages) continue
             when (event.eventType) {
-                UsageEvents.Event.MOVE_TO_FOREGROUND -> foregroundStartTimes[pkg] = event.timeStamp
+                UsageEvents.Event.MOVE_TO_FOREGROUND -> foregroundStartTimes.putIfAbsent(pkg, event.timeStamp)
                 UsageEvents.Event.MOVE_TO_BACKGROUND -> {
                     val start = foregroundStartTimes.remove(pkg)
                     if (start != null) {
-                        totalUsageMs += (event.timeStamp - start).coerceAtLeast(0L)
+                        if (event.timeStamp > startTime) {
+                            totalUsageMs += (event.timeStamp - maxOf(start, startTime)).coerceAtLeast(0L)
+                        }
                     }
                 }
             }
         }
         for ((_, start) in foregroundStartTimes) {
-            totalUsageMs += (now - start).coerceAtLeast(0L)
+            totalUsageMs += (now - maxOf(start, startTime)).coerceAtLeast(0L)
+        }
+        if (Prefs.getUsageLimitPeriodStart(block.id) == trackingPeriodStart) {
+            totalUsageMs = maxOf(totalUsageMs, Prefs.getUsageLimitTrackedMs(block.id))
         }
 
         val limitMs = block.usageLimitMinutes * 60_000L
@@ -469,12 +668,20 @@ class BlockAccessibilityService : AccessibilityService() {
 
     override fun onDestroy() {
         isRunning = false
+        AccessibilityHealthMonitor.markDisconnected()
+        ProtectionDiagnostics.record("Accessibility onDestroy/disconnected")
         currentForegroundPackage = null
+        currentForegroundClassName = null
+        currentForegroundIsRecents = false
+        pendingRecentsCheck?.let(mainHandler::removeCallbacks)
+        pendingRecentsCheck = null
+        foregroundEvaluationJob?.cancel()
+        foregroundEvaluationJob = null
         accessibilitySettingsObserver?.let {
             contentResolver.unregisterContentObserver(it)
         }
         accessibilitySettingsObserver = null
-        BackgroundService.start(this)
+        BackgroundService.start(this, BackgroundService.ACTION_ACCESSIBILITY_DISCONNECTED)
         scope.cancel()
         super.onDestroy()
     }

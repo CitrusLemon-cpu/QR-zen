@@ -46,6 +46,8 @@ class HomeViewModel @Inject constructor(
         Prefs.clearAppTimersForBlock(block.id)
         Prefs.clearWaitTimerState(block.id)
         Prefs.clearScheduleWtState(block.id)
+        Prefs.clearSchedAllowanceState(block.id)
+        Prefs.clearUsageLimitState(block.id)
         dao.delete(block)
         WidgetRefresh.refresh(ctx)
     }
@@ -58,6 +60,8 @@ class HomeViewModel @Inject constructor(
             }
             Prefs.clearWaitTimerState(block.id)
             Prefs.clearScheduleWtState(block.id)
+            Prefs.clearSchedAllowanceState(block.id)
+            Prefs.clearUsageLimitState(block.id)
         }
         dao.update(block.copy(isEnabled = enabled))
         WidgetRefresh.refresh(ctx)
@@ -85,6 +89,8 @@ class HomeViewModel @Inject constructor(
         Prefs.clearAppTimersForBlock(block.id)
         Prefs.clearWaitTimerState(block.id)
         Prefs.clearScheduleWtState(block.id)
+        Prefs.clearSchedAllowanceState(block.id)
+        Prefs.clearUsageLimitState(block.id)
         dao.update(
             block.copy(
                 isEnabled = false,
@@ -173,6 +179,8 @@ class HomeViewModel @Inject constructor(
                 }
                 Prefs.clearWaitTimerState(block.id)
                 Prefs.clearScheduleWtState(block.id)
+                Prefs.clearSchedAllowanceState(block.id)
+                Prefs.clearUsageLimitState(block.id)
             }
         }
         db.withTransaction {

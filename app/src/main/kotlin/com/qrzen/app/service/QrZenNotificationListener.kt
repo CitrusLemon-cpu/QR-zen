@@ -131,6 +131,7 @@ class QrZenNotificationListener : NotificationListenerService() {
             "com.android.systemui",
             "com.android.intentresolver",
             "com.android.documentsui",
+            "com.android.pixeldisplayservice",
             "com.google.android.documentsui",
             "com.miui.securitycenter",
             "com.miui.securitycore",

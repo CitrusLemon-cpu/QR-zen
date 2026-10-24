@@ -56,11 +56,13 @@ class StatsFragment : Fragment() {
             set(Calendar.MILLISECOND, 0)
         }
         val pm = requireContext().packageManager
-        val stats = usm.queryUsageStats(
-            UsageStatsManager.INTERVAL_DAILY,
-            cal.timeInMillis,
-            System.currentTimeMillis()
-        )?.filter { it.totalTimeInForeground > 0 }
+        val stats = runCatching {
+            usm.queryUsageStats(
+                UsageStatsManager.INTERVAL_DAILY,
+                cal.timeInMillis,
+                System.currentTimeMillis()
+            )
+        }.getOrNull()?.filter { it.totalTimeInForeground > 0 }
             ?.sortedByDescending { it.totalTimeInForeground }
             ?.take(5)
             ?: emptyList()

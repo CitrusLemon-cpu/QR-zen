@@ -34,7 +34,7 @@
         app:boxBackgroundMode="outline"
         app:hintTextColor="@color/white">
 
-        <com.google.android.material.textfield.TextInputEditText
+        <com.qrzen.app.ui.unlock.NoPasteTextInputEditText
             android:id="@+id/etTypeOver"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
